@@ -1,0 +1,71 @@
+name: edunotify_mobile
+description: "EduNotify — Plateforme académique Cameroun"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0' # Correction de la version du SDK (3.11 n'existe pas)
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Fichiers et CSV
+  file_picker: ^11.0.2
+  csv: ^6.0.0
+  file: ^7.0.1
+  url_launcher: ^6.2.0
+
+  # Navigation
+  go_router: ^14.6.2
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # HTTP
+  dio: ^5.7.0
+
+  # Stockage sécurisé
+  flutter_secure_storage: ^9.2.2
+
+  # Notifications push
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
+  flutter_local_notifications: ^18.0.1
+
+  # UI
+  cupertino_icons: ^1.0.8
+  pdf: ^3.12.0
+  printing: ^5.14.3
+  geolocator: ^14.0.2
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - lib/assets/logos/logo_dark.png
+    - lib/assets/logos/logo_light.png
+    - lib/assets/logos/splash_screen.png
+    - lib/assets/logos/mobile_icon.png
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "lib/assets/logos/mobile_icon.png" # Chemin vers mon logo
+flutter_native_splash:
+  color: "#ffffff" # Couleur de fond (blanc EduNotify)
+  image: lib/assets/logos/splash_screen.png
+  android_12:
+    image: lib/assets/logos/splash_screen.png
+    color: "#ffffff"
+  android_gravity: center
+  ios_content_mode: center
+  fullscreen: true
+
