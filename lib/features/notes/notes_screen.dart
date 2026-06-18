@@ -36,9 +36,9 @@ class PublicationResume {
         publieLe: j['publieLe'] != null
             ? DateTime.parse(j['publieLe'] as String)
             : DateTime.now(),
-        nbNotes:  j['nbNotes']  as int?    ?? 0,
-        moyenne:  (j['moyenne'] as num?)?.toDouble(),
-        admis:    j['admis']    as bool?,
+        nbNotes: j['nbNotes'] as int? ?? 0,
+        moyenne: (j['moyenne'] as num?)?.toDouble(),
+        admis:   j['admis']   as bool?,
       );
 }
 
@@ -47,16 +47,18 @@ class NoteDetail {
   final String matiereId;
   final String matiere;
   final int coefficient;
-  final double valeur;
+  final double? valeur;
   final String mention;
+  final bool manquante;
 
   const NoteDetail({
     required this.id,
     required this.matiereId,
     required this.matiere,
     required this.coefficient,
-    required this.valeur,
+    this.valeur,
     required this.mention,
+    this.manquante = false,
   });
 
   factory NoteDetail.fromJson(Map<String, dynamic> j) => NoteDetail(
@@ -64,8 +66,9 @@ class NoteDetail {
     matiereId:   j['matiereId']   as String? ?? '',
     matiere:     j['matiere']     as String? ?? '',
     coefficient: j['coefficient'] as int?    ?? 1,
-    valeur:      (j['valeur'] as num?)?.toDouble() ?? 0,
+    valeur:      (j['valeur']     as num?)?.toDouble(),
     mention:     j['mention']     as String? ?? '',
+    manquante:   j['manquante']   as bool?   ?? false,
   );
 }
 
@@ -125,7 +128,7 @@ class RequeteNote {
   final String motif;
   final String? reponse;
   final String matiere;
-  final double noteActuelle;
+  final double? noteActuelle;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -135,7 +138,7 @@ class RequeteNote {
     required this.motif,
     this.reponse,
     required this.matiere,
-    required this.noteActuelle,
+    this.noteActuelle,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -146,7 +149,7 @@ class RequeteNote {
     motif:        j['motif']   as String? ?? '',
     reponse:      j['reponse'] as String?,
     matiere:      j['matiere'] as String? ?? '',
-    noteActuelle: (j['noteActuelle'] as num?)?.toDouble() ?? 0,
+    noteActuelle: (j['noteActuelle'] as num?)?.toDouble(),
     createdAt:    j['createdAt'] != null
         ? DateTime.parse(j['createdAt'] as String)
         : DateTime.now(),
@@ -192,7 +195,6 @@ class ClasseInfo {
 // PROVIDERS
 // ══════════════════════════════════════════════════════════════════
 
-// Badge notes étudiant
 final notesBadgeProvider =
 StateNotifierProvider<NotesBadgeNotifier, int>((_) => NotesBadgeNotifier());
 
@@ -219,7 +221,6 @@ class NotesBadgeNotifier extends StateNotifier<int> {
   }
 }
 
-// Publications étudiant
 final mesPublicationsProvider = StateNotifierProvider<
     MesPublicationsNotifier, AsyncValue<List<PublicationResume>>>(
         (_) => MesPublicationsNotifier());
@@ -244,7 +245,6 @@ class MesPublicationsNotifier
   }
 }
 
-// Bulletin d'une publication
 final bulletinPublicationProvider = StateNotifierProvider.family<
     BulletinPublicationNotifier,
     AsyncValue<BulletinPublication>,
@@ -270,7 +270,6 @@ class BulletinPublicationNotifier
   }
 }
 
-// Requêtes étudiant
 final mesRequetesProvider = StateNotifierProvider<
     MesRequetesNotifier, AsyncValue<List<RequeteNote>>>(
         (_) => MesRequetesNotifier());
@@ -300,7 +299,6 @@ class MesRequetesNotifier
   }
 }
 
-// Classes chef
 final mesClassesProvider = StateNotifierProvider<
     MesClassesNotifier, AsyncValue<Map<String, List<ClasseInfo>>>>(
         (_) => MesClassesNotifier());
@@ -329,7 +327,6 @@ class MesClassesNotifier
   }
 }
 
-// Requêtes chef
 final requetesChefProvider = StateNotifierProvider<
     RequetesChefNotifier, AsyncValue<List<Map<String, dynamic>>>>(
         (_) => RequetesChefNotifier());
@@ -378,7 +375,7 @@ class NotesScreen extends ConsumerWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// VUE ÉTUDIANT — Liste des publications
+// VUE ÉTUDIANT
 // ══════════════════════════════════════════════════════════════════
 
 class _NotesEtudiant extends ConsumerStatefulWidget {
@@ -410,7 +407,6 @@ class _NotesEtudiantState extends ConsumerState<_NotesEtudiant>
     if (user == null) return;
     ref.read(mesPublicationsProvider.notifier).charger(user.id, user.role);
     ref.read(mesRequetesProvider.notifier).charger(user.id, user.role);
-    // Marquer comme consulté pour le badge
     ref.read(notesBadgeProvider.notifier).marquerConsulte();
   }
 
@@ -442,7 +438,6 @@ class _NotesEtudiantState extends ConsumerState<_NotesEtudiant>
   }
 }
 
-// ── Liste des publications ────────────────────────────────────────
 class _PublicationsEtudiantTab extends ConsumerWidget {
   const _PublicationsEtudiantTab();
 
@@ -466,14 +461,11 @@ class _PublicationsEtudiantTab extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.assignment_outlined,
-                    size: 64, color: context.textMuted),
+                Icon(Icons.assignment_outlined, size: 64, color: context.textMuted),
                 const SizedBox(height: 16),
                 Text('Aucun résultat publié',
-                    style: TextStyle(
-                        color: context.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600)),
+                    style: TextStyle(color: context.textPrimary,
+                        fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 Text(
                   'Vos résultats apparaîtront ici\ndès que le chef de département les publiera.',
@@ -485,7 +477,6 @@ class _PublicationsEtudiantTab extends ConsumerWidget {
           );
         }
 
-        // Grouper par semestre
         final groupes = <String, List<PublicationResume>>{};
         for (final p in liste) {
           groupes.putIfAbsent(p.semestre, () => []).add(p);
@@ -510,24 +501,18 @@ class _PublicationsEtudiantTab extends ConsumerWidget {
                           ),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text(
-                          entry.key,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700),
-                        ),
+                        child: Text(entry.key,
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 12,
+                                fontWeight: FontWeight.w700)),
                       ),
                       const SizedBox(width: 8),
                       Text('${entry.value.length} publication(s)',
-                          style: TextStyle(
-                              color: context.textMuted, fontSize: 12)),
+                          style: TextStyle(color: context.textMuted, fontSize: 12)),
                     ],
                   ),
                 ),
-                ...entry.value
-                    .map((p) => _PublicationCard(pub: p))
-                    .toList(),
+                ...entry.value.map((p) => _PublicationCard(pub: p)),
                 const SizedBox(height: 8),
               ],
             );
@@ -538,7 +523,6 @@ class _PublicationsEtudiantTab extends ConsumerWidget {
   }
 }
 
-// ── Carte publication ─────────────────────────────────────────────
 class _PublicationCard extends ConsumerWidget {
   final PublicationResume pub;
   const _PublicationCard({required this.pub});
@@ -560,8 +544,7 @@ class _PublicationCard extends ConsumerWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => _BulletinDetailScreen(publication: pub),
-        ),
+            builder: (_) => _BulletinDetailScreen(publication: pub)),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -578,7 +561,6 @@ class _PublicationCard extends ConsumerWidget {
         ),
         child: Column(
           children: [
-            // En-tête coloré
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -590,8 +572,7 @@ class _PublicationCard extends ConsumerWidget {
                   begin: Alignment.topLeft,
                   end:   Alignment.bottomRight,
                 ),
-                borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(18)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
               ),
               child: Row(
                 children: [
@@ -609,22 +590,14 @@ class _PublicationCard extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          pub.titre,
-                          style: TextStyle(
-                            color:      context.textPrimary,
-                            fontSize:   14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        Text(pub.titre,
+                            style: TextStyle(color: context.textPrimary,
+                                fontSize: 14, fontWeight: FontWeight.w700),
+                            maxLines: 2, overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 2),
-                        Text(
-                          'Publié le $dateStr · ${pub.nbNotes} matière(s)',
-                          style: TextStyle(
-                              color: context.textMuted, fontSize: 11),
-                        ),
+                        Text('Publié le $dateStr · ${pub.nbNotes} matière(s)',
+                            style: TextStyle(
+                                color: context.textMuted, fontSize: 11)),
                       ],
                     ),
                   ),
@@ -633,8 +606,6 @@ class _PublicationCard extends ConsumerWidget {
                 ],
               ),
             ),
-
-            // Moyenne
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
               child: Row(
@@ -647,14 +618,9 @@ class _PublicationCard extends ConsumerWidget {
                             style: TextStyle(
                                 color: context.textMuted, fontSize: 11)),
                         const SizedBox(height: 2),
-                        Text(
-                          pub.moyenne!.toStringAsFixed(2),
-                          style: TextStyle(
-                            color:      _couleurMoy,
-                            fontSize:   24,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+                        Text(pub.moyenne!.toStringAsFixed(2),
+                            style: TextStyle(color: _couleurMoy,
+                                fontSize: 24, fontWeight: FontWeight.w800)),
                       ],
                     ),
                     const SizedBox(width: 20),
@@ -675,29 +641,27 @@ class _PublicationCard extends ConsumerWidget {
                             pub.admis!
                                 ? Icons.check_circle_rounded
                                 : Icons.cancel_rounded,
-                            color: pub.admis! ? AppColors.green : AppColors.red,
+                            color: pub.admis!
+                                ? AppColors.green
+                                : AppColors.red,
                             size: 14,
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            pub.admis! ? 'Admis' : 'Non admis',
-                            style: TextStyle(
-                              color: pub.admis!
-                                  ? AppColors.green
-                                  : AppColors.red,
-                              fontSize:   12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          Text(pub.admis! ? 'Admis' : 'Non admis',
+                              style: TextStyle(
+                                color: pub.admis!
+                                    ? AppColors.green
+                                    : AppColors.red,
+                                fontSize:   12,
+                                fontWeight: FontWeight.w600,
+                              )),
                         ],
                       ),
                     ),
                   const Spacer(),
                   Text('Voir le détail',
-                      style: TextStyle(
-                          color:      _couleurMoy,
-                          fontSize:   12,
-                          fontWeight: FontWeight.w600)),
+                      style: TextStyle(color: _couleurMoy,
+                          fontSize: 12, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -742,8 +706,9 @@ class _BulletinDetailScreenState
     ref.watch(bulletinPublicationProvider(widget.publication.id));
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.publication.titre, maxLines: 1,
-          overflow: TextOverflow.ellipsis)),
+      appBar: AppBar(
+          title: Text(widget.publication.titre,
+              maxLines: 1, overflow: TextOverflow.ellipsis)),
       body: bulletin.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErreurView(
@@ -762,19 +727,15 @@ class _BulletinDetailScreenState
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // Carte moyenne
               if (data.moyenne != null)
                 _MoyenneCard(
-                  moyenne: data.moyenne!,
-                  mention: data.mention ?? '',
-                  admis:   data.admis,
-                  titre:   data.publication.titre,
+                  moyenne:  data.moyenne!,
+                  mention:  data.mention ?? '',
+                  admis:    data.admis,
+                  titre:    data.publication.titre,
                   semestre: data.publication.semestre,
                 ),
-
               const SizedBox(height: 16),
-
-              // Infos étudiant
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -817,17 +778,12 @@ class _BulletinDetailScreenState
                   ],
                 ),
               ),
-
               const SizedBox(height: 16),
-
-              // En-tête liste notes
               Row(
                 children: [
                   Text('Notes par matière',
-                      style: TextStyle(
-                          color:      context.textPrimary,
-                          fontSize:   16,
-                          fontWeight: FontWeight.w700)),
+                      style: TextStyle(color: context.textPrimary,
+                          fontSize: 16, fontWeight: FontWeight.w700)),
                   const Spacer(),
                   Text('${data.notes.length} matière(s)',
                       style: TextStyle(
@@ -835,7 +791,6 @@ class _BulletinDetailScreenState
                 ],
               ),
               const SizedBox(height: 10),
-
               ...data.notes.map((n) => _NoteTile(note: n)),
             ],
           ),
@@ -845,7 +800,6 @@ class _BulletinDetailScreenState
   }
 }
 
-// ── Carte moyenne ─────────────────────────────────────────────────
 class _MoyenneCard extends StatelessWidget {
   final double moyenne;
   final String mention;
@@ -897,19 +851,12 @@ class _MoyenneCard extends StatelessWidget {
                       color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 12)),
               const SizedBox(height: 4),
-              Text(
-                moyenne.toStringAsFixed(2),
-                style: const TextStyle(
-                  color:      Colors.white,
-                  fontSize:   42,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+              Text(moyenne.toStringAsFixed(2),
+                  style: const TextStyle(color: Colors.white,
+                      fontSize: 42, fontWeight: FontWeight.w900)),
               Text(mention,
-                  style: const TextStyle(
-                      color:      Colors.white,
-                      fontSize:   13,
-                      fontWeight: FontWeight.w600)),
+                  style: const TextStyle(color: Colors.white,
+                      fontSize: 13, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -937,19 +884,17 @@ class _MoyenneCard extends StatelessWidget {
                       width: 2),
                 ),
                 child: Icon(
-                  admis ? Icons.emoji_events_rounded : Icons.close_rounded,
+                  admis
+                      ? Icons.emoji_events_rounded
+                      : Icons.close_rounded,
                   color: Colors.white,
                   size:  28,
                 ),
               ),
               const SizedBox(height: 6),
-              Text(
-                admis ? 'Admis ✓' : 'Non admis',
-                style: const TextStyle(
-                    color:      Colors.white,
-                    fontSize:   12,
-                    fontWeight: FontWeight.w700),
-              ),
+              Text(admis ? 'Admis' : 'Non admis',
+                  style: const TextStyle(color: Colors.white,
+                      fontSize: 12, fontWeight: FontWeight.w700)),
             ],
           ),
         ],
@@ -958,14 +903,15 @@ class _MoyenneCard extends StatelessWidget {
   }
 }
 
-// ── Note tile avec bouton requête ─────────────────────────────────
 class _NoteTile extends ConsumerWidget {
   final NoteDetail note;
   const _NoteTile({required this.note});
 
   Color get _couleur {
-    if (note.valeur >= 14) return AppColors.green;
-    if (note.valeur >= 10) return AppColors.orange;
+    if (note.manquante) return AppColors.orange;
+    final v = note.valeur ?? 0;
+    if (v >= 14) return AppColors.green;
+    if (v >= 10) return AppColors.orange;
     return AppColors.red;
   }
 
@@ -977,6 +923,12 @@ class _NoteTile extends ConsumerWidget {
       decoration: BoxDecoration(
         color: context.cardColor,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: note.manquante
+              ? AppColors.orange.withValues(alpha: 0.4)
+              : context.borderColor,
+          width: note.manquante ? 1.5 : 1,
+        ),
         boxShadow: [
           BoxShadow(
             color:      Colors.black.withValues(alpha: 0.04),
@@ -994,14 +946,13 @@ class _NoteTile extends ConsumerWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Center(
-              child: Text(
-                note.valeur.toStringAsFixed(1),
-                style: TextStyle(
-                  color:      _couleur,
-                  fontSize:   16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              child: note.manquante
+                  ? Text('__',
+                  style: TextStyle(color: AppColors.orange,
+                      fontSize: 18, fontWeight: FontWeight.w800))
+                  : Text(note.valeur!.toStringAsFixed(1),
+                  style: TextStyle(color: _couleur,
+                      fontSize: 16, fontWeight: FontWeight.w800)),
             ),
           ),
           const SizedBox(width: 12),
@@ -1010,10 +961,8 @@ class _NoteTile extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(note.matiere,
-                    style: TextStyle(
-                        color:      context.textPrimary,
-                        fontSize:   13,
-                        fontWeight: FontWeight.w600)),
+                    style: TextStyle(color: context.textPrimary,
+                        fontSize: 13, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 Row(
                   children: [
@@ -1025,14 +974,14 @@ class _NoteTile extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color:        _couleur.withValues(alpha: 0.1),
+                        color: _couleur.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(note.mention,
-                          style: TextStyle(
-                              color:      _couleur,
-                              fontSize:   10,
-                              fontWeight: FontWeight.w600)),
+                      child: Text(
+                        note.manquante ? 'À rattraper' : note.mention,
+                        style: TextStyle(color: _couleur,
+                            fontSize: 10, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ],
                 ),
@@ -1058,14 +1007,11 @@ class _NoteTile extends ConsumerWidget {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.flag_rounded,
-                      color: AppColors.orange, size: 13),
+                  Icon(Icons.flag_rounded, color: AppColors.orange, size: 13),
                   SizedBox(width: 4),
                   Text('Requête',
-                      style: TextStyle(
-                          color:      AppColors.orange,
-                          fontSize:   11,
-                          fontWeight: FontWeight.w600)),
+                      style: TextStyle(color: AppColors.orange,
+                          fontSize: 11, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -1076,7 +1022,6 @@ class _NoteTile extends ConsumerWidget {
   }
 }
 
-// ── Modal requête étudiant ────────────────────────────────────────
 class _RequeteModal extends ConsumerStatefulWidget {
   final NoteDetail note;
   const _RequeteModal({required this.note});
@@ -1095,7 +1040,8 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
 
   Future<void> _soumettre() async {
     if (_motifCtrl.text.trim().length < 10) {
-      setState(() => _erreur = 'Décrivez le problème en au moins 10 caractères');
+      setState(() =>
+      _erreur = 'Décrivez le problème en au moins 10 caractères');
       return;
     }
     setState(() { _loading = true; _erreur = null; });
@@ -1103,19 +1049,27 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
       final user = ref.read(currentUserProvider)!;
       final resp = await ApiClient.postAcademic(
         '/academic/requetes',
-        data:   {'noteId': widget.note.id, 'motif': _motifCtrl.text.trim()},
+        data: {
+          'noteId':    widget.note.manquante ? null : widget.note.id,
+          'matiereId': widget.note.manquante ? widget.note.matiereId : null,
+          'motif':     _motifCtrl.text.trim(),
+        },
         userId: user.id, role: user.role,
       );
       final r = resp['requete'] as Map<String, dynamic>;
       ref.read(mesRequetesProvider.notifier).ajouter(RequeteNote(
-        id: r['id'] as String? ?? '', statut: r['statut'] as String? ?? 'en_attente',
-        motif: r['motif'] as String? ?? '', matiere: widget.note.matiere,
-        noteActuelle: widget.note.valeur, createdAt: DateTime.now(), updatedAt: DateTime.now(),
+        id:           r['id']     as String? ?? '',
+        statut:       r['statut'] as String? ?? 'en_attente',
+        motif:        r['motif']  as String? ?? '',
+        matiere:      widget.note.matiere,
+        noteActuelle: widget.note.valeur,
+        createdAt:    DateTime.now(),
+        updatedAt:    DateTime.now(),
       ));
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Requête soumise avec succès'),
+          content:         Text('Requête soumise avec succès'),
           backgroundColor: AppColors.green,
         ));
       }
@@ -1141,9 +1095,14 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(child: Container(width: 40, height: 4,
-              decoration: BoxDecoration(color: context.borderColor,
-                  borderRadius: BorderRadius.circular(2)))),
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                  color: context.borderColor,
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
           const SizedBox(height: 20),
           Text('Soumettre une requête',
               style: TextStyle(color: context.textPrimary,
@@ -1160,12 +1119,17 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
                 const Icon(Icons.grade_rounded,
                     color: AppColors.orange, size: 16),
                 const SizedBox(width: 8),
-                Expanded(child: Text(widget.note.matiere,
-                    style: TextStyle(color: context.textPrimary,
-                        fontSize: 13, fontWeight: FontWeight.w600))),
-                Text('${widget.note.valeur}/20',
+                Expanded(
+                  child: Text(
+                    widget.note.manquante
+                        ? '${widget.note.matiere} — Note absente'
+                        : '${widget.note.matiere} — ${widget.note.valeur}/20',
                     style: TextStyle(
-                        color: context.textSecondary, fontSize: 12)),
+                        color:      context.textPrimary,
+                        fontSize:   13,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1175,16 +1139,17 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
                   fontSize: 13, fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
           TextField(
-            controller: _motifCtrl, maxLines: 4,
+            controller: _motifCtrl,
+            maxLines: 4,
             decoration: InputDecoration(
-              hintText: 'Ex: Ma note de TP n\'a pas été prise en compte...',
+              hintText:  'Ex: Ma note de TP n\'a pas été prise en compte...',
               hintStyle: TextStyle(color: context.textMuted, fontSize: 12),
             ),
           ),
           if (_erreur != null) ...[
             const SizedBox(height: 8),
-            Text(_erreur!, style: const TextStyle(
-                color: AppColors.red, fontSize: 12)),
+            Text(_erreur!,
+                style: const TextStyle(color: AppColors.red, fontSize: 12)),
           ],
           const SizedBox(height: 20),
           SizedBox(
@@ -1208,7 +1173,6 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
   }
 }
 
-// ── Onglet requêtes étudiant ──────────────────────────────────────
 class _RequetesEtudiantTab extends ConsumerWidget {
   const _RequetesEtudiantTab();
 
@@ -1236,9 +1200,11 @@ class _RequetesEtudiantTab extends ConsumerWidget {
                 Text('Aucune requête soumise',
                     style: TextStyle(color: context.textMuted, fontSize: 14)),
                 const SizedBox(height: 8),
-                Text('Ouvrez un bulletin et appuyez sur\n"Requête" sur une note pour signaler une erreur.',
-                    style: TextStyle(color: context.textMuted, fontSize: 12),
-                    textAlign: TextAlign.center),
+                Text(
+                  'Ouvrez un bulletin et appuyez sur\n"Requête" pour signaler une erreur.',
+                  style: TextStyle(color: context.textMuted, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
           );
@@ -1260,19 +1226,28 @@ class _RequeteTileEtudiant extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = r.statut == 'en_attente' ? AppColors.orange
-        : r.statut == 'traitee' ? AppColors.green : AppColors.red;
-    final label = r.statut == 'en_attente' ? 'En attente'
-        : r.statut == 'traitee' ? 'Traitée' : 'Rejetée';
-    final icon = r.statut == 'en_attente' ? Icons.hourglass_empty_rounded
-        : r.statut == 'traitee' ? Icons.check_circle_rounded : Icons.cancel_rounded;
+    final color = r.statut == 'en_attente'
+        ? AppColors.orange
+        : r.statut == 'traitee'
+        ? AppColors.green
+        : AppColors.red;
+    final label = r.statut == 'en_attente'
+        ? 'En attente'
+        : r.statut == 'traitee'
+        ? 'Traitée'
+        : 'Rejetée';
+    final icon = r.statut == 'en_attente'
+        ? Icons.hourglass_empty_rounded
+        : r.statut == 'traitee'
+        ? Icons.check_circle_rounded
+        : Icons.cancel_rounded;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color:        context.cardColor,
         borderRadius: BorderRadius.circular(14),
-        border:       Border.all(
+        border: Border.all(
           color: r.statut == 'en_attente'
               ? context.borderColor
               : color.withValues(alpha: 0.3),
@@ -1283,11 +1258,14 @@ class _RequeteTileEtudiant extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(r.matiere,
-                  style: TextStyle(color: context.textPrimary,
-                      fontSize: 14, fontWeight: FontWeight.w600))),
+              Expanded(
+                child: Text(r.matiere,
+                    style: TextStyle(color: context.textPrimary,
+                        fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -1305,8 +1283,12 @@ class _RequeteTileEtudiant extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Text('Note concernée : ${r.noteActuelle}/20',
-              style: TextStyle(color: context.textMuted, fontSize: 12)),
+          Text(
+            r.noteActuelle != null
+                ? 'Note concernée : ${r.noteActuelle}/20'
+                : 'Note absente',
+            style: TextStyle(color: context.textMuted, fontSize: 12),
+          ),
           const SizedBox(height: 6),
           Text(r.motif, style: TextStyle(
               color: context.textSecondary, fontSize: 12, height: 1.4)),
@@ -1339,7 +1321,7 @@ class _RequeteTileEtudiant extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// VUE CHEF — Import + Publications + Requêtes
+// VUE CHEF
 // ══════════════════════════════════════════════════════════════════
 
 class _NotesChef extends ConsumerStatefulWidget {
@@ -1372,9 +1354,10 @@ class _NotesChefState extends ConsumerState<_NotesChef>
 
   @override
   Widget build(BuildContext context) {
-    final requetes   = ref.watch(requetesChefProvider);
+    final requetes    = ref.watch(requetesChefProvider);
     final nbEnAttente = requetes.valueOrNull
-        ?.where((r) => r['statut'] == 'en_attente').length ?? 0;
+        ?.where((r) => r['statut'] == 'en_attente').length ??
+        0;
 
     return Scaffold(
       appBar: AppBar(
@@ -1403,8 +1386,8 @@ class _NotesChefState extends ConsumerState<_NotesChef>
                       ),
                       child: Text('$nbEnAttente',
                           style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
+                              color:      Colors.white,
+                              fontSize:   10,
                               fontWeight: FontWeight.w700)),
                     ),
                   ],
@@ -1422,7 +1405,6 @@ class _NotesChefState extends ConsumerState<_NotesChef>
   }
 }
 
-// ── Import notes ──────────────────────────────────────────────────
 class _ImportNotesTab extends ConsumerStatefulWidget {
   const _ImportNotesTab();
 
@@ -1431,8 +1413,8 @@ class _ImportNotesTab extends ConsumerStatefulWidget {
 }
 
 class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
-  String?     _filiereSelectionnee;
-  ClasseInfo? _classeSelectionnee;
+  String?       _filiereSelectionnee;
+  ClasseInfo?   _classeSelectionnee;
   PlatformFile? _fichier;
 
   final _titreCtrl = TextEditingController();
@@ -1442,9 +1424,8 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
   String? _erreur;
   String? _succes;
 
-  // Historique publications pour la classe sélectionnée
-  List<Map<String, dynamic>> _historique = [];
-  bool _historiqueLoading = false;
+  List<Map<String, dynamic>> _historique        = [];
+  bool                       _historiqueLoading = false;
 
   static const _semestres = ['Semestre 1', 'Semestre 2'];
 
@@ -1458,7 +1439,11 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
       withData: true,
     );
     if (result != null && result.files.isNotEmpty) {
-      setState(() { _fichier = result.files.first; _succes = null; _erreur = null; });
+      setState(() {
+        _fichier = result.files.first;
+        _succes  = null;
+        _erreur  = null;
+      });
     }
   }
 
@@ -1516,12 +1501,63 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
         _fichier = null;
         _titreCtrl.clear();
       });
-      // Recharger l'historique
       await _chargerHistorique(_classeSelectionnee!.id);
     } on ApiException catch (e) {
       setState(() { _loading = false; _erreur = e.message; });
     } catch (e) {
       setState(() { _loading = false; _erreur = 'Erreur : ${e.toString()}'; });
+    }
+  }
+
+  Future<void> _supprimerPublication(String pubId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title:   const Text('Supprimer la publication ?'),
+        content: const Text(
+            'Toutes les notes associées seront supprimées. Cette action est irréversible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
+            child: const Text('Supprimer',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final user = ref.read(currentUserProvider)!;
+      await ApiClient.deleteAcademic(
+        '/academic/publications/$pubId', // CORRECTION : Utilisez pubId ici
+        userId: user.id,
+        role: user.role,
+        departementId: user.departementId,
+      );
+      setState(() {
+        _historique.removeWhere((p) => p['id'] == pubId);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:         Text('Publication supprimée'),
+          backgroundColor: AppColors.green,
+        ));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:         Text('Erreur lors de la suppression'),
+          backgroundColor: AppColors.red,
+        ));
+      }
     }
   }
 
@@ -1535,7 +1571,7 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
 
-          // ── Info format ──────────────────────────────────────
+          // Info format
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -1570,17 +1606,16 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
 
           const SizedBox(height: 24),
 
-          // ── Sélecteur filière / classe ───────────────────────
           Text('Filière et classe',
               style: TextStyle(color: context.textSecondary,
                   fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
 
           classesAsync.when(
-            loading: () => const Center(
-                child: CircularProgressIndicator(strokeWidth: 2)),
-            error: (_, __) => Text('Impossible de charger les classes',
-                style: const TextStyle(color: AppColors.red, fontSize: 12)),
+            loading: () =>
+            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            error: (_, __) => const Text('Impossible de charger les classes',
+                style: TextStyle(color: AppColors.red, fontSize: 12)),
             data: (filieres) {
               if (filieres.isEmpty) {
                 return Text('Aucune classe dans votre département',
@@ -1589,13 +1624,12 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
               final filiereNoms = filieres.keys.toList()..sort();
               return Column(
                 children: [
-                  // Filière
                   _DropdownContainer(
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        value:       _filiereSelectionnee,
-                        isExpanded:  true,
-                        hint:        Text('Choisir une filière',
+                        value:        _filiereSelectionnee,
+                        isExpanded:   true,
+                        hint:         Text('Choisir une filière',
                             style: TextStyle(
                                 color: context.textMuted, fontSize: 14)),
                         dropdownColor: context.cardColor,
@@ -1612,10 +1646,11 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
                                   color: AppColors.violet.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: Text(f, style: const TextStyle(
-                                    color:      AppColors.violet,
-                                    fontSize:   12,
-                                    fontWeight: FontWeight.w700)),
+                                child: Text(f,
+                                    style: const TextStyle(
+                                        color:      AppColors.violet,
+                                        fontSize:   12,
+                                        fontWeight: FontWeight.w700)),
                               ),
                               const SizedBox(width: 8),
                               Text('${filieres[f]!.length} classe(s)',
@@ -1632,17 +1667,15 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
                       ),
                     ),
                   ),
-
-                  // Niveau
                   if (_filiereSelectionnee != null) ...[
                     const SizedBox(height: 10),
                     _DropdownContainer(
                       highlight: _classeSelectionnee != null,
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<ClasseInfo>(
-                          value:       _classeSelectionnee,
-                          isExpanded:  true,
-                          hint:        Text('Choisir un niveau',
+                          value:        _classeSelectionnee,
+                          isExpanded:   true,
+                          hint:         Text('Choisir un niveau',
                               style: TextStyle(
                                   color: context.textMuted, fontSize: 14)),
                           dropdownColor: context.cardColor,
@@ -1664,9 +1697,10 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
                                         fontSize: 11)),
                               ],
                             ),
-                          )).toList(),
+                          ))
+                              .toList(),
                           onChanged: (v) {
-                            setState(() { _classeSelectionnee = v; });
+                            setState(() => _classeSelectionnee = v);
                             if (v != null) _chargerHistorique(v.id);
                           },
                         ),
@@ -1680,7 +1714,6 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
 
           const SizedBox(height: 20),
 
-          // ── Titre publication ────────────────────────────────
           Text('Titre de la publication',
               style: TextStyle(color: context.textSecondary,
                   fontSize: 13, fontWeight: FontWeight.w600)),
@@ -1696,7 +1729,6 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
 
           const SizedBox(height: 16),
 
-          // ── Semestre ─────────────────────────────────────────
           Text('Semestre',
               style: TextStyle(color: context.textSecondary,
                   fontSize: 13, fontWeight: FontWeight.w600)),
@@ -1724,9 +1756,13 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
                     child: Text(s,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: selected ? Colors.white : context.textSecondary,
+                          color: selected
+                              ? Colors.white
+                              : context.textSecondary,
                           fontSize:   13,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w400,
                         )),
                   ),
                 ),
@@ -1736,7 +1772,6 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
 
           const SizedBox(height: 16),
 
-          // ── Toggle publier ───────────────────────────────────
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -1753,7 +1788,8 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
                       Text('Publier immédiatement',
                           style: TextStyle(color: context.textPrimary,
                               fontSize: 14, fontWeight: FontWeight.w600)),
-                      Text('Les étudiants verront les notes après publication',
+                      Text(
+                          'Les étudiants verront les notes après publication',
                           style: TextStyle(
                               color: context.textMuted, fontSize: 11)),
                     ],
@@ -1770,7 +1806,6 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
 
           const SizedBox(height: 16),
 
-          // ── Fichier sélectionné ──────────────────────────────
           if (_fichier != null) ...[
             Container(
               padding: const EdgeInsets.all(12),
@@ -1799,17 +1834,16 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
             const SizedBox(height: 12),
           ],
 
-          // ── Boutons ──────────────────────────────────────────
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: _loading ? null : _choisirFichier,
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.cyan,
-                side: const BorderSide(color: AppColors.cyan),
+                side:    const BorderSide(color: AppColors.cyan),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              icon: const Icon(Icons.upload_file_rounded, size: 20),
+              icon:  const Icon(Icons.upload_file_rounded, size: 20),
               label: Text(_fichier == null
                   ? 'Choisir un fichier Excel'
                   : 'Changer de fichier'),
@@ -1837,7 +1871,6 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
             ),
           ],
 
-          // ── Messages ─────────────────────────────────────────
           if (_erreur != null) ...[
             const SizedBox(height: 12),
             _MessageBanner(message: _erreur!, isSuccess: false),
@@ -1847,7 +1880,7 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
             _MessageBanner(message: _succes!, isSuccess: true),
           ],
 
-          // ── Historique publications ──────────────────────────
+          // Historique publications
           if (_classeSelectionnee != null) ...[
             const SizedBox(height: 28),
             Row(
@@ -1862,7 +1895,6 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
               ],
             ),
             const SizedBox(height: 12),
-
             if (_historique.isEmpty && !_historiqueLoading)
               Container(
                 padding: const EdgeInsets.all(16),
@@ -1872,11 +1904,14 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
                   border:       Border.all(color: context.borderColor),
                 ),
                 child: Text('Aucune publication pour cette classe',
-                    style: TextStyle(
-                        color: context.textMuted, fontSize: 13)),
+                    style: TextStyle(color: context.textMuted, fontSize: 13)),
               )
             else
-              ..._historique.map((p) => _HistoriquePubTile(pub: p)).toList(),
+              ..._historique.map((p) => _HistoriquePubTile(
+                pub:        p,
+                onSupprimer: () =>
+                    _supprimerPublication(p['id'] as String),
+              )),
           ],
         ],
       ),
@@ -1886,7 +1921,7 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
 
 class _DropdownContainer extends StatelessWidget {
   final Widget child;
-  final bool highlight;
+  final bool   highlight;
   const _DropdownContainer({required this.child, this.highlight = false});
 
   @override
@@ -1896,7 +1931,7 @@ class _DropdownContainer extends StatelessWidget {
       decoration: BoxDecoration(
         color:        context.cardColor,
         borderRadius: BorderRadius.circular(12),
-        border:       Border.all(
+        border: Border.all(
           color: highlight
               ? AppColors.green.withValues(alpha: 0.4)
               : context.borderColor,
@@ -1909,7 +1944,8 @@ class _DropdownContainer extends StatelessWidget {
 
 class _HistoriquePubTile extends StatelessWidget {
   final Map<String, dynamic> pub;
-  const _HistoriquePubTile({required this.pub});
+  final VoidCallback?        onSupprimer;
+  const _HistoriquePubTile({required this.pub, this.onSupprimer});
 
   @override
   Widget build(BuildContext context) {
@@ -1948,20 +1984,46 @@ class _HistoriquePubTile extends StatelessWidget {
                     style: TextStyle(color: context.textPrimary,
                         fontSize: 13, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 3),
-                Text('${pub['semestre']} · Publié le $dateStr · ${pub['nbNotes']} notes',
-                    style: TextStyle(color: context.textMuted, fontSize: 11)),
+                Text(
+                  '${pub['semestre']} · Publié le $dateStr · ${pub['nbNotes']} notes',
+                  style: TextStyle(color: context.textMuted, fontSize: 11),
+                ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color:        AppColors.green.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Text('Publié',
-                style: TextStyle(color: AppColors.green,
-                    fontSize: 11, fontWeight: FontWeight.w600)),
+          // Badges Publié + Supprimer
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color:        AppColors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text('Publié',
+                    style: TextStyle(color: AppColors.green,
+                        fontSize: 11, fontWeight: FontWeight.w600)),
+              ),
+              if (onSupprimer != null) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: onSupprimer,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color:        AppColors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text('Supprimer',
+                        style: TextStyle(color: AppColors.red,
+                            fontSize: 11, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -1971,7 +2033,7 @@ class _HistoriquePubTile extends StatelessWidget {
 
 class _MessageBanner extends StatelessWidget {
   final String message;
-  final bool isSuccess;
+  final bool   isSuccess;
   const _MessageBanner({required this.message, required this.isSuccess});
 
   @override
@@ -1986,7 +2048,9 @@ class _MessageBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(isSuccess ? Icons.check_circle_rounded : Icons.error_rounded,
+          Icon(isSuccess
+              ? Icons.check_circle_rounded
+              : Icons.error_rounded,
               color: color, size: 16),
           const SizedBox(width: 8),
           Expanded(child: Text(message,
@@ -1998,6 +2062,7 @@ class _MessageBanner extends StatelessWidget {
 }
 
 // ── Requêtes chef ─────────────────────────────────────────────────
+
 class _RequetesChefTab extends ConsumerWidget {
   const _RequetesChefTab();
 
@@ -2011,12 +2076,17 @@ class _RequetesChefTab extends ConsumerWidget {
         onRetry: () {
           final user = ref.read(currentUserProvider);
           if (user != null)
-            ref.read(requetesChefProvider.notifier).charger(user.id, user.role);
+            ref.read(requetesChefProvider.notifier)
+                .charger(user.id, user.role);
         },
       ),
       data: (liste) {
-        final enAttente = liste.where((r) => r['statut'] == 'en_attente').toList();
-        final traitees  = liste.where((r) => r['statut'] != 'en_attente').toList();
+        final enAttente = liste
+            .where((r) => r['statut'] == 'en_attente')
+            .toList();
+        final traitees = liste
+            .where((r) => r['statut'] != 'en_attente')
+            .toList();
 
         if (liste.isEmpty) {
           return Center(
@@ -2026,7 +2096,8 @@ class _RequetesChefTab extends ConsumerWidget {
                 Icon(Icons.inbox_outlined, size: 56, color: context.textMuted),
                 const SizedBox(height: 16),
                 Text('Aucune requête reçue',
-                    style: TextStyle(color: context.textMuted, fontSize: 14)),
+                    style: TextStyle(
+                        color: context.textMuted, fontSize: 14)),
               ],
             ),
           );
@@ -2036,13 +2107,16 @@ class _RequetesChefTab extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           children: [
             if (enAttente.isNotEmpty) ...[
-              _SectionHeader('⏳ En attente (${enAttente.length})', AppColors.orange),
+              _SectionHeader(
+                  '⏳ En attente (${enAttente.length})',
+                  AppColors.orange),
               const SizedBox(height: 10),
               ...enAttente.map((r) => _RequeteTileChef(requete: r)),
               const SizedBox(height: 16),
             ],
             if (traitees.isNotEmpty) ...[
-              _SectionHeader('✅ Traitées (${traitees.length})', AppColors.green),
+              _SectionHeader(
+                  '✅ Traitées (${traitees.length})', AppColors.green),
               const SizedBox(height: 10),
               ...traitees.map((r) => _RequeteTileChef(requete: r)),
             ],
@@ -2055,12 +2129,13 @@ class _RequetesChefTab extends ConsumerWidget {
 
 class _SectionHeader extends StatelessWidget {
   final String titre;
-  final Color color;
+  final Color  color;
   const _SectionHeader(this.titre, this.color);
 
   @override
   Widget build(BuildContext context) => Text(titre,
-      style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w700));
+      style: TextStyle(
+          color: color, fontSize: 14, fontWeight: FontWeight.w700));
 }
 
 class _RequeteTileChef extends ConsumerWidget {
@@ -2079,7 +2154,7 @@ class _RequeteTileChef extends ConsumerWidget {
       decoration: BoxDecoration(
         color:        context.cardColor,
         borderRadius: BorderRadius.circular(14),
-        border:       Border.all(
+        border: Border.all(
           color: enAttente
               ? AppColors.orange.withValues(alpha: 0.3)
               : context.borderColor,
@@ -2094,11 +2169,14 @@ class _RequeteTileChef extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${etudiant['prenom'] ?? ''} ${etudiant['nom'] ?? ''}',
-                        style: TextStyle(color: context.textPrimary,
-                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    Text(
+                      '${etudiant['prenom'] ?? ''} ${etudiant['nom'] ?? ''}',
+                      style: TextStyle(color: context.textPrimary,
+                          fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
                     Text(etudiant['matricule'] as String? ?? '',
-                        style: TextStyle(color: context.textMuted, fontSize: 11)),
+                        style: TextStyle(
+                            color: context.textMuted, fontSize: 11)),
                   ],
                 ),
               ),
@@ -2109,13 +2187,15 @@ class _RequeteTileChef extends ConsumerWidget {
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
                     builder: (_) => _TraiterRequeteModal(
-                      requeteId:   requete['id']     as String? ?? '',
-                      etudiantNom: '${etudiant['prenom'] ?? ''} ${etudiant['nom'] ?? ''}',
+                      requeteId:   requete['id']      as String? ?? '',
+                      etudiantNom:
+                      '${etudiant['prenom'] ?? ''} ${etudiant['nom'] ?? ''}',
                       matiere:     requete['matiere']      as String? ?? '',
                       motif:       requete['motif']        as String? ?? '',
                       note: (requete['noteActuelle'] as num?)?.toDouble() ?? 0,
-                      onTraite: (s) => ref.read(requetesChefProvider.notifier)
-                          .traiter(requete['id'] as String? ?? '', s),
+                      onTraite: (s) =>
+                          ref.read(requetesChefProvider.notifier)
+                              .traiter(requete['id'] as String? ?? '', s),
                     ),
                   ),
                   child: Container(
@@ -2125,7 +2205,8 @@ class _RequeteTileChef extends ConsumerWidget {
                       color:        AppColors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border:       Border.all(
-                          color: AppColors.orange.withValues(alpha: 0.3)),
+                          color:
+                          AppColors.orange.withValues(alpha: 0.3)),
                     ),
                     child: const Text('Traiter',
                         style: TextStyle(color: AppColors.orange,
@@ -2137,10 +2218,13 @@ class _RequeteTileChef extends ConsumerWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              Icon(Icons.grade_rounded, size: 13, color: context.textMuted),
+              Icon(Icons.grade_rounded,
+                  size: 13, color: context.textMuted),
               const SizedBox(width: 4),
-              Text('${requete['matiere'] ?? ''} — ${requete['noteActuelle'] ?? ''}/20',
-                  style: TextStyle(color: context.textMuted, fontSize: 12)),
+              Text(
+                '${requete['matiere'] ?? ''} — ${requete['noteActuelle'] ?? ''}/20',
+                style: TextStyle(color: context.textMuted, fontSize: 12),
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -2153,16 +2237,18 @@ class _RequeteTileChef extends ConsumerWidget {
   }
 }
 
-// ── Modal traiter requête chef ────────────────────────────────────
 class _TraiterRequeteModal extends ConsumerStatefulWidget {
   final String requeteId, etudiantNom, matiere, motif;
   final double note;
   final void Function(String) onTraite;
 
   const _TraiterRequeteModal({
-    required this.requeteId, required this.etudiantNom,
-    required this.matiere,   required this.motif,
-    required this.note,      required this.onTraite,
+    required this.requeteId,
+    required this.etudiantNom,
+    required this.matiere,
+    required this.motif,
+    required this.note,
+    required this.onTraite,
   });
 
   @override
@@ -2170,7 +2256,8 @@ class _TraiterRequeteModal extends ConsumerStatefulWidget {
       _TraiterRequeteModalState();
 }
 
-class _TraiterRequeteModalState extends ConsumerState<_TraiterRequeteModal> {
+class _TraiterRequeteModalState
+    extends ConsumerState<_TraiterRequeteModal> {
   final _reponseCtrl      = TextEditingController();
   final _nouvelleNoteCtrl = TextEditingController();
   bool    _loading  = false;
@@ -2178,7 +2265,11 @@ class _TraiterRequeteModalState extends ConsumerState<_TraiterRequeteModal> {
   bool    _corriger = false;
 
   @override
-  void dispose() { _reponseCtrl.dispose(); _nouvelleNoteCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _reponseCtrl.dispose();
+    _nouvelleNoteCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _traiter(String statut) async {
     if (_reponseCtrl.text.trim().isEmpty) {
@@ -2189,10 +2280,12 @@ class _TraiterRequeteModalState extends ConsumerState<_TraiterRequeteModal> {
     try {
       final user = ref.read(currentUserProvider)!;
       final body = <String, dynamic>{
-        'statut': statut, 'reponse': _reponseCtrl.text.trim(),
+        'statut':  statut,
+        'reponse': _reponseCtrl.text.trim(),
       };
       if (_corriger && _nouvelleNoteCtrl.text.trim().isNotEmpty)
-        body['nouvelleNote'] = double.tryParse(_nouvelleNoteCtrl.text.trim());
+        body['nouvelleNote'] =
+            double.tryParse(_nouvelleNoteCtrl.text.trim());
 
       await ApiClient.patchAcademic(
         '/academic/requetes/${widget.requeteId}',
@@ -2232,9 +2325,14 @@ class _TraiterRequeteModalState extends ConsumerState<_TraiterRequeteModal> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(child: Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: context.borderColor,
-                    borderRadius: BorderRadius.circular(2)))),
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                    color: context.borderColor,
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
             const SizedBox(height: 20),
             Text('Traiter la requête',
                 style: TextStyle(color: context.textPrimary,
@@ -2256,9 +2354,9 @@ class _TraiterRequeteModalState extends ConsumerState<_TraiterRequeteModal> {
                       style: TextStyle(color: context.textPrimary,
                           fontSize: 13, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  Text(widget.motif, style: TextStyle(
-                      color: context.textSecondary,
-                      fontSize: 12, height: 1.4)),
+                  Text(widget.motif,
+                      style: TextStyle(color: context.textSecondary,
+                          fontSize: 12, height: 1.4)),
                 ],
               ),
             ),
@@ -2266,19 +2364,22 @@ class _TraiterRequeteModalState extends ConsumerState<_TraiterRequeteModal> {
             Row(
               children: [
                 Checkbox(
-                  value: _corriger,
-                  onChanged: (v) => setState(() => _corriger = v ?? false),
+                  value:     _corriger,
+                  onChanged: (v) =>
+                      setState(() => _corriger = v ?? false),
                   activeColor: AppColors.cyan,
                 ),
                 Text('Corriger la note',
-                    style: TextStyle(color: context.textSecondary, fontSize: 13)),
+                    style: TextStyle(
+                        color: context.textSecondary, fontSize: 13)),
               ],
             ),
             if (_corriger) ...[
               const SizedBox(height: 8),
               TextField(
                 controller: _nouvelleNoteCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true),
                 decoration: InputDecoration(
                   hintText: 'Nouvelle note (0-20)',
                   prefixIcon: Icon(Icons.edit_rounded,
@@ -2292,40 +2393,47 @@ class _TraiterRequeteModalState extends ConsumerState<_TraiterRequeteModal> {
                     fontSize: 13, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             TextField(
-              controller: _reponseCtrl, maxLines: 4,
+              controller: _reponseCtrl,
+              maxLines: 4,
               decoration: InputDecoration(
-                hintText: 'Ce message sera envoyé par email à l\'étudiant.',
-                hintStyle: TextStyle(color: context.textMuted, fontSize: 12),
+                hintText:
+                'Ce message sera envoyé par email à l\'étudiant.',
+                hintStyle: TextStyle(
+                    color: context.textMuted, fontSize: 12),
               ),
             ),
             if (_erreur != null) ...[
               const SizedBox(height: 8),
-              Text(_erreur!, style: const TextStyle(
-                  color: AppColors.red, fontSize: 12)),
+              Text(_erreur!,
+                  style: const TextStyle(
+                      color: AppColors.red, fontSize: 12)),
             ],
             const SizedBox(height: 20),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _loading ? null : () => _traiter('rejetee'),
+                    onPressed:
+                    _loading ? null : () => _traiter('rejetee'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.red,
                       side: const BorderSide(color: AppColors.red),
                     ),
-                    icon: const Icon(Icons.cancel_rounded, size: 18),
+                    icon:  const Icon(Icons.cancel_rounded, size: 18),
                     label: const Text('Rejeter'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _loading ? null : () => _traiter('traitee'),
+                    onPressed:
+                    _loading ? null : () => _traiter('traitee'),
                     style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.green,
                         foregroundColor: Colors.white),
                     icon: _loading
-                        ? const SizedBox(width: 18, height: 18,
+                        ? const SizedBox(
+                        width: 18, height: 18,
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.check_rounded, size: 18),

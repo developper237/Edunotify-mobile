@@ -11,6 +11,8 @@ import '../auth/auth_provider.dart';
 import '../home/home_screen.dart';
 import 'presence_archive.dart';
 import 'pdf_service.dart' as pdf_service;
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // MODÈLES & PROVIDERS
@@ -374,9 +376,25 @@ class _EtudiantSessionActiveState
     ref.read(presenceErrorProvider.notifier).state  = null;
     setState(() { _gpsErreur = null; });
   }
+  Future<String?> _getDeviceId() async {
+    try {
+      final info = DeviceInfoPlugin();
+      if (Platform.isAndroid) {
+        final android = await info.androidInfo;
+        return android.id;
+      } else if (Platform.isIOS) {
+        final ios = await info.iosInfo;
+        return ios.identifierForVendor;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> _confirm() async {
     if (code.length < 6) return;
+
     ref.read(presenceStatusProvider.notifier).state = PresenceStatus.loading;
     ref.read(presenceErrorProvider.notifier).state  = null;
     setState(() { _gpsErreur = null; });
@@ -391,11 +409,11 @@ class _EtudiantSessionActiveState
         if (position == null) {
           setState(() {
             _gpsEnCours = false;
-            _gpsErreur  = 'Impossible d\'obtenir votre position GPS.';
+            _gpsErreur  = 'Impossible d\'obtenir votre position GPS. '
+                'Activez la localisation et réessayez.';
           });
-          ref.read(presenceStatusProvider.notifier).state =
-              PresenceStatus.error;
-          ref.read(presenceErrorProvider.notifier).state = _gpsErreur;
+          ref.read(presenceStatusProvider.notifier).state = PresenceStatus.error;
+          ref.read(presenceErrorProvider.notifier).state  = _gpsErreur;
           return;
         }
         latitude  = position.latitude;
@@ -413,10 +431,13 @@ class _EtudiantSessionActiveState
     }
 
     try {
-      final user = ref.read(currentUserProvider)!;
+      final user     = ref.read(currentUserProvider)!;
+      final deviceId = await _getDeviceId(); // ✅ récupérer le device ID
+
       final body = <String, dynamic>{'code': code};
-      if (latitude != null)  body['latitude']  = latitude;
+      if (latitude  != null) body['latitude']  = latitude;
       if (longitude != null) body['longitude'] = longitude;
+      if (deviceId  != null) body['deviceId']  = deviceId; // ✅ envoyer au backend
 
       await ApiClient.postPresence(
         '/presence/confirmer',
@@ -437,11 +458,19 @@ class _EtudiantSessionActiveState
           present:    true,
         ),
       );
-      ref.invalidate(sessionActiveProvider);
       ref.read(presenceStatusProvider.notifier).state = PresenceStatus.success;
+
     } on ApiException catch (e) {
-      ref.read(presenceStatusProvider.notifier).state = PresenceStatus.error;
-      ref.read(presenceErrorProvider.notifier).state  = e.message;
+      // ✅ Gérer le cas DEVICE_ALREADY_USED
+      if (e.body != null && e.body!['code'] == 'DEVICE_ALREADY_USED') {
+        final etudiant = e.body!['etudiant'] as String? ?? 'un autre étudiant';
+        ref.read(presenceStatusProvider.notifier).state = PresenceStatus.error;
+        ref.read(presenceErrorProvider.notifier).state  =
+        'Cet appareil a déjà confirmé la présence de $etudiant pour cette séance.';
+      } else {
+        ref.read(presenceStatusProvider.notifier).state = PresenceStatus.error;
+        ref.read(presenceErrorProvider.notifier).state  = e.message;
+      }
     } catch (_) {
       ref.read(presenceStatusProvider.notifier).state = PresenceStatus.error;
       ref.read(presenceErrorProvider.notifier).state  = 'Erreur de connexion';
@@ -1424,6 +1453,7 @@ class _FormSessionState extends ConsumerState<_FormSession> {
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
+              runSpacing: 10,
               children: _durees.map((d) {
                 final selected = _duree == d;
                 return GestureDetector(
@@ -1457,11 +1487,10 @@ class _FormSessionState extends ConsumerState<_FormSession> {
                 );
               }).toList(),
             ),
+            const SizedBox(height: 12),
 
-            const SizedBox(height: 8),
             Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: context.cardColor,
                 borderRadius: BorderRadius.circular(10),
@@ -1469,13 +1498,14 @@ class _FormSessionState extends ConsumerState<_FormSession> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.timer_outlined,
-                      color: context.textMuted, size: 15),
+                  const Icon(Icons.timer_outlined, size: 16, color: Colors.grey),
                   const SizedBox(width: 8),
-                  Text(
-                    '${s.studentTime} $_duree ${s.minutesToEnter}',
-                    style: TextStyle(
-                        color: context.textMuted, fontSize: 12),
+                  Expanded(
+                    child: Text(
+                      '${s.studentTime} $_duree ${s.minutesToEnter}',
+                      style: TextStyle(
+                          color: context.textMuted, fontSize: 12),
+                    ),
                   ),
                 ],
               ),

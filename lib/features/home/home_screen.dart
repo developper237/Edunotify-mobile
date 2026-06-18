@@ -173,6 +173,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _NavItem(Icons.notifications_rounded, 'Notifs', const NotificationsScreen(), badge: nonLues),
           _NavItem(Icons.description_rounded, 'Rapports', const RapportsChefScreen()),
           _NavItem(Icons.class_rounded, 'Classes', const ClassesChefScreen()),
+          _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
       case 'admin':

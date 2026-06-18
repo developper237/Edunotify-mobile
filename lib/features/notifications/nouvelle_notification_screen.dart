@@ -45,7 +45,9 @@ class _NouvelleNotificationScreenState
         bottom: TabBar(
           controller: _tabs,
           tabs: const [
-            Tab(icon: Icon(Icons.notifications_outlined, size: 18), text: 'Notification'),
+            Tab(
+                icon: Icon(Icons.notifications_outlined, size: 18),
+                text: 'Notification'),
             Tab(icon: Icon(Icons.poll_outlined, size: 18), text: 'Sondage'),
           ],
         ),
@@ -74,22 +76,30 @@ class _FormulaireNotif extends ConsumerStatefulWidget {
 }
 
 class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
-  final _titre   = TextEditingController();
+  final _titre = TextEditingController();
   final _message = TextEditingController();
-  String _categorie    = 'administratif';
-  bool   _urgent       = false;
+  String _categorie = 'administratif';
+  bool _urgent = false;
   String _destinataire = 'classe';
-  bool   _loading      = false;
-  bool   _sent         = false;
+  bool _loading = false;
+  bool _sent = false;
   String? _error;
-  int?   _nbDestinataires;
+  int? _nbDestinataires;
 
-  static const _categories  = ['administratif', 'examen', 'resultat', 'cours'];
-  static const _catLabels   = ['Administratif', 'Examen', 'Résultat', 'Cours'];
-  static const _catIcons    = [Icons.info_outline, Icons.assignment_outlined,
-    Icons.grade_outlined, Icons.school_outlined];
-  static const _catColors   = [AppColors.violet, AppColors.orange,
-    AppColors.green, AppColors.blue];
+  static const _categories = ['administratif', 'examen', 'resultat', 'cours'];
+  static const _catLabels = ['Administratif', 'Examen', 'Résultat', 'Cours'];
+  static const _catIcons = [
+    Icons.info_outline,
+    Icons.assignment_outlined,
+    Icons.grade_outlined,
+    Icons.school_outlined
+  ];
+  static const _catColors = [
+    AppColors.violet,
+    AppColors.orange,
+    AppColors.green,
+    AppColors.blue
+  ];
 
   @override
   void dispose() {
@@ -102,69 +112,80 @@ class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
     switch (widget.role) {
       case 'delegue':
         return [
-          {'value': 'classe',   'label': 'Ma classe entière'},
+          {'value': 'classe', 'label': 'Ma classe entière'},
           {'value': 'presents', 'label': 'Présents aujourd\'hui'},
-          {'value': 'absents',  'label': 'Absents aujourd\'hui'},
+          {'value': 'absents', 'label': 'Absents aujourd\'hui'},
         ];
       case 'chef_departement':
         return [
           {'value': 'dept', 'label': 'Tout le département'},
-          {'value': 'L1',   'label': 'L1'},
-          {'value': 'L2',   'label': 'L2'},
-          {'value': 'L3',   'label': 'L3'},
-          {'value': 'M1',   'label': 'M1'},
-          {'value': 'M2',   'label': 'M2'},
+          {'value': 'L1', 'label': 'L1'},
+          {'value': 'L2', 'label': 'L2'},
+          {'value': 'L3', 'label': 'L3'},
+          {'value': 'M1', 'label': 'M1'},
+          {'value': 'M2', 'label': 'M2'},
         ];
       case 'admin':
         return [
-          {'value': 'all',       'label': 'Tout l\'établissement'},
+          {'value': 'all', 'label': 'Tout l\'établissement'},
           {'value': 'etudiants', 'label': 'Étudiants uniquement'},
-          {'value': 'staff',     'label': 'Personnel uniquement'},
+          {'value': 'staff', 'label': 'Personnel uniquement'},
         ];
       case 'super_admin':
         return [
           {'value': 'platform', 'label': 'Toute la plateforme'},
         ];
       default:
-        return [{'value': 'classe', 'label': 'Ma classe'}];
+        return [
+          {'value': 'classe', 'label': 'Ma classe'}
+        ];
     }
   }
 
   Future<void> _envoyer() async {
     if (_titre.text.trim().isEmpty || _message.text.trim().isEmpty) return;
 
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     try {
       final user = ref.read(currentUserProvider)!;
       final resp = await ApiClient.postNotif(
         '/notifications',
         data: {
-          'titre':     _titre.text.trim(),
-          'contenu':   _message.text.trim(),
+          'titre': _titre.text.trim(),
+          'contenu': _message.text.trim(),
           'categorie': _categorie,
-          'urgence':   _urgent,
-          'cible':     _destinataire,
+          'urgence': _urgent,
+          'cible': _destinataire,
         },
-        userId:          user.id,
-        role:            user.role,
+        userId: user.id,
+        role: user.role,
         etablissementId: user.etablissementId,
-        departementId:   user.departementId,
-        classeId:        user.classeId,
+        departementId: user.departementId,
+        classeId: user.classeId,
       );
 
       setState(() {
-        _loading         = false;
-        _sent            = true;
+        _loading = false;
+        _sent = true;
         _nbDestinataires = resp['nbDestinataires'] as int?;
       });
 
       // Recharger les notifs
       ref.read(notifsProvider.notifier).charger();
     } on ApiException catch (e) {
-      setState(() { _loading = false; _error = e.message; });
+      setState(() {
+        _loading = false;
+        _error = e.message;
+      });
     } catch (_) {
-      setState(() { _loading = false; _error = 'Erreur de connexion'; });
+      setState(() {
+        _loading = false;
+        _error = 'Erreur de connexion';
+      });
     }
   }
 
@@ -172,14 +193,17 @@ class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
   Widget build(BuildContext context) {
     if (_sent) {
       return _SuccessView(
-        icon:    Icons.notifications_active_outlined,
-        color:   AppColors.cyan,
-        titre:   'Notification envoyée !',
+        icon: Icons.notifications_active_outlined,
+        color: AppColors.cyan,
+        titre: 'Notification envoyée !',
         message: _nbDestinataires != null
             ? 'Envoyée à $_nbDestinataires destinataire(s).'
             : 'Les destinataires ont été notifiés.',
         onReset: () => setState(() {
-          _sent = false; _titre.clear(); _message.clear(); _urgent = false;
+          _sent = false;
+          _titre.clear();
+          _message.clear();
+          _urgent = false;
         }),
       );
     }
@@ -195,14 +219,16 @@ class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
           _Label('Destinataires', context),
           const SizedBox(height: 10),
           Wrap(
-            spacing: 8, runSpacing: 8,
+            spacing: 8,
+            runSpacing: 8,
             children: dests.map((d) {
               final selected = _destinataire == d['value'];
               return GestureDetector(
                 onTap: () => setState(() => _destinataire = d['value']!),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: selected ? AppColors.cyan : context.cardColor,
                     borderRadius: BorderRadius.circular(20),
@@ -211,9 +237,11 @@ class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
                   ),
                   child: Text(d['label']!,
                       style: TextStyle(
-                        color: selected ? AppColors.dark : context.textSecondary,
+                        color:
+                            selected ? AppColors.dark : context.textSecondary,
                         fontSize: 12,
-                        fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                        fontWeight:
+                            selected ? FontWeight.w700 : FontWeight.w400,
                       )),
                 ),
               );
@@ -233,7 +261,8 @@ class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
                   onTap: () => setState(() => _categorie = _categories[i]),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
-                    margin: EdgeInsets.only(right: i < _categories.length - 1 ? 8 : 0),
+                    margin: EdgeInsets.only(
+                        right: i < _categories.length - 1 ? 8 : 0),
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       color: selected
@@ -253,9 +282,11 @@ class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
                         const SizedBox(height: 4),
                         Text(_catLabels[i],
                             style: TextStyle(
-                              color: selected ? _catColors[i] : context.textMuted,
+                              color:
+                                  selected ? _catColors[i] : context.textMuted,
                               fontSize: 9,
-                              fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                              fontWeight:
+                                  selected ? FontWeight.w700 : FontWeight.w400,
                             ),
                             textAlign: TextAlign.center),
                       ],
@@ -292,7 +323,8 @@ class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
               alignLabelWithHint: true,
               prefixIcon: Padding(
                 padding: const EdgeInsets.only(bottom: 60),
-                child: Icon(Icons.message_outlined, color: context.textMuted, size: 20),
+                child: Icon(Icons.message_outlined,
+                    color: context.textMuted, size: 20),
               ),
             ),
           ),
@@ -316,12 +348,14 @@ class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
             child: Row(
               children: [
                 Container(
-                  width: 36, height: 36,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: AppColors.red.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.priority_high_rounded, color: AppColors.red, size: 18),
+                  child: const Icon(Icons.priority_high_rounded,
+                      color: AppColors.red, size: 18),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -329,10 +363,13 @@ class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Marquer comme urgent',
-                          style: TextStyle(color: context.textPrimary, fontSize: 13,
+                          style: TextStyle(
+                              color: context.textPrimary,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600)),
                       Text('La notification sera mise en avant',
-                          style: TextStyle(color: context.textMuted, fontSize: 11)),
+                          style: TextStyle(
+                              color: context.textMuted, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -356,10 +393,13 @@ class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: AppColors.red, size: 16),
+                  const Icon(Icons.error_outline,
+                      color: AppColors.red, size: 16),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(_error!,
-                      style: const TextStyle(color: AppColors.red, fontSize: 13))),
+                  Expanded(
+                      child: Text(_error!,
+                          style: const TextStyle(
+                              color: AppColors.red, fontSize: 13))),
                 ],
               ),
             ),
@@ -370,12 +410,17 @@ class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _loading || _titre.text.trim().isEmpty || _message.text.trim().isEmpty
+              onPressed: _loading ||
+                      _titre.text.trim().isEmpty ||
+                      _message.text.trim().isEmpty
                   ? null
                   : _envoyer,
               icon: _loading
-                  ? const SizedBox(width: 18, height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.send_rounded, size: 18),
               label: Text(_loading ? 'Envoi...' : 'Envoyer la notification'),
             ),
@@ -388,89 +433,167 @@ class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// FORMULAIRE SONDAGE — connecté au backend
+// FORMULAIRE SONDAGE — compatible avec le nouveau backend
 // ══════════════════════════════════════════════════════════════════
+
+class _QuestionSondageBloc {
+  final TextEditingController questionController;
+  final List<TextEditingController> choixControllers;
+  bool obligatoire;
+
+  _QuestionSondageBloc({
+    required this.questionController,
+    required this.choixControllers,
+    this.obligatoire = false,
+  });
+}
 
 class _FormulaireSondage extends ConsumerStatefulWidget {
   final String role;
   const _FormulaireSondage({required this.role});
 
   @override
-  ConsumerState<_FormulaireSondage> createState() => _FormulaireSondageState();
+  ConsumerState createState() => _FormulaireSondageState();
 }
 
 class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
-  final _question = TextEditingController();
-  final _choixControllers = [
-    TextEditingController(),
-    TextEditingController(),
+  final List<_QuestionSondageBloc> _questions = [
+    _QuestionSondageBloc(
+      questionController: TextEditingController(),
+      choixControllers: [
+        TextEditingController(),
+        TextEditingController(),
+      ],
+      obligatoire: false,
+    ),
   ];
-  String  _destinataire = 'classe';
-  bool    _loading      = false;
-  bool    _sent         = false;
+
+  String _destinataire = 'classe';
+  bool _loading = false;
+  bool _sent = false;
   String? _error;
-  int?    _nbDestinataires;
+  int? _nbDestinataires;
 
   @override
   void dispose() {
-    _question.dispose();
-    for (final c in _choixControllers) c.dispose();
+    for (final q in _questions) {
+      q.questionController.dispose();
+      for (final c in q.choixControllers) c.dispose();
+    }
     super.dispose();
   }
 
-  void _ajouterChoix() {
-    if (_choixControllers.length >= 4) return;
-    setState(() => _choixControllers.add(TextEditingController()));
+  void _ajouterQuestion() {
+    setState(() {
+      _questions.add(
+        _QuestionSondageBloc(
+          questionController: TextEditingController(),
+          choixControllers: [
+            TextEditingController(),
+            TextEditingController(),
+          ],
+          obligatoire: false,
+        ),
+      );
+    });
   }
 
-  void _supprimerChoix(int index) {
-    if (_choixControllers.length <= 2) return;
+  void _supprimerQuestion(int index) {
+    if (_questions.length <= 1) return;
     setState(() {
-      _choixControllers[index].dispose();
-      _choixControllers.removeAt(index);
+      final q = _questions[index];
+      q.questionController.dispose();
+      for (final c in q.choixControllers) c.dispose();
+      _questions.removeAt(index);
+    });
+  }
+
+  void _ajouterChoix(int questionIndex) {
+    if (_questions[questionIndex].choixControllers.length >= 4) return;
+    setState(() {
+      _questions[questionIndex].choixControllers.add(TextEditingController());
+    });
+  }
+
+  void _supprimerChoix(int questionIndex, int choixIndex) {
+    if (_questions[questionIndex].choixControllers.length <= 2) return;
+    setState(() {
+      final c = _questions[questionIndex].choixControllers[choixIndex];
+      c.dispose();
+      _questions[questionIndex].choixControllers.removeAt(choixIndex);
     });
   }
 
   Future<void> _envoyer() async {
-    if (_question.text.trim().isEmpty) return;
-    final choixValides = _choixControllers
-        .where((c) => c.text.trim().isNotEmpty)
-        .map((c) => c.text.trim())
-        .toList();
-    if (choixValides.length < 2) {
-      setState(() => _error = 'Minimum 2 choix requis');
+    final questionsPayload = <Map<String, dynamic>>[];
+
+    for (final q in _questions) {
+      final questionText = q.questionController.text.trim();
+      final choixValides = q.choixControllers
+          .where((c) => c.text.trim().isNotEmpty)
+          .map((c) => c.text.trim())
+          .toList();
+
+      if (questionText.isEmpty) {
+        setState(() => _error = 'Chaque question doit avoir un texte.');
+        return;
+      }
+
+      if (choixValides.length < 2) {
+        setState(() => _error = 'Chaque question doit avoir au moins 2 choix.');
+        return;
+      }
+
+      questionsPayload.add({
+        'question': questionText,
+        'choix': choixValides,
+        'required': q.obligatoire,
+      });
+    }
+
+    if (questionsPayload.isEmpty) {
+      setState(() => _error = 'Ajoutez au moins une question.');
       return;
     }
 
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     try {
       final user = ref.read(currentUserProvider)!;
+
       final resp = await ApiClient.postNotif(
         '/notifications/sondage',
         data: {
-          'question': _question.text.trim(),
-          'choix':    choixValides,
-          'cible':    _destinataire,
+          'questions': questionsPayload, // nouveau format
+          'cible': _destinataire,
         },
-        userId:          user.id,
-        role:            user.role,
+        userId: user.id,
+        role: user.role,
         etablissementId: user.etablissementId,
-        departementId:   user.departementId,
-        classeId:        user.classeId,
+        departementId: user.departementId,
+        classeId: user.classeId,
       );
 
       setState(() {
-        _loading         = false;
-        _sent            = true;
+        _loading = false;
+        _sent = true;
         _nbDestinataires = resp['nbDestinataires'] as int?;
       });
 
       ref.read(notifsProvider.notifier).charger();
     } on ApiException catch (e) {
-      setState(() { _loading = false; _error = e.message; });
+      setState(() {
+        _loading = false;
+        _error = e.message;
+      });
     } catch (_) {
-      setState(() { _loading = false; _error = 'Erreur de connexion'; });
+      setState(() {
+        _loading = false;
+        _error = 'Erreur de connexion';
+      });
     }
   }
 
@@ -478,16 +601,30 @@ class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
   Widget build(BuildContext context) {
     if (_sent) {
       return _SuccessView(
-        icon:    Icons.poll_outlined,
-        color:   AppColors.violet,
-        titre:   'Sondage envoyé !',
+        icon: Icons.poll_outlined,
+        color: AppColors.violet,
+        titre: 'Sondage envoyé !',
         message: _nbDestinataires != null
             ? 'Envoyé à $_nbDestinataires destinataire(s).'
             : 'Les destinataires peuvent maintenant voter.',
-        onReset: () => setState(() {
-          _sent = false; _question.clear();
-          for (final c in _choixControllers) c.clear();
-        }),
+        onReset: () {
+          setState(() {
+            _sent = false;
+            _error = null;
+            _nbDestinataires = null;
+            _questions
+              ..clear()
+              ..add(
+                _QuestionSondageBloc(
+                  questionController: TextEditingController(),
+                  choixControllers: [
+                    TextEditingController(),
+                    TextEditingController(),
+                  ],
+                ),
+              );
+          });
+        },
       );
     }
 
@@ -496,7 +633,6 @@ class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Destinataires
           _Label('Destinataires', context),
           const SizedBox(height: 10),
           _DestinataireSelector(
@@ -504,99 +640,135 @@ class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
             selected: _destinataire,
             onChanged: (v) => setState(() => _destinataire = v),
           ),
-
           const SizedBox(height: 24),
-
-          _Label('Question *', context),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _question,
-            maxLines: 2,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: 'Ex: Êtes-vous disponible pour un cours de rattrapage ?',
-              prefixIcon: Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: Icon(Icons.help_outline, color: context.textMuted, size: 20),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
           Row(
             children: [
-              _Label('Choix de réponse *', context),
+              _Label('Questions du sondage', context),
               const Spacer(),
-              if (_choixControllers.length < 4)
-                GestureDetector(
-                  onTap: _ajouterChoix,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.violet.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.violet.withValues(alpha: 0.3)),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.add, color: AppColors.violet, size: 14),
-                        SizedBox(width: 4),
-                        Text('Ajouter',
-                            style: TextStyle(color: AppColors.violet, fontSize: 12,
-                                fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
-                ),
+              TextButton.icon(
+                onPressed: _ajouterQuestion,
+                icon: const Icon(Icons.add),
+                label: const Text('Ajouter une question'),
+              ),
             ],
           ),
-          const SizedBox(height: 10),
-
-          ...List.generate(_choixControllers.length, (i) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  Container(
-                    width: 28, height: 28,
-                    decoration: BoxDecoration(
-                      color: AppColors.violet.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(String.fromCharCode(65 + i),
-                          style: const TextStyle(color: AppColors.violet, fontSize: 12,
-                              fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: _choixControllers[i],
-                      decoration: InputDecoration(hintText: 'Choix ${i + 1}'),
-                    ),
-                  ),
-                  if (_choixControllers.length > 2) ...[
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => _supprimerChoix(i),
-                      child: Container(
-                        width: 32, height: 32,
-                        decoration: BoxDecoration(
-                          color: AppColors.red.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+          const SizedBox(height: 12),
+          for (int qIndex = 0; qIndex < _questions.length; qIndex++) ...[
+            Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Question ${qIndex + 1}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
-                        child: const Icon(Icons.close, color: AppColors.red, size: 16),
+                        const Spacer(),
+                        Row(
+                          children: [
+                            Text('Obligatoire',
+                                style: TextStyle(
+                                    color: context.textMuted, fontSize: 12)),
+                            const SizedBox(width: 6),
+                            Switch.adaptive(
+                              value: _questions[qIndex].obligatoire,
+                              onChanged: (value) {
+                                setState(() =>
+                                    _questions[qIndex].obligatoire = value);
+                              },
+                              activeColor: AppColors.violet,
+                            ),
+                          ],
+                        ),
+                        if (_questions.length > 1)
+                          IconButton(
+                            onPressed: () => _supprimerQuestion(qIndex),
+                            icon: const Icon(Icons.delete_outline,
+                                color: AppColors.red),
+                            tooltip: 'Supprimer cette question',
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _questions[qIndex].questionController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        hintText:
+                            'Ex: Êtes-vous disponible pour un cours de rattrapage ?',
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: Icon(Icons.help_outline,
+                              color: context.textMuted, size: 20),
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        _Label('Choix de réponse *', context),
+                        const Spacer(),
+                        TextButton.icon(
+                          onPressed: () => _ajouterChoix(qIndex),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Ajouter un choix'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    for (int cIndex = 0;
+                        cIndex < _questions[qIndex].choixControllers.length;
+                        cIndex++) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller:
+                                    _questions[qIndex].choixControllers[cIndex],
+                                decoration: InputDecoration(
+                                  hintText: 'Choix ${cIndex + 1}',
+                                  border: const OutlineInputBorder(),
+                                ),
+                              ),
+                            ),
+                            if (_questions[qIndex].choixControllers.length >
+                                2) ...[
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () => _supprimerChoix(qIndex, cIndex),
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.red.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: AppColors.red,
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            );
-          }),
-
+            ),
+          ],
           if (_error != null) ...[
             const SizedBox(height: 12),
             Container(
@@ -608,17 +780,21 @@ class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: AppColors.red, size: 16),
+                  const Icon(Icons.error_outline,
+                      color: AppColors.red, size: 16),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(_error!,
-                      style: const TextStyle(color: AppColors.red, fontSize: 13))),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style:
+                          const TextStyle(color: AppColors.red, fontSize: 13),
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
-
           const SizedBox(height: 24),
-
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -628,8 +804,14 @@ class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
                 foregroundColor: Colors.white,
               ),
               icon: _loading
-                  ? const SizedBox(width: 18, height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Icon(Icons.poll_outlined, size: 18),
               label: Text(_loading ? 'Envoi...' : 'Lancer le sondage'),
             ),
@@ -649,43 +831,50 @@ class _DestinataireSelector extends StatelessWidget {
   final String role, selected;
   final void Function(String) onChanged;
   const _DestinataireSelector({
-    required this.role, required this.selected, required this.onChanged,
+    required this.role,
+    required this.selected,
+    required this.onChanged,
   });
 
   List<Map<String, String>> get _options {
     switch (role) {
       case 'delegue':
         return [
-          {'value': 'classe',   'label': 'Ma classe'},
+          {'value': 'classe', 'label': 'Ma classe'},
           {'value': 'presents', 'label': 'Présents'},
-          {'value': 'absents',  'label': 'Absents'},
+          {'value': 'absents', 'label': 'Absents'},
         ];
       case 'chef_departement':
         return [
           {'value': 'dept', 'label': 'Département'},
-          {'value': 'L1',   'label': 'L1'},
-          {'value': 'L2',   'label': 'L2'},
-          {'value': 'L3',   'label': 'L3'},
-          {'value': 'M1',   'label': 'M1'},
-          {'value': 'M2',   'label': 'M2'},
+          {'value': 'L1', 'label': 'L1'},
+          {'value': 'L2', 'label': 'L2'},
+          {'value': 'L3', 'label': 'L3'},
+          {'value': 'M1', 'label': 'M1'},
+          {'value': 'M2', 'label': 'M2'},
         ];
       case 'admin':
         return [
-          {'value': 'all',       'label': 'Tous'},
+          {'value': 'all', 'label': 'Tous'},
           {'value': 'etudiants', 'label': 'Étudiants'},
-          {'value': 'staff',     'label': 'Personnel'},
+          {'value': 'staff', 'label': 'Personnel'},
         ];
       case 'super_admin':
-        return [{'value': 'platform', 'label': 'Plateforme'}];
+        return [
+          {'value': 'platform', 'label': 'Plateforme'}
+        ];
       default:
-        return [{'value': 'classe', 'label': 'Ma classe'}];
+        return [
+          {'value': 'classe', 'label': 'Ma classe'}
+        ];
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 8, runSpacing: 8,
+      spacing: 8,
+      runSpacing: 8,
       children: _options.map((d) {
         final isSelected = selected == d['value'];
         return GestureDetector(
@@ -718,8 +907,11 @@ class _SuccessView extends StatelessWidget {
   final String titre, message;
   final VoidCallback onReset;
   const _SuccessView({
-    required this.icon, required this.color,
-    required this.titre, required this.message, required this.onReset,
+    required this.icon,
+    required this.color,
+    required this.titre,
+    required this.message,
+    required this.onReset,
   });
 
   @override
@@ -731,7 +923,8 @@ class _SuccessView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 80, height: 80,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
@@ -741,7 +934,9 @@ class _SuccessView extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(titre,
-                style: TextStyle(color: context.textPrimary, fontSize: 20,
+                style: TextStyle(
+                    color: context.textPrimary,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(message,
@@ -773,5 +968,6 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(text,
-      style: TextStyle(color: ctx.textSecondary, fontSize: 13, fontWeight: FontWeight.w500));
+      style: TextStyle(
+          color: ctx.textSecondary, fontSize: 13, fontWeight: FontWeight.w500));
 }

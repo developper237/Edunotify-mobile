@@ -5,7 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'core/app_theme.dart';
 import 'core/router.dart';
-import 'core/api_client.dart'; // Au lieu de services/api_client.dart // Assure-toi que le chemin est correct
+import 'core/api_client.dart';
 
 // Fonction pour gérer les messages en arrière-plan
 @pragma('vm:entry-point')

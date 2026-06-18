@@ -5,13 +5,13 @@ import 'storage.dart';
 class ApiException implements Exception {
   final String message;
   final int? statusCode;
-  ApiException(this.message, {this.statusCode});
-  @override
+  final Map<String, dynamic>? body;
+  ApiException(this.message, {this.statusCode, this.body});
   String toString() => message;
 }
 
 class ApiClient {
-  // IP Actuelle (AGL / Point d'accès PC)
+
   static const _baseUrl         = 'http://172.20.10.3:3001';
   static const _presenceBaseUrl = 'http://172.20.10.3:3004';
   static const _notifBaseUrl    = 'http://172.20.10.3:3003';
@@ -193,6 +193,30 @@ class ApiClient {
       return resp.data as Map<String, dynamic>;
     } on DioException catch (e) { throw _handle(e); }
   }
+  static Future<Map<String, dynamic>> deleteAcademic(String path, {
+    required String userId,
+    required String role,
+    String? departementId,
+    String? classeId,
+    Map<String, dynamic>? params,
+  }) async {
+    try {
+      final resp = await _dioAcademic.delete(
+        path,
+        queryParameters: params,
+        options: Options(headers: {
+          'x-user-id': userId,
+          'x-user-role': role,
+          'x-dept-id': departementId ?? '',
+          'x-classe-id': classeId ?? '',
+        }),
+      );
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw _handle(e);
+    }
+  }
+
 
   // ── HELPERS ──
   static Future<String?> _refreshToken() async {
@@ -209,8 +233,14 @@ class ApiClient {
 
   static ApiException _handle(DioException e) {
     final data = e.response?.data;
-    final msg = data is Map ? (data['message'] ?? data['error'] ?? 'Erreur') : 'Erreur réseau';
-    return ApiException(msg.toString(), statusCode: e.response?.statusCode);
+    final msg  = data is Map
+        ? (data['message'] ?? data['error'] ?? 'Erreur')
+        : 'Erreur réseau';
+    return ApiException(
+      msg.toString(),
+      statusCode: e.response?.statusCode,
+      body: data is Map<String, dynamic> ? data : null,
+    );
   }
 }
 
@@ -235,3 +265,4 @@ class _AuthInterceptor extends Interceptor {
     handler.next(err);
   }
 }
+

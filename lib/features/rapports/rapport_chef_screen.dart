@@ -65,7 +65,7 @@ class RapportsChefNotifier extends StateNotifier<AsyncValue<List<RapportAppel>>>
         params: {'limit': '100'},
       );
 
-      final notifs = resp['notifs'] as List<dynamic>? ?? [];
+      final notifs = resp['notifications'] as List<dynamic>? ?? [];
       final rapports = notifs
           .map((n) => RapportAppel.fromNotifJson(n as Map<String, dynamic>))
           .whereType<RapportAppel>()

@@ -39,6 +39,7 @@ dependencies:
   printing: ^5.14.3
   geolocator: ^14.0.2
   intl: ^0.20.2
+  device_info_plus: ^12.4.0
 
 dev_dependencies:
   flutter_test:

@@ -4,16 +4,62 @@ import '../../core/theme.dart';
 import '../../core/locale.dart';
 import '../../core/api_client.dart';
 import '../auth/auth_provider.dart';
-// Importation de l'écran des rapports pour la redirection
 import '../rapports/rapport_chef_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // MODÈLES
 // ══════════════════════════════════════════════════════════════════
 
+/// Un choix de réponse à une question de sondage
+class SondageChoix {
+  final String id;
+  final String texte;
+  final int votes;
+  final String? questionId; // ← lien vers la question parente
+
+  const SondageChoix({
+    required this.id,
+    required this.texte,
+    required this.votes,
+    this.questionId,
+  });
+
+  factory SondageChoix.fromJson(Map<String, dynamic> j) => SondageChoix(
+    id:         j['id']         as String? ?? '',
+    texte:      j['texte']      as String? ?? '',
+    votes:      (j['_count']?['votes'] as int?) ?? j['votes'] as int? ?? 0,
+    questionId: j['questionId'] as String?,
+  );
+}
+
+/// Une question de sondage avec ses choix
+class SondageQuestion {
+  final String id;
+  final String texte;
+  final int ordre;
+  final List<SondageChoix> choix;
+
+  const SondageQuestion({
+    required this.id,
+    required this.texte,
+    required this.ordre,
+    required this.choix,
+  });
+
+  factory SondageQuestion.fromJson(Map<String, dynamic> j) => SondageQuestion(
+    id:    j['id']    as String? ?? '',
+    texte: j['texte'] as String? ?? '',
+    ordre: j['ordre'] as int?    ?? 0,
+    choix: (j['choixSondage'] as List<dynamic>? ?? [])
+        .map((c) => SondageChoix.fromJson(c as Map<String, dynamic>))
+        .toList(),
+  );
+}
+
+/// Notification reçue par un destinataire
 class EduNotification {
-  final String id;       // id du NotificationDestinataire
-  final String notifId;  // id de la Notification
+  final String id;       // id NotificationDestinataire
+  final String notifId;  // id Notification
   final String titre;
   final String contenu;
   final String categorie;
@@ -22,7 +68,9 @@ class EduNotification {
   final DateTime envoyeLe;
   final String expediteur;
   final bool estSondage;
-  final List<SondageChoix> choixSondage;
+  // Pour sondages : structure complète par question
+  final List<SondageQuestion> questions;
+  // Pour vote : choixId sélectionné par cet utilisateur
   final String? monVoteChoixId;
 
   const EduNotification({
@@ -36,14 +84,14 @@ class EduNotification {
     required this.envoyeLe,
     this.expediteur = 'Administration',
     this.estSondage = false,
-    this.choixSondage = const [],
+    this.questions = const [],
     this.monVoteChoixId,
   });
 
   EduNotification copyWith({
     bool? lue,
     String? monVoteChoixId,
-    List<SondageChoix>? choixSondage,
+    List<SondageQuestion>? questions,
   }) =>
       EduNotification(
         id:             id,
@@ -56,54 +104,56 @@ class EduNotification {
         envoyeLe:       envoyeLe,
         expediteur:     expediteur,
         estSondage:     estSondage,
-        choixSondage:   choixSondage ?? this.choixSondage,
+        questions:      questions ?? this.questions,
         monVoteChoixId: monVoteChoixId ?? this.monVoteChoixId,
       );
 
+  /// Structure backend :
+  /// {
+  ///   id, lue, notification: {
+  ///     id, titre, contenu, categorie, estSondage,
+  ///     expediteur: {nom, prenom},
+  ///     questionsSondage: [{ id, texte, ordre, choixSondage: [...] }]
+  ///   }
+  /// }
   factory EduNotification.fromJson(Map<String, dynamic> j) {
     final notif = j['notification'] as Map<String, dynamic>? ?? j;
 
-    final choix = (notif['choixSondage'] as List<dynamic>? ?? [])
-        .map((c) => SondageChoix.fromJson(c as Map<String, dynamic>))
-        .toList();
+    // Nom de l'expéditeur
+    final expediteurStr = () {
+      final exp = notif['expediteur'];
+      if (exp is Map<String, dynamic>) {
+        return '${exp['prenom'] ?? ''} ${exp['nom'] ?? ''}'.trim();
+      }
+      if (exp is String && exp.isNotEmpty) return exp;
+      return 'Administration';
+    }();
+
+    // Questions structurées (nouveau format)
+    final questionsRaw =
+        notif['questionsSondage'] as List<dynamic>? ?? [];
+    final questions = questionsRaw
+        .map((q) => SondageQuestion.fromJson(q as Map<String, dynamic>))
+        .toList()
+      ..sort((a, b) => a.ordre.compareTo(b.ordre));
 
     return EduNotification(
-      id:          j['id'] as String,
-      notifId:     notif['id'] as String? ?? j['notificationId'] as String? ?? '',
-      titre:       notif['titre']    as String? ?? '',
-      contenu:     notif['contenu']  as String? ?? '',
+      id:          j['id']          as String,
+      notifId:     notif['id']      as String? ??
+          j['notificationId'] as String? ?? '',
+      titre:       notif['titre']   as String? ?? '',
+      contenu:     notif['contenu'] as String? ?? '',
       categorie:   notif['categorie'] as String? ?? 'administratif',
-      urgence:     notif['urgence']  as bool? ?? false,
-      lue:         j['lue']          as bool? ?? false,
+      urgence:     notif['urgence'] as bool? ?? false,
+      lue:         j['lue']         as bool? ?? false,
       envoyeLe:    DateTime.parse(
         notif['createdAt'] as String? ?? DateTime.now().toIso8601String(),
       ),
-      expediteur:  notif['expediteur'] as String? ?? 'Administration',
+      expediteur:  expediteurStr.isNotEmpty ? expediteurStr : 'Administration',
       estSondage:  notif['estSondage'] as bool? ?? false,
-      choixSondage: choix,
+      questions:   questions,
     );
   }
-}
-
-class SondageChoix {
-  final String id;
-  final String texte;
-  final int votes;
-  final int pourcentage;
-
-  const SondageChoix({
-    required this.id,
-    required this.texte,
-    required this.votes,
-    this.pourcentage = 0,
-  });
-
-  factory SondageChoix.fromJson(Map<String, dynamic> j) => SondageChoix(
-    id:          j['id']          as String,
-    texte:       j['texte']       as String,
-    votes:       j['votes']       as int? ?? 0,
-    pourcentage: j['pourcentage'] as int? ?? 0,
-  );
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -164,30 +214,42 @@ class NotifsNotifier
         .toList());
   }
 
-  Future<List<SondageChoix>?> voter(String notifId, String choixId) async {
+  /// Vote sur un choix — le backend retourne les résultats mis à jour
+  Future<bool> voter(String notifId, List<String> choixIds) async {
     final user = _ref.read(currentUserProvider)!;
     try {
       final resp = await ApiClient.postNotif(
         '/notifications/sondage/$notifId/voter',
-        data:            {'choixId': choixId},
+        data:            {'choixIds': choixIds},
         userId:          user.id,
         role:            user.role,
         etablissementId: user.etablissementId,
         departementId:   user.departementId,
         classeId:        user.classeId,
       );
-      final resultats = (resp['resultats'] as List<dynamic>? ?? [])
-          .map((c) => SondageChoix.fromJson(c as Map<String, dynamic>))
-          .toList();
+
+      // Mettre à jour depuis la réponse structurée par question
+      final questionsRaw =
+          resp['questions'] as List<dynamic>? ?? [];
 
       state = state.whenData((liste) => liste.map((n) {
         if (n.notifId != notifId) return n;
+        if (questionsRaw.isEmpty) return n;
+
+        final questionsUpdated = questionsRaw
+            .map((q) => SondageQuestion.fromJson(q as Map<String, dynamic>))
+            .toList()
+          ..sort((a, b) => a.ordre.compareTo(b.ordre));
+
         return n.copyWith(
-            monVoteChoixId: choixId, choixSondage: resultats);
+          monVoteChoixId: choixIds.first,
+          questions:      questionsUpdated,
+        );
       }).toList());
-      return resultats;
+
+      return true;
     } catch (_) {
-      return null;
+      return false;
     }
   }
 
@@ -230,10 +292,10 @@ class _NotificationsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final notifsAsync   = ref.watch(notifsProvider);
-    final s             = ref.watch(stringsProvider);
-    final user          = ref.watch(currentUserProvider);
-    final primaryColor  = AppColors.forRole(user?.role ?? 'etudiant');
+    final notifsAsync  = ref.watch(notifsProvider);
+    final s            = ref.watch(stringsProvider);
+    final user         = ref.watch(currentUserProvider);
+    final primaryColor = AppColors.forRole(user?.role ?? 'etudiant');
     final labels = [
       s.all, s.exams, s.results, s.course, s.admin, s.urgent,
     ];
@@ -242,6 +304,7 @@ class _NotificationsScreenState
       backgroundColor: context.bgColor,
       body: Column(
         children: [
+          // ── Header ─────────────────────────────────────────────
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -261,20 +324,19 @@ class _NotificationsScreenState
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          s.notifications,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
+                        Text(s.notifications,
+                            style: const TextStyle(
+                              color:       Colors.white,
+                              fontSize:    26,
+                              fontWeight:  FontWeight.w800,
+                              letterSpacing: -0.5,
+                            )),
                         const SizedBox(height: 4),
                         notifsAsync.when(
-                          data: (notifs) => Text(
-                            '${notifs.where((n) => !n.lue).length} non lues',
-                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          data:    (n) => Text(
+                            '${n.where((x) => !x.lue).length} non lues',
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 13),
                           ),
                           loading: () => const SizedBox(),
                           error:   (_, __) => const SizedBox(),
@@ -282,8 +344,10 @@ class _NotificationsScreenState
                       ],
                     ),
                     IconButton(
-                      icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                      onPressed: () => ref.read(notifsProvider.notifier).charger(),
+                      icon: const Icon(Icons.refresh_rounded,
+                          color: Colors.white),
+                      onPressed: () =>
+                          ref.read(notifsProvider.notifier).charger(),
                     ),
                   ],
                 ),
@@ -291,79 +355,107 @@ class _NotificationsScreenState
             ),
           ),
 
+          // ── Liste ───────────────────────────────────────────────
           Expanded(
             child: Container(
               transform: Matrix4.translationValues(0, -20, 0),
               decoration: BoxDecoration(
                 color:        context.bgColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(30)),
               ),
               child: Column(
                 children: [
                   const SizedBox(height: 20),
+
+                  // Filtres
                   SizedBox(
                     height: 40,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       itemCount: _categories.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      separatorBuilder: (_, __) =>
+                      const SizedBox(width: 8),
                       itemBuilder: (_, i) {
                         final selected = _filtre == _categories[i];
                         return GestureDetector(
-                          onTap: () => setState(() => _filtre = _categories[i]),
+                          onTap: () =>
+                              setState(() => _filtre = _categories[i]),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16),
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: selected ? primaryColor : context.cardColor,
+                              color: selected
+                                  ? primaryColor
+                                  : context.cardColor,
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: selected ? primaryColor : context.borderColor),
-                              boxShadow: selected ? [
+                              border: Border.all(
+                                color: selected
+                                    ? primaryColor
+                                    : context.borderColor,
+                              ),
+                              boxShadow: selected
+                                  ? [
                                 BoxShadow(
-                                  color: primaryColor.withValues(alpha: 0.3),
+                                  color: primaryColor
+                                      .withValues(alpha: 0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 )
-                              ] : [],
+                              ]
+                                  : [],
                             ),
-                            child: Text(
-                              labels[i],
-                              style: TextStyle(
-                                color: selected ? Colors.white : context.textSecondary,
-                                fontSize: 12,
-                                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                              ),
-                            ),
+                            child: Text(labels[i],
+                                style: TextStyle(
+                                  color: selected
+                                      ? Colors.white
+                                      : context.textSecondary,
+                                  fontSize:   12,
+                                  fontWeight: selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                )),
                           ),
                         );
                       },
                     ),
                   ),
 
+                  // Notifications
                   Expanded(
                     child: notifsAsync.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () => const Center(
+                          child: CircularProgressIndicator()),
                       error: (_, __) => _ErrorState(
-                        onRetry: () => ref.read(notifsProvider.notifier).charger(),
+                        onRetry: () =>
+                            ref.read(notifsProvider.notifier).charger(),
                       ),
                       data: (notifs) {
                         final filtered = _filtre == null
                             ? notifs
                             : _filtre == 'urgent'
                             ? notifs.where((n) => n.urgence).toList()
-                            : notifs.where((n) => n.categorie == _filtre).toList();
+                            : notifs
+                            .where(
+                                (n) => n.categorie == _filtre)
+                            .toList();
 
-                        if (filtered.isEmpty) return _EmptyState(label: s.noNotifications);
+                        if (filtered.isEmpty)
+                          return _EmptyState(label: s.noNotifications);
 
                         return ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+                          padding: const EdgeInsets.fromLTRB(
+                              20, 20, 20, 40),
                           itemCount: filtered.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          separatorBuilder: (_, __) =>
+                          const SizedBox(height: 12),
                           itemBuilder: (_, i) => _NotifTile(
                             notif: filtered[i],
-                            onTap: () => _openModal(context, filtered[i]),
+                            onTap: () =>
+                                _openModal(context, filtered[i]),
                           ),
                         );
                       },
@@ -389,33 +481,34 @@ class _NotificationsScreenState
 
   void _showNotifModal(BuildContext context, EduNotification notif) {
     showModalBottomSheet(
-      context:           context,
+      context:            context,
       isScrollControlled: true,
-      backgroundColor:   Colors.transparent,
+      backgroundColor:    Colors.transparent,
       builder: (_) => _NotifModal(
-        notif: notif,
-        color: _colorForCategorie(notif.categorie),
-        icon:  _iconForCategorie(notif.categorie),
+        notif:  notif,
+        color:  _colorFor(notif.categorie),
+        icon:   _iconFor(notif.categorie),
       ),
     );
   }
 
   void _showSondageModal(BuildContext context, EduNotification notif) {
     showModalBottomSheet(
-      context:           context,
+      context:            context,
       isScrollControlled: true,
-      backgroundColor:   Colors.transparent,
+      backgroundColor:    Colors.transparent,
+      // Changer l'appel
       builder: (_) => Consumer(
         builder: (ctx, ref, _) => _SondageModal(
-          notif:    notif,
-          onVoter: (choixId) =>
-              ref.read(notifsProvider.notifier).voter(notif.notifId, choixId),
+          notif:   notif,
+          onVoter: (choixIds) =>
+              ref.read(notifsProvider.notifier).voter(notif.notifId, choixIds),
         ),
       ),
     );
   }
 
-  Color _colorForCategorie(String cat) {
+  Color _colorFor(String cat) {
     switch (cat) {
       case 'examen':        return AppColors.orange;
       case 'resultat':      return AppColors.green;
@@ -425,7 +518,7 @@ class _NotificationsScreenState
     }
   }
 
-  IconData _iconForCategorie(String cat) {
+  IconData _iconFor(String cat) {
     switch (cat) {
       case 'examen':        return Icons.assignment_rounded;
       case 'resultat':      return Icons.grade_rounded;
@@ -470,7 +563,9 @@ class _NotifTile extends StatelessWidget {
           color:        context.cardColor,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: notif.lue ? context.borderColor.withValues(alpha: 0.5) : _color.withValues(alpha: 0.4),
+            color: notif.lue
+                ? context.borderColor.withValues(alpha: 0.5)
+                : _color.withValues(alpha: 0.4),
             width: notif.lue ? 1 : 1.5,
           ),
           boxShadow: [
@@ -493,9 +588,10 @@ class _NotifTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
-                    notif.estSondage ? Icons.poll_rounded : Icons.notifications_active_rounded,
-                    color: _color,
-                    size:  22,
+                    notif.estSondage
+                        ? Icons.poll_rounded
+                        : Icons.notifications_active_rounded,
+                    color: _color, size: 22,
                   ),
                 ),
                 if (!notif.lue)
@@ -506,7 +602,8 @@ class _NotifTile extends StatelessWidget {
                       decoration: BoxDecoration(
                         color:  _color,
                         shape:  BoxShape.circle,
-                        border: Border.all(color: context.cardColor, width: 2),
+                        border: Border.all(
+                            color: context.cardColor, width: 2),
                       ),
                     ),
                   ),
@@ -520,11 +617,15 @@ class _NotifTile extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        notif.expediteur,
-                        style: TextStyle(color: _color, fontSize: 11, fontWeight: FontWeight.w700),
-                      ),
-                      Text(timeStr, style: TextStyle(color: context.textMuted, fontSize: 11)),
+                      Text(notif.expediteur,
+                          style: TextStyle(
+                            color:      _color,
+                            fontSize:   11,
+                            fontWeight: FontWeight.w700,
+                          )),
+                      Text(timeStr,
+                          style: TextStyle(
+                              color: context.textMuted, fontSize: 11)),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -533,15 +634,24 @@ class _NotifTile extends StatelessWidget {
                     style: TextStyle(
                       color:      context.textPrimary,
                       fontSize:   14,
-                      fontWeight: notif.lue ? FontWeight.w600 : FontWeight.w800,
+                      fontWeight: notif.lue
+                          ? FontWeight.w600
+                          : FontWeight.w800,
                     ),
-                    maxLines:  1,
-                    overflow:  TextOverflow.ellipsis,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    notif.contenu.startsWith('PDF:') ? "📑 Rapport d'appel PDF" : notif.contenu,
-                    style: TextStyle(color: context.textSecondary, fontSize: 12, height: 1.4),
+                    notif.estSondage
+                        ? '${notif.questions.length} question(s) · Appuyez pour répondre'
+                        : notif.contenu.startsWith('PDF:')
+                        ? "Rapport d'appel PDF"
+                        : notif.contenu,
+                    style: TextStyle(
+                        color: context.textSecondary,
+                        fontSize: 12,
+                        height: 1.4),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -549,8 +659,13 @@ class _NotifTile extends StatelessWidget {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        if (notif.urgence) _MiniBadge(label: 'URGENT', color: AppColors.red),
-                        if (notif.estSondage) _MiniBadge(label: 'SONDAGE', color: AppColors.violet),
+                        if (notif.urgence)
+                          _MiniBadge(
+                              label: 'URGENT', color: AppColors.red),
+                        if (notif.estSondage)
+                          _MiniBadge(
+                              label: 'SONDAGE',
+                              color: AppColors.violet),
                       ],
                     ),
                   ],
@@ -565,25 +680,27 @@ class _NotifTile extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// MODAL NOTIFICATION (CORRIGÉE POUR ÉVITER L'OVERFLOW)
+// MODAL NOTIFICATION SIMPLE
 // ══════════════════════════════════════════════════════════════════
 
 class _NotifModal extends StatelessWidget {
   final EduNotification notif;
   final Color color;
   final IconData icon;
-  const _NotifModal({required this.notif, required this.color, required this.icon});
+  const _NotifModal(
+      {required this.notif, required this.color, required this.icon});
 
   @override
   Widget build(BuildContext context) {
-    final bool isPdf = notif.contenu.startsWith('PDF:');
+    final isPdf = notif.contenu.startsWith('PDF:');
 
     return Container(
       decoration: BoxDecoration(
         color:        context.cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+          24, 12, 24, MediaQuery.of(context).viewInsets.bottom + 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -591,7 +708,9 @@ class _NotifModal extends StatelessWidget {
           Center(
             child: Container(
               width: 40, height: 4,
-              decoration: BoxDecoration(color: context.borderColor, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(
+                  color:        context.borderColor,
+                  borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: 24),
@@ -599,7 +718,10 @@ class _NotifModal extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
+                decoration: BoxDecoration(
+                  color:        color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Icon(icon, color: color, size: 28),
               ),
               const SizedBox(width: 16),
@@ -607,21 +729,42 @@ class _NotifModal extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(notif.titre, style: TextStyle(color: context.textPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
-                    Text(notif.expediteur, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text(notif.titre,
+                        style: TextStyle(
+                          color:      context.textPrimary,
+                          fontSize:   18,
+                          fontWeight: FontWeight.w800,
+                        )),
+                    Text(notif.expediteur,
+                        style: TextStyle(
+                          color:      color,
+                          fontSize:   13,
+                          fontWeight: FontWeight.w600,
+                        )),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 20),
-
-          // CORRECTION : Gestion du PDF ou du texte long pour éviter l'overflow
           if (isPdf)
             _PdfContent(color: color)
           else
-            _ScrollableTextContent(text: notif.contenu),
-
+            Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.4,
+              ),
+              child: SingleChildScrollView(
+                child: Text(
+                  notif.contenu,
+                  style: TextStyle(
+                    color:    context.textPrimary,
+                    fontSize: 15,
+                    height:   1.6,
+                  ),
+                ),
+              ),
+            ),
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
@@ -630,9 +773,12 @@ class _NotifModal extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: color,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
               ),
-              child: const Text('Fermer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text('Fermer',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -641,28 +787,6 @@ class _NotifModal extends StatelessWidget {
   }
 }
 
-// Widget interne pour le contenu texte avec scroll
-class _ScrollableTextContent extends StatelessWidget {
-  final String text;
-  const _ScrollableTextContent({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.4, // Limite à 40% de la hauteur écran
-      ),
-      child: SingleChildScrollView(
-        child: Text(
-          text,
-          style: TextStyle(color: context.textPrimary, fontSize: 15, height: 1.6),
-        ),
-      ),
-    );
-  }
-}
-
-// Widget interne pour les notifications PDF
 class _PdfContent extends StatelessWidget {
   final Color color;
   const _PdfContent({required this.color});
@@ -673,16 +797,17 @@ class _PdfContent extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color:        color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border:       Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
-          const Icon(Icons.picture_as_pdf_rounded, color: AppColors.red, size: 48),
+          const Icon(Icons.picture_as_pdf_rounded,
+              color: AppColors.red, size: 48),
           const SizedBox(height: 12),
           const Text(
-            "Cette notification contient un rapport PDF.",
+            'Cette notification contient un rapport PDF.',
             textAlign: TextAlign.center,
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
@@ -690,9 +815,12 @@ class _PdfContent extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const RapportsChefScreen()));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const RapportsChefScreen()));
             },
-            icon: const Icon(Icons.open_in_new_rounded, size: 18),
+            icon:  const Icon(Icons.open_in_new_rounded, size: 18),
             label: const Text("Ouvrir l'onglet Rapports"),
           ),
         ],
@@ -702,12 +830,12 @@ class _PdfContent extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// MODAL SONDAGE
+// MODAL SONDAGE — affiche question par question
 // ══════════════════════════════════════════════════════════════════
 
 class _SondageModal extends StatefulWidget {
   final EduNotification notif;
-  final Future<List<SondageChoix>?> Function(String choixId) onVoter;
+  final Future<bool> Function(List<String> choixIds) onVoter;
   const _SondageModal({required this.notif, required this.onVoter});
 
   @override
@@ -715,99 +843,307 @@ class _SondageModal extends StatefulWidget {
 }
 
 class _SondageModalState extends State<_SondageModal> {
-  String? _selectedChoixId;
+  // Map questionId → choixId sélectionné
+  final Map<String, String> _selections = {};
   bool _loading = false;
   bool _voted   = false;
-  List<SondageChoix> _resultats = [];
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _resultats        = widget.notif.choixSondage;
-    _voted            = widget.notif.monVoteChoixId != null;
-    _selectedChoixId  = widget.notif.monVoteChoixId;
+    // Si déjà voté, marquer comme voté
+    _voted = widget.notif.monVoteChoixId != null;
   }
 
-  int get _totalVotes => _resultats.fold(0, (s, c) => s + c.votes);
+  int get _totalVotesGlobal {
+    int total = 0;
+    for (final q in widget.notif.questions) {
+      for (final c in q.choix) {
+        total += c.votes;
+      }
+    }
+    return total;
+  }
+
+  bool get _toutesQuestionsRepondues {
+    for (final q in widget.notif.questions) {
+      if (!_selections.containsKey(q.id)) return false;
+    }
+    return widget.notif.questions.isNotEmpty;
+  }
+
+  Future<void> _voter() async {
+    if (!_toutesQuestionsRepondues) {
+      setState(() => _error = 'Veuillez répondre à toutes les questions.');
+      return;
+    }
+    setState(() { _loading = true; _error = null; });
+
+    // Envoyer TOUS les choix sélectionnés en une seule requête
+    final choixIds = _selections.values.toList();
+    final success  = await widget.onVoter(choixIds);
+
+    setState(() {
+      _loading = false;
+      if (success) _voted = true;
+      else _error = 'Erreur lors du vote.';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final questions = widget.notif.questions;
+
     return Container(
       decoration: BoxDecoration(
         color:        context.cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+          24, 12, 24, MediaQuery.of(context).viewInsets.bottom + 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Poignée
           Center(
             child: Container(
               width: 40, height: 4,
-              decoration: BoxDecoration(color: context.borderColor, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(
+                  color: context.borderColor,
+                  borderRadius: BorderRadius.circular(2)),
             ),
           ),
-          const SizedBox(height: 24),
-          const Text('Sondage', style: TextStyle(color: AppColors.violet, fontSize: 13, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          Text(widget.notif.contenu, style: TextStyle(color: context.textPrimary, fontSize: 17, fontWeight: FontWeight.w800, height: 1.4)),
-          const SizedBox(height: 24),
-          ..._resultats.map((c) {
-            final isMyVote = _selectedChoixId == c.id;
-            final ratio    = _totalVotes == 0 ? 0.0 : c.votes / _totalVotes;
-            return GestureDetector(
-              onTap: _voted ? null : () => setState(() => _selectedChoixId = c.id),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
+          const SizedBox(height: 20),
+
+          // En-tête
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: isMyVote ? AppColors.violet.withValues(alpha: 0.1) : context.bgColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isMyVote ? AppColors.violet : context.borderColor, width: isMyVote ? 2 : 1),
+                  color:        AppColors.violet.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: const Icon(Icons.poll_rounded,
+                    color: AppColors.violet, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(isMyVote ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
-                          color: isMyVote ? AppColors.violet : context.textMuted, size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(child: Text(c.texte, style: TextStyle(color: isMyVote ? AppColors.violet : context.textPrimary, fontWeight: isMyVote ? FontWeight.w700 : FontWeight.w500))),
-                        if (_voted) Text('${(ratio * 100).toInt()}%', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    if (_voted) ...[
-                      const SizedBox(height: 10),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(value: ratio, minHeight: 6, color: AppColors.violet, backgroundColor: context.borderColor),
-                      ),
-                    ],
+                    const Text('Sondage',
+                        style: TextStyle(
+                          color:      AppColors.violet,
+                          fontSize:   11,
+                          fontWeight: FontWeight.w700,
+                        )),
+                    Text(widget.notif.titre,
+                        style: TextStyle(
+                          color:      context.textPrimary,
+                          fontSize:   15,
+                          fontWeight: FontWeight.w800,
+                        )),
                   ],
                 ),
               ),
-            );
-          }),
-          const SizedBox(height: 24),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Questions
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.55,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                children: questions.asMap().entries.map((entry) {
+                  final qIndex = entry.key;
+                  final q      = entry.value;
+                  final totalQ = q.choix.fold(0, (s, c) => s + c.votes);
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color:        context.bgColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border:       Border.all(color: context.borderColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Texte de la question
+                        Text(
+                          '${qIndex + 1}. ${q.texte}',
+                          style: TextStyle(
+                            color:      context.textPrimary,
+                            fontSize:   14,
+                            fontWeight: FontWeight.w700,
+                            height:     1.3,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Choix
+                        ...q.choix.map((c) {
+                          final isSelected = _selections[q.id] == c.id;
+                          final ratio = totalQ == 0
+                              ? 0.0
+                              : c.votes / totalQ;
+
+                          return GestureDetector(
+                            onTap: _voted
+                                ? null
+                                : () => setState(
+                                    () => _selections[q.id] = c.id),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.violet
+                                    .withValues(alpha: 0.1)
+                                    : context.cardColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.violet
+                                      : context.borderColor,
+                                  width: isSelected ? 2 : 1,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        isSelected
+                                            ? Icons.check_circle_rounded
+                                            : Icons
+                                            .radio_button_off_rounded,
+                                        color: isSelected
+                                            ? AppColors.violet
+                                            : context.textMuted,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          c.texte,
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? AppColors.violet
+                                                : context.textPrimary,
+                                            fontWeight: isSelected
+                                                ? FontWeight.w700
+                                                : FontWeight.w500,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                      if (_voted)
+                                        Text(
+                                          '${(ratio * 100).toInt()}%',
+                                          style: TextStyle(
+                                            color:      AppColors.violet,
+                                            fontSize:   12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  // Barre de résultats après vote
+                                  if (_voted) ...[
+                                    const SizedBox(height: 8),
+                                    ClipRRect(
+                                      borderRadius:
+                                      BorderRadius.circular(4),
+                                      child: LinearProgressIndicator(
+                                        value: ratio,
+                                        minHeight: 5,
+                                        color: isSelected
+                                            ? AppColors.violet
+                                            : AppColors.violet
+                                            .withValues(alpha: 0.3),
+                                        backgroundColor:
+                                        context.borderColor,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+
+          // Erreur
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color:        AppColors.red.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline,
+                      color: AppColors.red, size: 14),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(_error!,
+                        style: const TextStyle(
+                            color: AppColors.red, fontSize: 12)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 20),
+
+          // Bouton voter / fermer
           SizedBox(
             width: double.infinity,
-            height: 55,
+            height: 52,
             child: ElevatedButton(
-              onPressed: _voted || _selectedChoixId == null || _loading
-                  ? (_voted ? () => Navigator.pop(context) : null)
-                  : () async {
-                setState(() => _loading = true);
-                final res = await widget.onVoter(_selectedChoixId!);
-                if (res != null) setState(() { _resultats = res; _voted = true; });
-                setState(() => _loading = false);
-              },
+              onPressed: _loading
+                  ? null
+                  : _voted
+                  ? () => Navigator.pop(context)
+                  : _voter,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _voted ? context.borderColor : AppColors.violet,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                backgroundColor: _voted
+                    ? context.borderColor
+                    : AppColors.violet,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
               ),
-              child: _loading ? const CircularProgressIndicator(color: Colors.white) : Text(_voted ? 'Fermer' : 'Voter', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: _loading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : Text(
+                _voted ? 'Fermer' : 'Voter',
+                style: const TextStyle(
+                  color:      Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize:   15,
+                ),
+              ),
             ),
           ),
         ],
@@ -817,7 +1153,7 @@ class _SondageModalState extends State<_SondageModal> {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// HELPERS
+// WIDGETS HELPERS
 // ══════════════════════════════════════════════════════════════════
 
 class _MiniBadge extends StatelessWidget {
@@ -830,8 +1166,16 @@ class _MiniBadge extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(right: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-      child: Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w800)),
+      decoration: BoxDecoration(
+        color:        color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(label,
+          style: TextStyle(
+            color:      color,
+            fontSize:   10,
+            fontWeight: FontWeight.w800,
+          )),
     );
   }
 }
@@ -866,7 +1210,8 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.notifications_none_rounded, size: 80, color: context.borderColor),
+          Icon(Icons.notifications_none_rounded,
+              size: 80, color: context.borderColor),
           const SizedBox(height: 16),
           Text(label, style: TextStyle(color: context.textMuted)),
         ],
