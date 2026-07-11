@@ -38,26 +38,72 @@ class _NouvelleNotificationScreenState
   @override
   Widget build(BuildContext context) {
     final role = ref.watch(currentUserProvider)?.role ?? 'etudiant';
+    final isDesktop = MediaQuery.of(context).size.width > 900;
 
+    // LE WRAPPER CENTRE POUR DESKTOP
     return Scaffold(
-      appBar: AppBar(
+      appBar: isDesktop ? null : AppBar(
         title: const Text('Envoyer'),
         bottom: TabBar(
           controller: _tabs,
           tabs: const [
-            Tab(
-                icon: Icon(Icons.notifications_outlined, size: 18),
-                text: 'Notification'),
+            Tab(icon: Icon(Icons.notifications_outlined, size: 18), text: 'Notification'),
             Tab(icon: Icon(Icons.poll_outlined, size: 18), text: 'Sondage'),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabs,
-        children: [
-          _FormulaireNotif(role: role),
-          _FormulaireSondage(role: role),
-        ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600), // LIMITE A 600 PX
+          child: Container(
+            margin: isDesktop ? const EdgeInsets.all(32) : EdgeInsets.zero,
+            decoration: isDesktop ? BoxDecoration(
+              color: context.cardColor,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: context.borderColor),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                )
+              ],
+            ) : null,
+            child: Column(
+              children: [
+                if (isDesktop) ...[
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Row(
+                      children: [
+                        Text('Nouveau Message',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: context.textPrimary)),
+                        const Spacer(),
+                        IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                      ],
+                    ),
+                  ),
+                  TabBar(
+                    controller: _tabs,
+                    tabs: const [
+                      Tab(text: 'Notification'),
+                      Tab(text: 'Sondage'),
+                    ],
+                  ),
+                ],
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabs,
+                    children: [
+                      _FormulaireNotif(role: role),
+                      _FormulaireSondage(role: role),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -453,10 +499,11 @@ class _FormulaireSondage extends ConsumerStatefulWidget {
   const _FormulaireSondage({required this.role});
 
   @override
-  ConsumerState createState() => _FormulaireSondageState();
+  ConsumerState<_FormulaireSondage> createState() => _FormulaireSondageState();
 }
 
 class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
+  final _titre = TextEditingController(); // Ajout du contrôleur de titre
   final List<_QuestionSondageBloc> _questions = [
     _QuestionSondageBloc(
       questionController: TextEditingController(),
@@ -476,6 +523,7 @@ class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
 
   @override
   void dispose() {
+    _titre.dispose(); // Dispose du titre
     for (final q in _questions) {
       q.questionController.dispose();
       for (final c in q.choixControllers) c.dispose();
@@ -525,6 +573,12 @@ class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
   }
 
   Future<void> _envoyer() async {
+    // Validation du titre
+    if (_titre.text.trim().isEmpty) {
+      setState(() => _error = 'Donnez un objet à ce sondage.');
+      return;
+    }
+
     final questionsPayload = <Map<String, dynamic>>[];
 
     for (final q in _questions) {
@@ -551,11 +605,6 @@ class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
       });
     }
 
-    if (questionsPayload.isEmpty) {
-      setState(() => _error = 'Ajoutez au moins une question.');
-      return;
-    }
-
     setState(() {
       _loading = true;
       _error = null;
@@ -563,11 +612,11 @@ class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
 
     try {
       final user = ref.read(currentUserProvider)!;
-
       final resp = await ApiClient.postNotif(
         '/notifications/sondage',
         data: {
-          'questions': questionsPayload, // nouveau format
+          'titre': _titre.text.trim(), // Envoi du titre
+          'questions': questionsPayload,
           'cible': _destinataire,
         },
         userId: user.id,
@@ -610,19 +659,19 @@ class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
         onReset: () {
           setState(() {
             _sent = false;
+            _titre.clear(); // Reset titre
             _error = null;
             _nbDestinataires = null;
-            _questions
-              ..clear()
-              ..add(
-                _QuestionSondageBloc(
-                  questionController: TextEditingController(),
-                  choixControllers: [
-                    TextEditingController(),
-                    TextEditingController(),
-                  ],
-                ),
-              );
+            _questions.clear();
+            _questions.add(
+              _QuestionSondageBloc(
+                questionController: TextEditingController(),
+                choixControllers: [
+                  TextEditingController(),
+                  TextEditingController(),
+                ],
+              ),
+            );
           });
         },
       );
@@ -641,6 +690,21 @@ class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
             onChanged: (v) => setState(() => _destinataire = v),
           ),
           const SizedBox(height: 24),
+
+          // ── CHAMP TITRE ──────────────────────────────────────────
+          _Label('Objet du sondage *', context),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _titre,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: 'Ex: Disponibilité pour le cours de rattrapage',
+              prefixIcon: Icon(Icons.poll_outlined,
+                  color: context.textMuted, size: 20),
+            ),
+          ),
+          const SizedBox(height: 24),
+
           Row(
             children: [
               _Label('Questions du sondage', context),
@@ -652,6 +716,8 @@ class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
               ),
             ],
           ),
+          // ... reste du code (boucle for qIndex)
+
           const SizedBox(height: 12),
           for (int qIndex = 0; qIndex < _questions.length; qIndex++) ...[
             Card(

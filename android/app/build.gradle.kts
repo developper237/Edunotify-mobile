@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "cm.edunotify.edunotify_mobile"
+    namespace = "cm.smartcampus.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.2.12479018"
 
@@ -21,9 +21,9 @@ android {
     }
 
     defaultConfig {
-        applicationId = "cm.edunotify.edunotify_mobile"
-        minSdk = flutter.minSdkVersion // Conseil : mets 21 en dur ici pour Firebase/Notifications
-        targetSdk = flutter.targetSdkVersion
+        applicationId = "cm.smartcampus.app"
+        minSdk = flutter.minSdkVersion
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true

@@ -29,7 +29,6 @@ class EtudiantPresent {
   });
 
   factory EtudiantPresent.fromJson(Map<String, dynamic> j) {
-    // Le backend retourne confirmeA (pas confirmedAt)
     final dateStr = (j['confirmeA'] ?? j['confirmedAt']) as String?;
     return EtudiantPresent(
       matricule:   j['matricule'] as String? ?? '',
@@ -52,13 +51,11 @@ class EtudiantAbsent {
     required this.prenom,
   });
 
-  factory EtudiantAbsent.fromJson(Map<String, dynamic> j) {
-    return EtudiantAbsent(
-      matricule: j['matricule'] as String? ?? '',
-      nom:       j['nom']      as String? ?? '',
-      prenom:    j['prenom']   as String? ?? '',
-    );
-  }
+  factory EtudiantAbsent.fromJson(Map<String, dynamic> j) => EtudiantAbsent(
+    matricule: j['matricule'] as String? ?? '',
+    nom:       j['nom']      as String? ?? '',
+    prenom:    j['prenom']   as String? ?? '',
+  );
 }
 
 class SessionArchive {
@@ -71,7 +68,6 @@ class SessionArchive {
   final DateTime finLe;
   final List<EtudiantPresent> presents;
   final List<EtudiantAbsent> absents;
-  // Valeurs réelles du backend pour la vue liste (avant chargement du détail)
   final int? nbPresentsReel;
   final int? nbTotalReel;
 
@@ -89,12 +85,10 @@ class SessionArchive {
     this.nbTotalReel,
   });
 
-  // Utilise les valeurs réelles si disponibles, sinon compte les listes
-  int get total      => nbTotalReel   ?? (presents.length + absents.length);
+  int get total      => nbTotalReel    ?? (presents.length + absents.length);
   int get nbPresents => nbPresentsReel ?? presents.where((e) => e.matricule.isNotEmpty).length;
   int get nbAbsents  => total - nbPresents;
-  double get tauxPresence =>
-      total == 0 ? 0 : (nbPresents / total * 100);
+  double get tauxPresence => total == 0 ? 0 : (nbPresents / total * 100);
   Duration get duree => finLe.difference(debutLe);
   String get dureeLabel {
     final m = duree.inMinutes;
@@ -103,7 +97,6 @@ class SessionArchive {
   }
 
   factory SessionArchive.fromJson(Map<String, dynamic> j) {
-    // Listes détaillées (disponibles après fermeture ou GET detail)
     final presentsList = (j['presents'] as List<dynamic>? ?? [])
         .map((e) => EtudiantPresent.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -111,13 +104,10 @@ class SessionArchive {
         .map((e) => EtudiantAbsent.fromJson(e as Map<String, dynamic>))
         .toList();
 
-    // Le backend retourne ouverteLe/fermeeLe
     final debutStr = (j['debutLe'] ?? j['ouverteLe']) as String?;
     final finStr   = (j['finLe']   ?? j['fermeeLe'])  as String?;
-
-    // Valeurs réelles du backend pour la vue liste
-    final nbPres  = j['nbPresents'] as int?;
-    final nbTotal = j['nbTotal']    as int?;
+    final nbPres   = j['nbPresents'] as int?;
+    final nbTotal  = j['nbTotal']    as int?;
 
     return SessionArchive(
       id:             j['id']         as String? ?? '',
@@ -129,35 +119,31 @@ class SessionArchive {
       finLe:          finStr   != null ? DateTime.parse(finStr)   : DateTime.now(),
       presents:       presentsList,
       absents:        absentsList,
-      // Stocker les compteurs réels pour affichage correct dans la liste
       nbPresentsReel: nbPres,
       nbTotalReel:    nbTotal,
     );
   }
 
-  // Utilisé pour ajouter localement après fermeture de session
   SessionArchive copyWithLists({
     List<EtudiantPresent>? presents,
     List<EtudiantAbsent>? absents,
-  }) {
-    return SessionArchive(
-      id:              id,
-      matiere:         matiere,
-      professeur:      professeur,
-      salle:           salle,
-      type:            type,
-      debutLe:         debutLe,
-      finLe:           finLe,
-      presents:        presents ?? this.presents,
-      absents:         absents  ?? this.absents,
-      nbPresentsReel:  null, // reset car on a les vraies listes
-      nbTotalReel:     null,
-    );
-  }
+  }) => SessionArchive(
+    id:             id,
+    matiere:        matiere,
+    professeur:     professeur,
+    salle:          salle,
+    type:           type,
+    debutLe:        debutLe,
+    finLe:          finLe,
+    presents:       presents ?? this.presents,
+    absents:        absents  ?? this.absents,
+    nbPresentsReel: null,
+    nbTotalReel:    null,
+  );
 }
 
 // ══════════════════════════════════════════════════════════════════
-// PROVIDER HISTORIQUE — données réelles
+// PROVIDER HISTORIQUE
 // ══════════════════════════════════════════════════════════════════
 
 final archivesProvider =
@@ -171,7 +157,6 @@ class ArchivesNotifier extends StateNotifier<List<SessionArchive>> {
 
   ArchivesNotifier(this._ref) : super([]);
 
-  /// Charge l'historique depuis le backend (presence-service)
   Future<void> charger() async {
     if (_loaded) return;
     final user = _ref.read(currentUserProvider);
@@ -185,29 +170,23 @@ class ArchivesNotifier extends StateNotifier<List<SessionArchive>> {
         role:     user.role,
         classeId: user.classeId,
       );
-
       final liste = (resp['sessions'] as List<dynamic>? ?? [])
           .map((e) => SessionArchive.fromJson(e as Map<String, dynamic>))
           .toList();
-
       state   = liste;
       _loaded = true;
-    } catch (_) {
-      // En cas d'erreur réseau on garde la liste vide
-    }
+    } catch (_) {}
   }
 
-  /// Ajoute une session locale juste après fermeture (avant rechargement)
   void ajouter(SessionArchive archive) {
     state = [archive, ...state];
   }
 
-  /// Force le rechargement au prochain appel
   void invalider() => _loaded = false;
 }
 
 // ══════════════════════════════════════════════════════════════════
-// GÉNÉRATION PDF
+// GÉNÉRATION PDF — SmartCampus
 // ══════════════════════════════════════════════════════════════════
 
 Future<Uint8List> genererPdfPresence(SessionArchive a) async {
@@ -220,6 +199,11 @@ Future<Uint8List> genererPdfPresence(SessionArchive a) async {
       '${a.debutLe.hour.toString().padLeft(2, '0')}:'
       '${a.debutLe.minute.toString().padLeft(2, '0')}';
 
+  // Couleurs SmartCampus
+  const bleuMarine  = PdfColor.fromInt(0xFF0B1120);
+  const cyan        = PdfColor.fromInt(0xFF1E88C8);
+  const orange      = PdfColor.fromInt(0xFFF97316);
+
   pdf.addPage(
     pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
@@ -230,18 +214,59 @@ Future<Uint8List> genererPdfPresence(SessionArchive a) async {
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text('EduNotify',
-                  style: pw.TextStyle(
-                      fontSize: 22,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.orange700)),
-              pw.Text('Rapport de présence',
+              // Logo texte SmartCampus
+              pw.Row(
+                children: [
+                  pw.Text('Smart',
+                      style: pw.TextStyle(
+                          fontSize: 20,
+                          fontWeight: pw.FontWeight.bold,
+                          color: bleuMarine)),
+                  pw.Text('Campus',
+                      style: pw.TextStyle(
+                          fontSize: 20,
+                          fontWeight: pw.FontWeight.bold,
+                          color: orange)),
+                ],
+              ),
+              pw.Text('Rapport de Présence',
                   style: pw.TextStyle(
                       fontSize: 13, color: PdfColors.grey600)),
             ],
           ),
-          pw.Divider(color: PdfColors.orange200, thickness: 1.5),
-          pw.SizedBox(height: 6),
+          // Bande cyan/orange
+          pw.SizedBox(height: 4),
+          pw.Container(
+            height: 3,
+            decoration: const pw.BoxDecoration(
+              gradient: pw.LinearGradient(
+                colors: [cyan, orange, cyan],
+              ),
+            ),
+          ),
+          pw.SizedBox(height: 8),
+        ],
+      ),
+      footer: (_) => pw.Column(
+        children: [
+          pw.Divider(color: PdfColors.grey300),
+          pw.SizedBox(height: 4),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'Document généré par SmartCampus — '
+                    '${DateTime.now().day.toString().padLeft(2, '0')}/'
+                    '${DateTime.now().month.toString().padLeft(2, '0')}/'
+                    '${DateTime.now().year}',
+                style: pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
+              ),
+              pw.Text(
+                'Learn · Grow · Succeed',
+                style: pw.TextStyle(fontSize: 9, color: PdfColors.grey400),
+              ),
+            ],
+          ),
         ],
       ),
       build: (_) => [
@@ -251,6 +276,7 @@ Future<Uint8List> genererPdfPresence(SessionArchive a) async {
           decoration: pw.BoxDecoration(
             color: PdfColors.grey100,
             borderRadius: pw.BorderRadius.circular(8),
+            border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
           ),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -317,9 +343,7 @@ Future<Uint8List> genererPdfPresence(SessionArchive a) async {
                         '${e.confirmedAt!.minute.toString().padLeft(2, '0')}'
                         : '--:--',
                   ),
-                  _pdfCell(
-                    e.methode == 'manuel' ? 'Manuel' : 'Code OTP',
-                  ),
+                  _pdfCell(e.methode == 'manuel' ? 'Manuel' : 'Code OTP'),
                 ],
               )),
             ],
@@ -359,13 +383,7 @@ Future<Uint8List> genererPdfPresence(SessionArchive a) async {
           ),
         ],
 
-        pw.SizedBox(height: 32),
-        pw.Divider(color: PdfColors.grey300),
-        pw.Text(
-          'Document généré par EduNotify — ${DateTime.now().day}/'
-              '${DateTime.now().month}/${DateTime.now().year}',
-          style: pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
-        ),
+        pw.SizedBox(height: 16),
       ],
     ),
   );
@@ -384,8 +402,7 @@ pw.Widget _pdfInfoRow(String label, String value) => pw.Padding(
               color: PdfColors.grey600,
               fontWeight: pw.FontWeight.bold)),
     ),
-    pw.Text(value,
-        style: const pw.TextStyle(fontSize: 11)),
+    pw.Text(value, style: const pw.TextStyle(fontSize: 11)),
   ]),
 );
 
@@ -416,14 +433,13 @@ pw.Widget _pdfStat(String label, String value, PdfColor color) =>
 pw.Widget _pdfHeader(String text) => pw.Padding(
   padding: const pw.EdgeInsets.all(6),
   child: pw.Text(text,
-      style: pw.TextStyle(
-          fontSize: 10, fontWeight: pw.FontWeight.bold)),
+      style:
+      pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
 );
 
 pw.Widget _pdfCell(String text) => pw.Padding(
   padding: const pw.EdgeInsets.all(6),
-  child: pw.Text(text,
-      style: const pw.TextStyle(fontSize: 10)),
+  child: pw.Text(text, style: const pw.TextStyle(fontSize: 10)),
 );
 
 // ══════════════════════════════════════════════════════════════════
@@ -441,7 +457,6 @@ class _HistoriqueScreenState extends ConsumerState<HistoriqueScreen> {
   @override
   void initState() {
     super.initState();
-    // Charge les archives au premier affichage
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(archivesProvider.notifier).charger();
     });
@@ -505,7 +520,6 @@ class _HistoriqueScreenState extends ConsumerState<HistoriqueScreen> {
 class _ArchiveTile extends ConsumerWidget {
   final SessionArchive archive;
   final VoidCallback onTap;
-
   const _ArchiveTile({required this.archive, required this.onTap});
 
   Color _tauxColor(double t) {
@@ -545,17 +559,11 @@ class _ArchiveTile extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(archive.matiere,
-                      style: TextStyle(
-                          color: context.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700)),
-                ),
-              ],
-            ),
+            Text(archive.matiere,
+                style: TextStyle(
+                    color: context.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -630,7 +638,7 @@ class _DetailSessionScreenState
   late TabController _tabs;
   bool _generatingPdf = false;
   bool _loading       = true;
-  SessionArchive? _detail; // version enrichie depuis le backend
+  SessionArchive? _detail;
 
   @override
   void initState() {
@@ -645,7 +653,6 @@ class _DetailSessionScreenState
     super.dispose();
   }
 
-  /// Charge le vrai détail depuis GET /presence/sessions/:id/detail
   Future<void> _chargerDetail() async {
     setState(() => _loading = true);
     try {
@@ -657,9 +664,9 @@ class _DetailSessionScreenState
         classeId: user.classeId,
       );
 
-      final s        = resp['session'] as Map<String, dynamic>? ?? {};
-      final rawPres  = (s['presents'] as List<dynamic>? ?? []);
-      final rawAbs   = (s['absents']  as List<dynamic>? ?? []);
+      final s       = resp['session'] as Map<String, dynamic>? ?? {};
+      final rawPres = (s['presents'] as List<dynamic>? ?? []);
+      final rawAbs  = (s['absents']  as List<dynamic>? ?? []);
 
       final presents = rawPres.map((p) {
         final m = p as Map<String, dynamic>;
@@ -694,7 +701,7 @@ class _DetailSessionScreenState
           debutLe:    debutStr != null
               ? DateTime.parse(debutStr)
               : widget.archive.debutLe,
-          finLe:      finStr != null
+          finLe: finStr != null
               ? DateTime.parse(finStr)
               : widget.archive.finLe,
           presents: presents,
@@ -703,7 +710,6 @@ class _DetailSessionScreenState
         _loading = false;
       });
     } catch (_) {
-      // Fallback sur l'archive locale si erreur
       setState(() {
         _detail  = widget.archive;
         _loading = false;
@@ -718,9 +724,9 @@ class _DetailSessionScreenState
       final pdfBytes = await genererPdfPresence(archive);
       await Printing.layoutPdf(
         onLayout: (_) async => pdfBytes,
-        name: 'presence_${archive.matiere.replaceAll(' ', '_')}_'
-            '${archive.debutLe.day}'
-            '${archive.debutLe.month}'
+        name: 'Rapport_appel_${archive.matiere.replaceAll(' ', '_')}_'
+            '${archive.debutLe.day.toString().padLeft(2, '0')}-'
+            '${archive.debutLe.month.toString().padLeft(2, '0')}-'
             '${archive.debutLe.year}.pdf',
       );
     } catch (e) {
@@ -754,17 +760,16 @@ class _DetailSessionScreenState
       appBar: AppBar(
         title: Text(a.matiere),
         actions: [
-          // ── Bouton télécharger PDF ──────────────────────────────
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: _generatingPdf
                 ? const Padding(
               padding: EdgeInsets.all(14),
               child: SizedBox(
-                width: 20, height: 20,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2),
-              ),
+                  width: 20,
+                  height: 20,
+                  child:
+                  CircularProgressIndicator(strokeWidth: 2)),
             )
                 : IconButton(
               icon: const Icon(Icons.picture_as_pdf_outlined),
@@ -783,7 +788,6 @@ class _DetailSessionScreenState
       ),
       body: Column(
         children: [
-          // Résumé
           Container(
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(16),
@@ -798,8 +802,7 @@ class _DetailSessionScreenState
                   children: [
                     _ResumeItem(
                       label: s.rate,
-                      value:
-                      '${a.tauxPresence.toStringAsFixed(0)}%',
+                      value: '${a.tauxPresence.toStringAsFixed(0)}%',
                       color: a.tauxPresence >= 75
                           ? AppColors.green
                           : a.tauxPresence >= 50
@@ -827,38 +830,31 @@ class _DetailSessionScreenState
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: a.total == 0
-                        ? 0
-                        : a.nbPresents / a.total,
-                    backgroundColor:
-                    AppColors.red.withValues(alpha: 0.2),
+                    value: a.total == 0 ? 0 : a.nbPresents / a.total,
+                    backgroundColor: AppColors.red.withValues(alpha: 0.2),
                     valueColor: const AlwaysStoppedAnimation<Color>(
                         AppColors.green),
                     minHeight: 6,
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Bouton téléchargement visible dans le résumé aussi
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed:
-                    _generatingPdf ? null : _telechargerPdf,
+                    onPressed: _generatingPdf ? null : _telechargerPdf,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.orange,
-                      side: const BorderSide(
-                          color: AppColors.orange),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 10),
+                      side: const BorderSide(color: AppColors.orange),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                     icon: _generatingPdf
                         ? const SizedBox(
-                        width: 16, height: 16,
+                        width: 16,
+                        height: 16,
                         child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: AppColors.orange))
-                        : const Icon(
-                        Icons.picture_as_pdf_outlined,
+                        : const Icon(Icons.picture_as_pdf_outlined,
                         size: 18),
                     label: Text(_generatingPdf
                         ? 'Génération...'
@@ -868,8 +864,6 @@ class _DetailSessionScreenState
               ],
             ),
           ),
-
-          // Onglets
           Expanded(
             child: TabBarView(
               controller: _tabs,
@@ -905,16 +899,15 @@ class _ListePresents extends ConsumerWidget {
     final s = ref.watch(stringsProvider);
     if (presents.isEmpty) {
       return Center(
-        child: Text(s.nonePresent,
-            style: TextStyle(color: context.textMuted)),
-      );
+          child: Text(s.nonePresent,
+              style: TextStyle(color: context.textMuted)));
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: presents.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (_, i) {
-        final e = presents[i];
+        final e  = presents[i];
         final dt = e.confirmedAt;
         final h  = dt != null ? dt.hour.toString().padLeft(2, '0') : '--';
         final m  = dt != null ? dt.minute.toString().padLeft(2, '0') : '--';
@@ -965,9 +958,8 @@ class _ListeAbsents extends ConsumerWidget {
     final s = ref.watch(stringsProvider);
     if (absents.isEmpty) {
       return Center(
-        child: Text(s.noneAbsent,
-            style: TextStyle(color: context.textMuted)),
-      );
+          child: Text(s.noneAbsent,
+              style: TextStyle(color: context.textMuted)));
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
@@ -1023,7 +1015,8 @@ class _EtudiantTile extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 36, height: 36,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
@@ -1056,12 +1049,8 @@ class _EtudiantTile extends StatelessWidget {
 class _ResumeItem extends StatelessWidget {
   final String label, value;
   final Color color;
-
-  const _ResumeItem({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _ResumeItem(
+      {required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -1075,8 +1064,8 @@ class _ResumeItem extends StatelessWidget {
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 2),
           Text(label,
-              style: TextStyle(
-                  color: context.textMuted, fontSize: 11)),
+              style:
+              TextStyle(color: context.textMuted, fontSize: 11)),
         ],
       ),
     );

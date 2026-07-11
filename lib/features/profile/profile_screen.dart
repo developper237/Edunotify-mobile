@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/app_theme.dart';
 import '../../core/locale.dart';
 import '../../core/router.dart';
@@ -124,6 +125,22 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 24),
+
+                  // ── Établissement (admin uniquement) ──
+                  if (user.role == 'admin') ...[
+                    _Section(
+                      titre: 'Établissement',
+                      enfants: [
+                        _ActionTile(
+                          icon: Icons.image_outlined,
+                          label: 'Charger le logo de l\'établissement',
+                          onTap: () => _choisirEtUploaderLogo(context, ref),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
                   _Section(
                     titre: s.settings,
                     enfants: [
@@ -182,6 +199,44 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  // ── Sélection + upload du logo établissement ────────────────────
+  Future<void> _choisirEtUploaderLogo(BuildContext context, WidgetRef ref) async {
+    final picker = ImagePicker();
+    final XFile? fichier = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      imageQuality: 85,
+    );
+    if (fichier == null) return;
+
+    final bytes = await fichier.readAsBytes();
+
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await ref.read(authProvider.notifier).uploaderLogoEtablissement(
+        fileBytes: bytes,
+        filename:  fichier.name,
+      );
+      if (!context.mounted) return;
+      Navigator.pop(context); // ferme le loader
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logo de l\'établissement mis à jour !')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // ferme le loader
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : ${e.toString()}')),
+      );
+    }
+  }
+
   void _confirmLogout(BuildContext context, WidgetRef ref, Strings s) {
     final isDark = ref.read(themeModeProvider) == ThemeMode.dark;
     showDialog(
@@ -190,15 +245,17 @@ class ProfileScreen extends ConsumerWidget {
         backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(s.logoutConfirm, style: TextStyle(color: isDark ? AppColors.textPrimary : AppColors.lightTextPrimary)),
-        content: Text(s.logoutMessage, style: TextStyle(color: isDark ? AppColors.textSecondary : AppColors.lightTextSecondary)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(s.cancel, style: const TextStyle(color: AppColors.textMuted))),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(s.cancel),
+          ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               ref.read(authProvider.notifier).logout();
             },
-            child: Text(s.disconnect, style: const TextStyle(color: AppColors.red)),
+            child: Text(s.logout, style: const TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -206,62 +263,83 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   void _showChangePwd(BuildContext context, WidgetRef ref, Strings s) {
-    final ancien = TextEditingController();
+    final ancien  = TextEditingController();
     final nouveau = TextEditingController();
     final confirm = TextEditingController();
-    final isDark = ref.read(themeModeProvider) == ThemeMode.dark;
+    final isDark  = ref.read(themeModeProvider) == ThemeMode.dark;
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(s.changePassword, style: TextStyle(color: isDark ? AppColors.textPrimary : AppColors.lightTextPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 24),
-            _PwdField(controller: ancien, hint: s.currentPassword),
-            const SizedBox(height: 12),
-            _PwdField(controller: nouveau, hint: s.newPassword),
-            const SizedBox(height: 12),
-            _PwdField(controller: confirm, hint: s.confirmNewPwd),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () async {
-                  if (nouveau.text.isEmpty || ancien.text.isEmpty) return;
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+        title: Text(
+          s.changePassword,
+          style: TextStyle(
+            color: isDark ? AppColors.textPrimary : AppColors.lightTextPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.9,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _PwdField(controller: ancien, hint: s.currentPassword),
+              const SizedBox(height: 5),
+              _PwdField(controller: nouveau, hint: s.newPassword),
+              const SizedBox(height: 5),
+              _PwdField(controller: confirm, hint: s.confirmNewPwd),
+              const SizedBox(height: 5),
+              SizedBox(
+                width: double.infinity,
+                height: 30,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (nouveau.text.isEmpty || ancien.text.isEmpty) return;
 
-                  if (nouveau.text != confirm.text) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Les mots de passe ne correspondent pas")));
-                    return;
-                  }
+                    if (nouveau.text != confirm.text) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Les mots de passe ne correspondent pas")),
+                      );
+                      return;
+                    }
 
-                  // Logique d'appel API via le notifier
-                  try {
-                    await ref.read(authProvider.notifier).updatePassword(
-                      oldPassword: ancien.text,
-                      newPassword: nouveau.text,
-                    );
-                    Navigator.pop(context); // Fermer le bottom sheet
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Mot de passe mis à jour !")));
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erreur: ${e.toString()}")));
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.forRole(ref.read(currentUserProvider)!.role),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    try {
+                      await ref.read(authProvider.notifier).updatePassword(
+                        oldPassword: ancien.text,
+                        newPassword: nouveau.text,
+                      );
+                      if (!context.mounted) return;
+                      Navigator.pop(context); // Fermer le popup
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Mot de passe mis à jour !")),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Erreur: ${e.toString()}")),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.forRole(ref.read(currentUserProvider)!.role),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    s.save,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
-                child: Text(s.save, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(s.cancel, style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.lightTextMuted)),
+              ),
+            ],
+          ),
         ),
       ),
     );

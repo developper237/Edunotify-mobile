@@ -1,73 +1,119 @@
+import 'dart:io'; // Import nécessaire pour vérifier la plateforme
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-
-import 'core/app_theme.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'core/theme.dart';
 import 'core/router.dart';
-import 'core/api_client.dart';
 
-// Fonction pour gérer les messages en arrière-plan
+// 1. Canal de notification pour Android (doit matcher ton firebase.js backend)
+const AndroidNotificationChannel channel = AndroidNotificationChannel(
+  'edunotify_default', // ID identique au backend
+  'Alertes SmartCampus', // Nom visible dans les réglages du téléphone
+  description: 'Notifications importantes (Appel, Notes, Rapports)',
+  importance: Importance.max,
+  playSound: true,
+);
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+FlutterLocalNotificationsPlugin();
+
+// Gestionnaire des notifications en arrière-plan
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  try {
-    await Firebase.initializeApp();
-    print("Message reçu en arrière-plan : ${message.messageId}");
-  } catch (e) {
-    print("Erreur background Firebase : $e");
-  }
+  // On initialise Firebase pour pouvoir traiter les données en arrière-plan si besoin
+  await Firebase.initializeApp();
 }
 
 void main() async {
-  // 1. Assurer l'initialisation des widgets Flutter
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Initialiser Firebase
   try {
+    // Initialiser Firebase (S'adapte à la plateforme)
     await Firebase.initializeApp();
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-    await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    print("Firebase initialisé avec succès");
+
+    // Configuration spécifique aux plateformes mobiles (Android / iOS)
+    if (Platform.isAndroid || Platform.isIOS) {
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+      // 2. Créer le canal sur l'appareil (Spécifique Android)
+      if (Platform.isAndroid) {
+        await flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+            ?.createNotificationChannel(channel);
+      }
+
+      // 3. Demander les permissions Android 13+ et iOS
+      FirebaseMessaging messaging = FirebaseMessaging.instance;
+      await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      // Initialisation des notifications locales pour le mode "App ouverte"
+      const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+      const InitializationSettings initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+      await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+      // 4. Écouter les notifications quand l'app est ouverte (Foreground)
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        RemoteNotification? notification = message.notification;
+        AndroidNotification? android = message.notification?.android;
+
+        if (notification != null && android != null) {
+          flutterLocalNotificationsPlugin.show(
+            notification.hashCode,
+            notification.title,
+            notification.body,
+            NotificationDetails(
+              android: AndroidNotificationDetails(
+                channel.id,
+                channel.name,
+                channelDescription: channel.description,
+                icon: android.smallIcon ?? '@mipmap/ic_launcher',
+                importance: Importance.max,
+                priority: Priority.high,
+                playSound: true,
+              ),
+            ),
+          );
+        }
+      });
+    }
   } catch (e) {
-    debugPrint("ERREUR INITIALISATION FIREBASE : $e");
+    debugPrint("Erreur d'initialisation Firebase : $e");
+    // L'application continuera de tourner même si Firebase échoue (ex: sur Windows)
   }
 
-  // 3. VÉRIFICATION DE LA CONNEXION (C'est ici que la magie opère)
-  // On vérifie si un token existe dans le stockage local
-  final bool loggedIn = await ApiClient.isLoggedIn();
-
-  // 4. Lancer l'application
   runApp(
-    ProviderScope(
-      overrides: [
-        // Si tu as un provider qui gère l'état d'authentification,
-        // tu peux l'initialiser ici. Sinon, le router s'en chargera.
-      ],
-      child: const EduNotifyApp(),
+    const ProviderScope(
+      child: SmartCampusApp(),
     ),
   );
 }
 
-class EduNotifyApp extends ConsumerWidget {
-  const EduNotifyApp({super.key});
+class SmartCampusApp extends ConsumerWidget {
+  const SmartCampusApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Le routerProvider doit utiliser la logique de redirection
-    // basée sur la présence du token (ApiClient.isLoggedIn)
+    // routerProvider doit être défini dans ton fichier core/router.dart
     final router = ref.watch(routerProvider);
-    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
-      title: 'EduNotify',
+      title: 'SmartCampus',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: themeMode,
+      // ── C'était ça qui manquait : sans themeMode, Flutter utilise
+      // ThemeMode.system par défaut et ignore complètement le toggle
+      // du profil (themeModeProvider). ──
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: router,
     );
   }

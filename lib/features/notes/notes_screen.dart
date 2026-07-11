@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
 import '../auth/auth_provider.dart';
+import '../../core/widgets/main_layout.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // MODÈLES

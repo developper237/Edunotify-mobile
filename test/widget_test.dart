@@ -1,30 +1,20 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:edunotify_mobile/main.dart';
+// Utilise un import relatif (../lib/) pour éviter les erreurs de nom de package
+import '../lib/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const EduNotifyApp());
+  testWidgets('Test de démarrage SmartCampusApp', (WidgetTester tester) async {
+    // On enveloppe l'application dans un ProviderScope car tu utilises Riverpod
+    await tester.pumpWidget(
+      const ProviderScope(
+        // Si tu as bien nommé ta classe SmartCampusApp dans main.dart, ceci fonctionnera
+        child: SmartCampusApp(),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // On vérifie simplement que l'application s'est construite correctement
+    expect(find.byType(SmartCampusApp), findsOneWidget);
   });
 }

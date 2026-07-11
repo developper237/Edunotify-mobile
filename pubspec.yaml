@@ -1,5 +1,5 @@
-name: edunotify_mobile
-description: "EduNotify — Plateforme académique Cameroun"
+name: SmartCampus
+description: "SmartCampus est une Plateforme de gestion académique au Cameroun"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -15,6 +15,7 @@ dependencies:
   csv: ^6.0.0
   file: ^7.0.1
   url_launcher: ^6.2.0
+  image_picker: ^1.0.7
 
   # Navigation
   go_router: ^14.6.2
@@ -40,7 +41,9 @@ dependencies:
   geolocator: ^14.0.2
   intl: ^0.20.2
   device_info_plus: ^12.4.0
-
+  rename: ^3.1.0
+  #Chatbot
+  google_generative_ai: ^0.4.7
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -54,17 +57,20 @@ flutter:
     - lib/assets/logos/logo_dark.png
     - lib/assets/logos/logo_light.png
     - lib/assets/logos/splash_screen.png
-    - lib/assets/logos/mobile_icon.png
+    - lib/assets/logos/icone_mobile.png
+    - lib/assets/logos/logosmart.png
+    - lib/assets/logos/univ.jpg
+    - lib/assets/tips/
 
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "lib/assets/logos/mobile_icon.png" # Chemin vers mon logo
+  image_path: "lib/assets/logos/splash.png" # Chemin vers mon logo
 flutter_native_splash:
   color: "#ffffff" # Couleur de fond (blanc EduNotify)
-  image: lib/assets/logos/splash_screen.png
+  image: lib/assets/logos/logosmart.png
   android_12:
-    image: lib/assets/logos/splash_screen.png
+    image: lib/assets/logos/logosmart.png
     color: "#ffffff"
   android_gravity: center
   ios_content_mode: center
