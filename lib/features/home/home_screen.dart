@@ -536,11 +536,11 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
           margin: EdgeInsets.fromLTRB(
               desktop ? 32 : 16, 16, desktop ? 32 : 16, 8),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+            color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
+                color: Colors.black.withValues(alpha: isDark ? 0.4:0.08),
                 blurRadius: 25,
                 offset: const Offset(0, 10),
               ),
@@ -898,7 +898,7 @@ class _QActionTileState extends State<_QActionTile>
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+            color: isDark ? const Color(0xFF131629) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             boxShadow: isDark
                 ? []
@@ -1057,7 +1057,7 @@ class _TipCardState extends State<_TipCard>
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+        color: isDark ? const Color(0xFF131629) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: isDark
             ? []
@@ -1662,68 +1662,97 @@ class _SideNav extends StatelessWidget {
   final int index;
   final void Function(int) onTap;
 
-  const _SideNav(
-      {required this.config,
-        required this.index,
-        required this.onTap});
+  const _SideNav({
+    required this.config,
+    required this.index,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool isExtended = MediaQuery.of(context).size.width >= 1200;
+
+    // Couleur principale (Indigo) adaptée au mode sombre
+    final activeColor = isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5);
+    // Couleur de texte/icône quand sélectionné (Blanc en sombre pour plus de contraste)
+    final selectedItemColor = isDark ? Colors.white : const Color(0xFF4F46E5);
+
     return NavigationRail(
       backgroundColor: context.cardColor,
       elevation: 1,
-      extended: MediaQuery.of(context).size.width >= 1200,
+      extended: isExtended,
       selectedIndex: index,
       onDestinationSelected: onTap,
-      indicatorColor:
-      const Color(0xFF1A1A2E).withValues(alpha: 0.08),
-      selectedIconTheme:
-      const IconThemeData(color: Color(0xFF1A1A2E)),
-      unselectedIconTheme:
-      IconThemeData(color: context.textMuted),
-      selectedLabelTextStyle: const TextStyle(
-          color: Color(0xFF1A1A2E), fontWeight: FontWeight.bold),
+
+      // 1. Indicateur de sélection (le fond derrière l'icône)
+      indicatorColor: activeColor.withValues(alpha: 0.1),
+
+      // 2. Thème des icônes
+      selectedIconTheme: IconThemeData(color: activeColor),
+      unselectedIconTheme: IconThemeData(color: context.textMuted),
+
+      // 3. Thème du texte
+      selectedLabelTextStyle: TextStyle(
+          color: activeColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 14
+      ),
+      unselectedLabelTextStyle: TextStyle(
+          color: context.textMuted,
+          fontSize: 13
+      ),
+
+      // 4. LE LOGO (LEADING)
       leading: Column(
         children: [
-          const SizedBox(height: 20),
-          // Remplacement de l'icône par ton logo
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Image.asset(
-              'lib/assets/logos/logosmart.png',
-              width: 150,
-              height: 150,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                width: 38, height: 38,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A2E),
-                  borderRadius: BorderRadius.circular(10),
+          const SizedBox(height: 24),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            padding: EdgeInsets.symmetric(horizontal: isExtended ? 20 : 8),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                'lib/assets/logos/adapter.png', // Retrait du 'lib/' si c'est un asset standard
+                // On ajuste la taille selon si la barre est ouverte ou fermée
+                width: isExtended ? 180 : 42,
+                height: isExtended ? 100 : 42,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 42, height: 42,
+                  decoration: BoxDecoration(
+                    color: activeColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.school_rounded, color: activeColor, size: 24),
                 ),
-                child: const Icon(Icons.school_rounded, color: Colors.white, size: 20),
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
         ],
       ),
-      destinations: config
-          .map((item) => NavigationRailDestination(
-        icon: _BadgeIcon(
+
+      // 5. LES DESTINATIONS (ICONES)
+      destinations: config.map((item) {
+        return NavigationRailDestination(
+          icon: _BadgeIcon(
             icon: item.icon,
             badge: item.badge,
             badgeColor: item.badgeColor,
             selected: false,
-            color: const Color(0xFF1A1A2E)),
-        selectedIcon: _BadgeIcon(
+            color: activeColor, // Utilise la couleur dynamique
+          ),
+          selectedIcon: _BadgeIcon(
             icon: item.icon,
             badge: item.badge,
             badgeColor: item.badgeColor,
             selected: true,
-            color: const Color(0xFF1A1A2E)),
-        label: Text(item.label),
-      ))
-          .toList(),
+            color: activeColor, // Utilise la couleur dynamique
+          ),
+          label: Text(item.label),
+        );
+      }).toList(),
     );
   }
 }

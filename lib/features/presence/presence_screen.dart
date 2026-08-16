@@ -13,6 +13,8 @@ import 'presence_archive.dart';
 import 'pdf_service.dart' as pdf_service;
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:convert';
+import 'package:qr_flutter/qr_flutter.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // MODÈLES & PROVIDERS
@@ -1250,13 +1252,6 @@ class _FormSessionState extends ConsumerState<_FormSession> {
   String? _gpsErreur;
 
   static const _durees = [5, 10, 15, 20, 30];
-  static const _rayons = [
-    _RayonOption(metres: 50,   label: '50 m',  desc: 'Salle de classe'),
-    _RayonOption(metres: 100,  label: '100 m', desc: 'Bâtiment'),
-    _RayonOption(metres: 200,  label: '200 m', desc: 'Campus proche'),
-    _RayonOption(metres: 500,  label: '500 m', desc: 'Grand campus'),
-    _RayonOption(metres: 1000, label: '1 km',  desc: 'Site étendu'),
-  ];
 
   @override
   void dispose() {
@@ -1305,6 +1300,12 @@ class _FormSessionState extends ConsumerState<_FormSession> {
     }
   }
 
+  // ══════════════════════════════════════════════════════════════════
+// FIX Flutter — _FormSessionState._lancer()
+// Remplace la méthode _lancer() dans presence_screen.dart
+// Correction : recapture la position GPS fraîche au moment du lancer
+// ══════════════════════════════════════════════════════════════════
+
   Future<void> _lancer() async {
     if (_matiere.text.trim().isEmpty ||
         _professeur.text.trim().isEmpty ||
@@ -1312,11 +1313,52 @@ class _FormSessionState extends ConsumerState<_FormSession> {
       setState(() => _error = 'Remplis tous les champs obligatoires');
       return;
     }
-    if (_geoActif && (_gpsLat == null || _gpsLng == null)) {
-      setState(() => _error = 'Position GPS non disponible.');
+
+    setState(() { _loading = true; _error = null; });
+
+    double? latFinale = _gpsLat;
+    double? lngFinale = _gpsLng;
+
+    // ✅ Fix : recapturer la position fraîche juste avant l'envoi
+    // évite le cas où le délégué a bougé depuis l'activation du toggle
+    if (_geoActif) {
+      setState(() => _gpsEnCours = true);
+      try {
+        final pos = await _obtenirPosition();
+        if (pos == null) {
+          setState(() {
+            _loading    = false;
+            _gpsEnCours = false;
+            _gpsErreur  = 'Impossible d\'obtenir votre position GPS. '
+                'Vérifiez que la localisation est activée.';
+          });
+          return;
+        }
+        latFinale = pos.latitude;
+        lngFinale = pos.longitude;
+        // Mettre à jour l'affichage
+        setState(() {
+          _gpsLat     = latFinale;
+          _gpsLng     = lngFinale;
+          _gpsEnCours = false;
+        });
+      } catch (e) {
+        setState(() {
+          _loading    = false;
+          _gpsEnCours = false;
+          _gpsErreur  = 'Erreur GPS : ${e.toString()}';
+        });
+        return;
+      }
+    }
+
+    if (_geoActif && (latFinale == null || lngFinale == null)) {
+      setState(() {
+        _loading = false;
+        _error   = 'Position GPS non disponible. Désactivez la géolocalisation ou réessayez.';
+      });
       return;
     }
-    setState(() { _loading = true; _error = null; });
 
     try {
       final user = ref.read(currentUserProvider)!;
@@ -1327,9 +1369,10 @@ class _FormSessionState extends ConsumerState<_FormSession> {
         'type':         _type,
         'dureeMinutes': _duree,
       };
-      if (_geoActif && _gpsLat != null && _gpsLng != null) {
-        body['gpsLat']      = _gpsLat;
-        body['gpsLng']      = _gpsLng;
+
+      if (_geoActif && latFinale != null && lngFinale != null) {
+        body['gpsLat']      = latFinale;
+        body['gpsLng']      = lngFinale;
         body['rayonMetres'] = _rayonMetres;
       }
 
@@ -1342,8 +1385,6 @@ class _FormSessionState extends ConsumerState<_FormSession> {
       );
 
       final session = resp['session'] as Map<String, dynamic>;
-      ref.read(dernierSessionIdProvider.notifier).state =
-      session['id'] as String?;
       ref.read(sessionDataProvider.notifier).state = SessionData(
         code:         session['code'],
         matiere:      session['matiere'],
@@ -1355,7 +1396,6 @@ class _FormSessionState extends ConsumerState<_FormSession> {
         geoActif:     session['geoActif']    as bool? ?? false,
         rayonMetres:  session['rayonMetres'] as int?,
       );
-      ref.invalidate(sessionActiveProvider);
       ref.read(sessionStatusProvider.notifier).state = SessionStatus.active;
       setState(() => _loading = false);
     } on ApiException catch (e) {
@@ -1364,6 +1404,54 @@ class _FormSessionState extends ConsumerState<_FormSession> {
       setState(() { _loading = false; _error = 'Erreur de connexion'; });
     }
   }
+
+// ══════════════════════════════════════════════════════════════════
+// FIX Flutter — _rayons (rayon minimum recommandé 100m)
+// Remplace la liste _rayons dans _FormSessionState
+// ══════════════════════════════════════════════════════════════════
+
+  static const _rayons = [
+    _RayonOption(metres: 100,  label: '100 m',  desc: 'Salle (conseillé)'),
+    _RayonOption(metres: 200,  label: '200 m',  desc: 'Bâtiment'),
+    _RayonOption(metres: 500,  label: '500 m',  desc: 'Campus proche'),
+    _RayonOption(metres: 1000, label: '1 km',   desc: 'Grand campus'),
+  ];
+
+// ══════════════════════════════════════════════════════════════════
+// FIX Flutter — avertissement dans la section géolocalisation
+// Ajoute ce widget dans le Container géolocalisation,
+// juste après le Switch, quand _geoActif == true
+// ══════════════════════════════════════════════════════════════════
+
+// Dans le bloc if (_geoActif && _gpsLat != null && !_gpsEnCours)
+// ajoute AVANT les boutons de rayon :
+
+  Widget _geoWarning(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color:        const Color(0xFFFFF7ED),
+      borderRadius: BorderRadius.circular(8),
+      border:       Border.all(color: const Color(0xFFFED7AA)),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.info_outline, size: 14, color: Color(0xFFEA580C)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'Le GPS en intérieur peut être imprécis (±25m). '
+                'Un rayon de 100m minimum est recommandé.',
+            style: TextStyle(
+              color:    const Color(0xFF92400E),
+              fontSize: 11,
+              height:   1.4,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -1772,7 +1860,18 @@ class _SessionActiveState extends ConsumerState<_SessionActive> {
     _ticker = Stream.periodic(const Duration(seconds: 1), (i) => i);
     _startPolling();
   }
-
+  String _buildQrPayload(SessionData session) {
+    final sessionId = ref.read(dernierSessionIdProvider) ?? '';
+    final user      = ref.read(currentUserProvider)!;
+    return jsonEncode({
+      'sessionId': sessionId,
+      'code':      session.code,
+      'classeId':  user.classeId ?? '',
+      'expiresAt': session.ouverteLe
+          .add(Duration(minutes: session.dureeMinutes))
+          .toIso8601String(),
+    });
+  }
   void _startPolling() {
     Stream.periodic(const Duration(seconds: 10)).listen((_) async {
       if (!mounted) return;
@@ -1925,11 +2024,12 @@ class _SessionActiveState extends ConsumerState<_SessionActive> {
                 const SizedBox(height: 8),
 
                 // Code OTP
+                // ── Code OTP + QR Code ────────────────────────────────────
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 32),
                   decoration: BoxDecoration(
-                    color: context.cardColor,
+                    color:        context.cardColor,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: expired
@@ -1940,31 +2040,30 @@ class _SessionActiveState extends ConsumerState<_SessionActive> {
                   ),
                   child: Column(
                     children: [
+                      // ── Label ─────────────────────────────────────────
                       Text(
                         expired ? s.expired : s.presenceCode,
-                        style: TextStyle(
-                            color: context.textMuted, fontSize: 13),
+                        style: TextStyle(color: context.textMuted, fontSize: 13),
                       ),
                       const SizedBox(height: 12),
+
+                      // ── Code OTP ──────────────────────────────────────
                       Text(
                         session.code,
                         style: TextStyle(
-                          color: expired
-                              ? AppColors.red
-                              : AppColors.orange,
-                          fontSize: 52,
+                          color:      expired ? AppColors.red : AppColors.orange,
+                          fontSize:   52,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 8,
                         ),
                       ),
                       const SizedBox(height: 16),
+
+                      // ── Timer ─────────────────────────────────────────
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          color: (expired
-                              ? AppColors.red
-                              : AppColors.orange)
+                          color: (expired ? AppColors.red : AppColors.orange)
                               .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -1973,50 +2072,74 @@ class _SessionActiveState extends ConsumerState<_SessionActive> {
                           children: [
                             Icon(Icons.timer_outlined,
                                 size: 16,
-                                color: expired
-                                    ? AppColors.red
-                                    : AppColors.orange),
+                                color: expired ? AppColors.red : AppColors.orange),
                             const SizedBox(width: 6),
                             Text(
                               expired
                                   ? s.codeExpired
                                   : '$minutes:$seconds ${s.remaining}',
                               style: TextStyle(
-                                color: expired
-                                    ? AppColors.red
-                                    : AppColors.orange,
-                                fontSize: 14,
+                                color: expired ? AppColors.red : AppColors.orange,
+                                fontSize:   14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      if (session.geoActif) ...[
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color:
-                            AppColors.cyan.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+
+                      // ── Séparateur ────────────────────────────────────
+                      if (!expired) ...[
+                        const SizedBox(height: 24),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
                           child: Row(
-                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.location_on,
-                                  color: AppColors.cyan, size: 13),
-                              const SizedBox(width: 5),
-                              Text(
-                                'Rayon ${session.rayonMetres ?? '?'} m actif',
-                                style: const TextStyle(
-                                    color: AppColors.cyan,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600),
+                              Expanded(child: Divider(color: context.borderColor)),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text('ou scanner',
+                                    style: TextStyle(
+                                        color: context.textMuted, fontSize: 11)),
                               ),
+                              Expanded(child: Divider(color: context.borderColor)),
                             ],
                           ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // ── QR Code ───────────────────────────────────
+                        Text(
+                          'QR Code pour les étudiants hors ligne',
+                          style: TextStyle(
+                              color: context.textMuted, fontSize: 12),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color:        Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: QrImageView(
+                            data: _buildQrPayload(session),
+                            version:   QrVersions.auto,
+                            size:      180,
+                            eyeStyle: const QrEyeStyle(
+                              eyeShape:  QrEyeShape.square,
+                              color:     Colors.black,
+                            ),
+                            dataModuleStyle: const QrDataModuleStyle(
+                              dataModuleShape: QrDataModuleShape.square,
+                              color:           Colors.black,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Valable ${session.dureeMinutes} min · Montrez aux étudiants',
+                          style: TextStyle(
+                              color: context.textMuted, fontSize: 11),
                         ),
                       ],
                     ],

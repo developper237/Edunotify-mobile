@@ -46,6 +46,7 @@ class PublicationResume {
 class NoteDetail {
   final String id;
   final String matiereId;
+  final String? publicationId;
   final String matiere;
   final int coefficient;
   final double? valeur;
@@ -55,6 +56,7 @@ class NoteDetail {
   const NoteDetail({
     required this.id,
     required this.matiereId,
+    this.publicationId,
     required this.matiere,
     required this.coefficient,
     this.valeur,
@@ -65,6 +67,7 @@ class NoteDetail {
   factory NoteDetail.fromJson(Map<String, dynamic> j) => NoteDetail(
     id:          j['id']          as String? ?? '',
     matiereId:   j['matiereId']   as String? ?? '',
+    publicationId: j['publicationId'] as String?,
     matiere:     j['matiere']     as String? ?? '',
     coefficient: j['coefficient'] as int?    ?? 1,
     valeur:      (j['valeur']     as num?)?.toDouble(),
@@ -1052,8 +1055,10 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
         '/academic/requetes',
         data: {
           'noteId':    widget.note.manquante ? null : widget.note.id,
-          'matiereId': widget.note.manquante ? widget.note.matiereId : null,
+          'publicationId': widget.note.manquante ? widget.note.publicationId : null,
+          'matiereId': widget.note.matiereId,
           'motif':     _motifCtrl.text.trim(),
+          'type':      widget.note.manquante ? 'note_absente' : 'contestation',
         },
         userId: user.id, role: user.role,
       );

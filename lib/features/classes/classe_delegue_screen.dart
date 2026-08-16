@@ -31,11 +31,11 @@ class EtudiantClasse {
   });
 
   factory EtudiantClasse.fromJson(Map<String, dynamic> j) => EtudiantClasse(
-    id:        j['id']        as String? ?? '',
-    nom:       j['nom']       as String? ?? '',
-    prenom:    j['prenom']    as String? ?? '',
-    matricule: j['matricule'] as String? ?? '',
-    email:     j['email']     as String? ?? '',
+    id:        j['id']?.toString() ?? '',
+    nom:       j['nom']?.toString() ?? '',
+    prenom:    j['prenom']?.toString() ?? '',
+    matricule: j['matricule']?.toString() ?? '',
+    email:     j['email']?.toString() ?? '',
   );
 }
 
@@ -88,23 +88,36 @@ class ClasseBackendNotifier
   ClasseBackendNotifier(this._ref) : super(const AsyncLoading()) {
     charger();
   }
-
   Future<void> charger() async {
     state = const AsyncLoading();
     try {
-      final user = _ref.read(currentUserProvider);
-      if (user == null) {
-        state = const AsyncData([]);
-        return;
+      // ApiClient.get renvoie déjà le JSON décodé (soit une Map, soit une List)
+      final dynamic resp = await ApiClient.get('/auth/cascade/ma-classe');
+
+      List<dynamic> rawList = [];
+
+      if (resp is List) {
+        // CAS A : Le serveur a renvoyé une liste directe [...]
+        rawList = resp;
+      } else if (resp is Map) {
+        // CAS B : Le serveur a renvoyé un objet {"etudiants": [...]}
+        if (resp.containsKey('etudiants') && resp['etudiants'] is List) {
+          rawList = resp['etudiants'] as List;
+        } else if (resp.containsKey('data') && resp['data'] is List) {
+          // Sécurité supplémentaire pour le format standard
+          rawList = resp['data'] as List;
+        }
       }
-      final resp = await ApiClient.get(
-        '/auth/cascade/ma-classe',
-      );
-      final liste = (resp['etudiants'] as List<dynamic>? ?? [])
+
+      final liste = rawList
           .map((e) => EtudiantClasse.fromJson(e as Map<String, dynamic>))
           .toList();
+
       state = AsyncData(liste);
     } catch (e, st) {
+      debugPrint('Erreur chargement classe: $e');
+      // Pour debug, on affiche le stacktrace complet dans la console
+      debugPrintStack(stackTrace: st);
       state = AsyncError(e, st);
     }
   }

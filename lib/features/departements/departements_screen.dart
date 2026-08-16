@@ -26,18 +26,16 @@ class Departement {
   });
 
   factory Departement.fromJson(Map<String, dynamic> j) {
-    final chefs = j['chefs'] as List? ?? [];
-    final chef = chefs.isNotEmpty ? chefs.first as Map<String, dynamic> : null;
+    final chefs = j['chefs'] as List<dynamic>? ?? [];
+    final chef  = chefs.isNotEmpty ? chefs.first as Map<String, dynamic> : null;
 
     return Departement(
-      id: j['id'] ?? '',
-      nom: j['nom'] ?? '',
-      description: j['description'] ?? '',
-      emailChef: chef?['email'] ?? '',
-      nomChef: chef != null
-          ? '${chef['prenom'] ?? ''} ${chef['nom'] ?? ''}'.trim()
-          : '',
-      nbClasses: (j['_count'] as Map<String, dynamic>?)?['classes'] ?? 0,
+      id:          j['id'] as String,
+      nom:         j['nom'] as String,
+      description: j['description'] as String? ?? '',
+      nomChef:     chef != null ? '${chef['prenom']} ${chef['nom']}' : '',
+      emailChef:   chef?['email'] as String? ?? '',
+      nbClasses:   (j['_count'] as Map<String, dynamic>?)?['classes'] as int? ?? 0,
     );
   }
 }
@@ -75,7 +73,8 @@ class DepartementsNotifier extends StateNotifier<AsyncValue<List<Departement>>> 
   }
 
   void ajouterLocal(Departement dept) {
-    state.whenData((current) => state = AsyncData([dept, ...current]));
+    final current = state.value ?? [];
+    state = AsyncData([dept, ...current]);
   }
 
   void modifierLocal(String id, String nom, String description) {
@@ -460,46 +459,67 @@ class _DeptFormModalState extends State<_DeptFormModal> {
     setState(() => _loading = true);
     try {
       if (widget.dept != null) {
-        await ApiClient.put('/auth/cascade/departement/${widget.dept!.id}', data: {
-          'nom': _nom.text.trim(),
+        // Modification — envoie aussi les champs chef si remplis
+        final data = <String, dynamic>{
+          'nom':         _nom.text.trim(),
           'description': _description.text.trim(),
-        });
+        };
+        // Si l'admin veut changer le chef, les trois champs doivent être remplis
+        final emailChef  = _emailChef.text.trim();
+        final prenomChef = _prenomChef.text.trim();
+        final nomChef    = _nomChef.text.trim();
+        if (emailChef.isNotEmpty || prenomChef.isNotEmpty || nomChef.isNotEmpty) {
+          if (emailChef.isEmpty || prenomChef.isEmpty || nomChef.isEmpty) {
+            setState(() {
+              _loading = false;
+              _error   = 'Remplissez tous les champs du nouveau chef (prénom, nom, email)';
+            });
+            return;
+          }
+          data['emailChef']  = emailChef;
+          data['prenomChef'] = prenomChef;
+          data['nomChef']    = nomChef;
+        }
+        await ApiClient.patch(
+          '/auth/cascade/departement/${widget.dept!.id}',
+          data: data,
+        );
         widget.onModifier?.call(_nom.text.trim(), _description.text.trim());
       } else {
+        // Création
         final resp = await ApiClient.post('/auth/cascade/departement', data: {
-          'nom': _nom.text.trim(),
+          'nom':         _nom.text.trim(),
           'description': _description.text.trim(),
-          'emailChef': _emailChef.text.trim(),
-          'prenomChef': _prenomChef.text.trim(),
-          'nomChef': _nomChef.text.trim(),
+          'emailChef':   _emailChef.text.trim(),
+          'prenomChef':  _prenomChef.text.trim(),
+          'nomChef':     _nomChef.text.trim(),
         });
         widget.onCreer?.call(Departement.fromJson(resp['departement']));
       }
-      setState(() {
-        _loading = false;
-        _done = true;
-      });
+      setState(() { _loading = false; _done = true; });
     } catch (e) {
-      setState(() {
-        _loading = false;
-        _error = e.toString();
-      });
+      setState(() { _loading = false; _error = e.toString(); });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isEdit = widget.dept != null;
+
     return Container(
       decoration: BoxDecoration(
         color: context.cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       ),
-      padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.only(
+        left: 24, right: 24, top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
       child: _done
           ? _SuccessView(
-        titre: widget.dept != null ? 'Mis à jour !' : 'Créé !',
+        titre:   isEdit ? 'Mis à jour !' : 'Créé !',
         message: 'Le département a été enregistré avec succès.',
-        color: AppColors.blue,
+        color:   AppColors.blue,
         onClose: () => Navigator.pop(context),
       )
           : SingleChildScrollView(
@@ -508,29 +528,118 @@ class _DeptFormModalState extends State<_DeptFormModal> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-                child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(color: context.borderColor, borderRadius: BorderRadius.circular(2)))),
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: context.borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
-            Text(widget.dept != null ? 'Modifier' : 'Nouveau Département',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            Text(
+              isEdit ? 'Modifier le Département' : 'Nouveau Département',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 24),
-            _buildField(Icons.edit, "Nom", _nom),
+
+            // ── Infos département ─────────────────────────────
+            _buildField(Icons.edit,        'Nom',         _nom),
             const SizedBox(height: 16),
-            _buildField(Icons.description, "Description", _description, maxLines: 2),
-            if (widget.dept == null) ...[
-              const Divider(height: 40),
-              const Text("Chef de Département", style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              _buildField(Icons.person, "Prénom", _prenomChef),
-              const SizedBox(height: 16),
-              _buildField(Icons.badge, "Nom", _nomChef),
-              const SizedBox(height: 16),
-              _buildField(Icons.email, "Email", _emailChef),
+            _buildField(Icons.description, 'Description', _description, maxLines: 2),
+
+            const Divider(height: 40),
+
+            // ── Chef de département ───────────────────────────
+            Row(
+              children: [
+                const Text('Chef de Département',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                if (isEdit)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.orange.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'optionnel',
+                      style: TextStyle(
+                        color:    AppColors.orange,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
+            if (isEdit) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color:        AppColors.orange.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border:       Border.all(
+                      color: AppColors.orange.withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline,
+                        color: AppColors.orange, size: 15),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Laissez vide pour conserver le chef actuel. '
+                            'Remplissez les 3 champs pour assigner un nouveau chef '
+                            '(un nouveau compte sera créé et les identifiants envoyés par email).',
+                        style: TextStyle(
+                          color:    context.textSecondary,
+                          fontSize: 11,
+                          height:   1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
+
+            const SizedBox(height: 16),
+            _buildField(Icons.person, 'Prénom', _prenomChef),
+            const SizedBox(height: 16),
+            _buildField(Icons.badge,  'Nom',    _nomChef),
+            const SizedBox(height: 16),
+            _buildField(Icons.email,  'Email',  _emailChef),
+
             if (_error != null)
-              Padding(padding: const EdgeInsets.only(top: 16), child: Text(_error!, style: const TextStyle(color: AppColors.red))),
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color:        AppColors.red.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border:       Border.all(
+                        color: AppColors.red.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline,
+                          color: AppColors.red, size: 15),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(_error!,
+                            style: const TextStyle(
+                                color: AppColors.red, fontSize: 13)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
@@ -538,10 +647,18 @@ class _DeptFormModalState extends State<_DeptFormModal> {
               child: ElevatedButton(
                 onPressed: _loading ? null : _save,
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.blue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                  backgroundColor: AppColors.blue,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                ),
                 child: _loading
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("Valider", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    : Text(
+                  isEdit ? 'Mettre à jour' : 'Créer le département',
+                  style: const TextStyle(
+                      color:      Colors.white,
+                      fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],

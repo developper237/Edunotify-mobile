@@ -6,6 +6,7 @@ import 'auth_provider.dart';
 import 'register_screen.dart';
 import 'dart:ui';
 import 'force_change_password_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -247,7 +248,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
 
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 8),
+
+                          // LIEN MOT DE PASSE OUBLIÉ
+                          Align(
+                            alignment: Alignment.center,
+                            child: TextButton(
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(0, 32),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const ForgotPasswordScreen(),
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                'Mot de passe oublié ?',
+                                style: TextStyle(
+                                  color: AppColors.cyan,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
 
                           // BOUTON DE CONNEXION
                           SizedBox(

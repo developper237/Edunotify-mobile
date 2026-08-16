@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'storage.dart';
 import 'dart:convert';
+import 'package:flutter/material.dart'; // Ou package:flutter/widgets.dart
 
 class ApiException implements Exception {
   final String message;
@@ -13,18 +14,14 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
-  // 💡 IP universelle issue de la carte réseau Wi-Fi active
-  // Si non connecté au Wi-Fi,cette valeure peux être remplaceé par 'localhost'
-  //static const String _devHost = '192.168.137.105';
-  static const String _devHost = '192.168.43.252';
-
-  // Définition dynamique des URLs de base pour s'adapter à toutes tes plateformes
-  static String get _baseUrl         => 'http://$_devHost:3001';
-  static String get _presenceBaseUrl => 'http://$_devHost:3004';
-  static String get _notifBaseUrl    => 'http://$_devHost:3003';
-  static String get _academicBaseUrl => 'http://$_devHost:3005';
-  static String get _chatbotBaseUrl  => 'http://$_devHost:8085';
-  static String get _billingBaseUrl  => 'http://$_devHost:3007';
+  // URLs de production — services déployés sur Render
+  static String get _baseUrl         => 'https://smartcampus-auth.onrender.com';
+  static String get _presenceBaseUrl => 'https://presence-service-q9wq.onrender.com';
+  static String get _notifBaseUrl    => 'https://notification-service-1o8a.onrender.com';
+  static String get _academicBaseUrl => 'https://academic-service-f5sm.onrender.com';
+  static String get _chatbotBaseUrl  => 'https://chatbot-service-sh1b.onrender.com';
+  // TODO: remplacer par l'URL Render du billing-service une fois déployé
+  static String get _billingBaseUrl  => 'https://billing-service.onrender.com';
 
   // Initialisation des instances Dio basées sur les getters dynamiques
   static final _dio         = Dio(BaseOptions(baseUrl: _baseUrl, connectTimeout: const Duration(seconds: 10), receiveTimeout: const Duration(seconds: 60)))..interceptors.add(_AuthInterceptor());
@@ -312,15 +309,25 @@ class ApiClient {
 
   static ApiException _handle(DioException e) {
     final data = e.response?.data;
+    final code = data is Map ? data['code'] : null;
     final msg  = data is Map
         ? (data['message'] ?? data['error'] ?? 'Erreur')
         : 'Erreur réseau';
+
+    // Déconnexion automatique si établissement suspendu
+    if (code == 'ETABLISSEMENT_SUSPENDU') {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await Storage.clear();
+      });
+    }
+
     return ApiException(
       msg.toString(),
       statusCode: e.response?.statusCode,
       body: data is Map<String, dynamic> ? data : null,
     );
   }
+
 }
 
 class _AuthInterceptor extends Interceptor {
@@ -333,14 +340,33 @@ class _AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode == 401 && !err.requestOptions.path.contains('/auth/login')) {
+    final data = err.response?.data;
+    final code = data is Map ? data['code'] : null;
+
+    // ── Établissement suspendu → déconnexion immédiate ──────────
+    if (err.response?.statusCode == 403 &&
+        code == 'ETABLISSEMENT_SUSPENDU') {
+      await Storage.clear();
+      // Le router détectera isAuthenticated=false → redirige vers /login
+      handler.next(err);
+      return;
+    }
+
+    // ── Token expiré → tentative de refresh ─────────────────────
+    if (err.response?.statusCode == 401 &&
+        !err.requestOptions.path.contains('/auth/login')) {
       final newToken = await ApiClient._refreshToken();
       if (newToken != null) {
         final options = Options(
           method:  err.requestOptions.method,
-          headers: {...err.requestOptions.headers, 'Authorization': 'Bearer $newToken'},
+          headers: {
+            ...err.requestOptions.headers,
+            'Authorization': 'Bearer $newToken',
+          },
         );
-        final clone = await Dio(BaseOptions(baseUrl: err.requestOptions.baseUrl)).request(
+        final clone = await Dio(
+          BaseOptions(baseUrl: err.requestOptions.baseUrl),
+        ).request(
           err.requestOptions.path,
           data:            err.requestOptions.data,
           queryParameters: err.requestOptions.queryParameters,
@@ -349,6 +375,7 @@ class _AuthInterceptor extends Interceptor {
         return handler.resolve(clone);
       }
     }
+
     handler.next(err);
   }
 }

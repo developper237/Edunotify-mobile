@@ -375,6 +375,7 @@ class _EtabTile extends ConsumerWidget {
   void _showDetailsModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _DetailsModal(etab: etab),
     );
@@ -485,66 +486,70 @@ class _DetailsModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
       decoration: BoxDecoration(
         color: context.cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: context.borderColor, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Container(
-                width: 60, height: 60,
-                decoration: BoxDecoration(color: AppColors.cyan.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
-                child: const Icon(Icons.school_outlined, color: AppColors.cyan, size: 30),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(etab.nom, style: TextStyle(color: context.textPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
-                    Text('Établissement rattaché', style: TextStyle(color: context.textMuted, fontSize: 13)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: context.isDark ? AppColors.dark : AppColors.light,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: context.borderColor),
-            ),
-            child: Row(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: context.borderColor, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 24),
+            Row(
               children: [
-                _statDashboard('Inscrits', '${etab.etudiants}', AppColors.cyan),
-                _statDashboard('Plan', etab.plan.toUpperCase(), etab.isPremium ? AppColors.yellow : AppColors.textMuted),
-                _statDashboard('Statut', etab.actif ? 'Actif' : 'Inactif', etab.actif ? AppColors.green : AppColors.red),
+                Container(
+                  width: 60, height: 60,
+                  decoration: BoxDecoration(color: AppColors.cyan.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
+                  child: const Icon(Icons.school_outlined, color: AppColors.cyan, size: 30),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(etab.nom, style: TextStyle(color: context.textPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
+                      Text('Établissement rattaché', style: TextStyle(color: context.textMuted, fontSize: 13)),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-          const SizedBox(height: 24),
-          _infoRow(context, Icons.map_rounded, 'Localisation', etab.ville),
-          _infoRow(context, Icons.email_rounded, 'Email Administrateur', etab.emailAdmin ?? 'Non renseigné'),
-          _infoRow(context, Icons.fingerprint_rounded, 'Identifiant Unique', etab.id),
-          const SizedBox(height: 30),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.dark, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Fermer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: context.isDark ? AppColors.dark : AppColors.light,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: context.borderColor),
+              ),
+              child: Row(
+                children: [
+                  _statDashboard('Inscrits', '${etab.etudiants}', AppColors.cyan),
+                  _statDashboard('Plan', etab.plan.toUpperCase(), etab.isPremium ? AppColors.yellow : AppColors.textMuted),
+                  _statDashboard('Statut', etab.actif ? 'Actif' : 'Inactif', etab.actif ? AppColors.green : AppColors.red),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            _infoRow(context, Icons.map_rounded, 'Localisation', etab.ville),
+            _infoRow(context, Icons.email_rounded, 'Email Administrateur', etab.emailAdmin ?? 'Non renseigné'),
+            _infoRow(context, Icons.fingerprint_rounded, 'Identifiant Unique', etab.id),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.dark, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Fermer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
