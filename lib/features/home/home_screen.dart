@@ -24,6 +24,7 @@ import '../departements/departements_screen.dart';
 import '../classes/classes_chef_screen.dart';
 import '../rapports/rapport_chef_screen.dart';
 import '../chatbot/chatbot_screen.dart';
+import '../billing/subscription_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // PROVIDERS
@@ -769,7 +770,12 @@ class _QuickActions extends StatelessWidget {
   final void Function(int) goTo;
   const _QuickActions({required this.role, required this.goTo});
 
-  List<_QAction> _actions() {
+  List<_QAction> _actions(BuildContext context) {
+    void ouvrirAbonnement() => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+    );
+
     switch (role) {
       case 'etudiant':
         return [
@@ -799,6 +805,8 @@ class _QuickActions extends StatelessWidget {
           _QAction(Icons.category_rounded, 'Départements', () => goTo(3)),
           _QAction(Icons.bar_chart_rounded, 'Rapports', () => goTo(4)),
           _QAction(Icons.notifications_rounded, 'Notifs', () => goTo(1)),
+          _QAction(Icons.workspace_premium_rounded, 'Abonnement',
+              ouvrirAbonnement),
         ];
       case 'super_admin':
         return [
@@ -806,6 +814,8 @@ class _QuickActions extends StatelessWidget {
           _QAction(Icons.insights_rounded, 'Stats', () => goTo(3)),
           _QAction(Icons.notifications_rounded, 'Notifs', () => goTo(1)),
           _QAction(Icons.person_rounded, 'Profil', () => goTo(4)),
+          _QAction(Icons.workspace_premium_rounded, 'Abonnement',
+              ouvrirAbonnement),
         ];
       default:
         return [];
@@ -814,7 +824,7 @@ class _QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final actions = _actions();
+    final actions = _actions(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final desktop = isDesktop(context);

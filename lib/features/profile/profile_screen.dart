@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/app_theme.dart';
 import '../../core/locale.dart';
-import '../../core/router.dart';
 import '../auth/auth_provider.dart';
+import '../billing/subscription_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -140,6 +140,24 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 24),
                   ],
+
+                  // ── Abonnement (plan + paiement Mobile Money) ──
+                  _Section(
+                    titre: 'Abonnement',
+                    enfants: [
+                      _ActionTile(
+                        icon: Icons.workspace_premium_outlined,
+                        label: 'Mon abonnement',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SubscriptionScreen(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
 
                   _Section(
                     titre: s.settings,

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'chatbot_provider.dart';
-import 'models/chat_message.dart';
 import 'widgets/chat_bubble.dart';
 import '../../core/theme.dart';
 
@@ -155,7 +154,7 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Je suis l\'assistant intégré à SmartCampus comment puis je t\'aider aujourd\'hui ?.',
+              'Je suis l\'assistant intégré à SmartCampus. Comment puis-je t\'aider aujourd\'hui ?',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: context.textMuted,
