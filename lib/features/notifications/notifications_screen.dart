@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../core/locale.dart';
 import '../../core/api_client.dart';
+import '../../core/widgets/ui_kit.dart';
 import '../auth/auth_provider.dart';
 import '../rapports/rapport_chef_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -380,8 +381,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             const SizedBox(height: 8),
             Expanded(
               child: notifsAsync.when(
-                loading: () => const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2)),
+                loading: () => const _NotifsSkeleton(),
                 error: (_, __) => _ErrorState(
                   onRetry: () => ref.read(notifsProvider.notifier).charger(),
                 ),
@@ -393,7 +393,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       : notifs.where((n) => n.categorie == _filtre).toList();
 
                   if (filtered.isEmpty) {
-                    return _EmptyState(label: s.noNotifications);
+                    return EmptyStateView(
+                      icon: Icons.notifications_off_outlined,
+                      title: s.noNotifications,
+                      message: 'Vous serez alerté dès qu\'une nouvelle notification arrivera.',
+                    );
                   }
 
                   return ListView.separated(
@@ -1531,6 +1535,48 @@ class _MiniBadge extends StatelessWidget {
   }
 }
 
+/// Squelette de chargement des notifications (shimmer)
+class _NotifsSkeleton extends StatelessWidget {
+  const _NotifsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: 6,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (_, __) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: context.borderColor),
+        ),
+        child: const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SkeletonBox(width: 40, height: 40, radius: 12),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonBox(width: 90, height: 10, radius: 5),
+                  SizedBox(height: 8),
+                  SkeletonBox(width: double.infinity, height: 13, radius: 6),
+                  SizedBox(height: 6),
+                  SkeletonBox(width: 160, height: 10, radius: 5),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ErrorState extends StatelessWidget {
   final VoidCallback onRetry;
   const _ErrorState({required this.onRetry});
@@ -1550,29 +1596,7 @@ class _ErrorState extends StatelessWidget {
             onPressed: onRetry,
             child: Text('Réessayer',
                 style: TextStyle(color: context.textPrimary)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final String label;
-  const _EmptyState({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.notifications_none_rounded,
-              size: 64, color: context.borderColor),
-          const SizedBox(height: 12),
-          Text(label,
-              style: TextStyle(color: context.textMuted, fontSize: 14)),
-        ],
+          ),        ],
       ),
     );
   }

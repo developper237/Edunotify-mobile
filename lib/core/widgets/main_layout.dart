@@ -16,16 +16,17 @@ class MainLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      // ── LE DÉGRADÉ UNIFORME (Bleu Facebook -> Rose) ──
-      decoration: const BoxDecoration(
+      // ── LE DÉGRADÉ UNIFORME (adapté au thème clair/sombre) ──
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFE7F3FF),
-            Color(0xFFFFF5F7),
-          ],
+          colors: isDark
+              ? const [Color(0xFF1A1A2E), Color(0xFF16162A)]
+              : const [Color(0xFFE7F3FF), Color(0xFFFFF5F7)],
         ),
       ),
       child: Scaffold(

@@ -1,20 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/theme.dart';
 import '../../core/locale.dart';
 import '../../core/api_client.dart';
+import '../../core/widgets/ui_kit.dart';
 import '../auth/auth_provider.dart';
 import '../home/home_screen.dart';
 import 'presence_archive.dart';
 import 'pdf_service.dart' as pdf_service;
-import 'dart:io';
-import 'package:device_info_plus/device_info_plus.dart';
-import 'dart:convert';
-import 'package:qr_flutter/qr_flutter.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // MODÈLES & PROVIDERS
@@ -2017,11 +2017,111 @@ class _SessionActiveState extends ConsumerState<_SessionActive> {
           final seconds = (ttl % 60).toString().padLeft(2, '0');
           final expired = session.isExpired;
 
+          final progress = session.dureeMinutes <= 0
+              ? 0.0
+              : ((session.dureeMinutes * 60 - ttl) /
+                        (session.dureeMinutes * 60))
+                    .clamp(0.0, 1.0);
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
                 const SizedBox(height: 8),
+
+                // ── Indicateur EN DIRECT + progression ───────────────
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: expired
+                        ? AppColors.red.withValues(alpha: 0.08)
+                        : AppColors.green.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: (expired ? AppColors.red : AppColors.green)
+                          .withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          PulseDot(
+                            color: expired ? AppColors.red : AppColors.green,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              expired ? s.codeExpired : s.sessionActive,
+                              style: TextStyle(
+                                color: context.textPrimary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          if (!expired)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.green.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.record_voice_over_outlined,
+                                      size: 12, color: AppColors.green),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'EN DIRECT',
+                                    style: TextStyle(
+                                      color: AppColors.green,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 5,
+                          backgroundColor: context.borderColor,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            expired ? AppColors.red : AppColors.green,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Début',
+                            style: TextStyle(
+                                color: context.textMuted, fontSize: 10),
+                          ),
+                          Text(
+                            '${session.dureeMinutes} min',
+                            style: TextStyle(
+                                color: context.textMuted, fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
 
                 // Code OTP
                 // ── Code OTP + QR Code ────────────────────────────────────

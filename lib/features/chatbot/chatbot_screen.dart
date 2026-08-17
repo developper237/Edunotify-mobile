@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'chatbot_provider.dart';
 import 'widgets/chat_bubble.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/ui_kit.dart';
 
 class ChatbotScreen extends ConsumerStatefulWidget {
   const ChatbotScreen({super.key});
@@ -90,6 +91,7 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
   }
 
   Widget _buildInput() {
+    final isLoading = ref.watch(chatProvider).isLoading;
     return SafeArea(
       top: false,
       child: Container(
@@ -113,17 +115,39 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            IconButton(
-              onPressed: () async {
-                final text = controller.text;
-                if (text.trim().isEmpty) return;
+            const SizedBox(width: 10),
+            // Bouton d'envoi en dégradé
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.cyan, AppColors.blue],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.cyan.withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        final text = controller.text;
+                        if (text.trim().isEmpty) return;
 
-                controller.clear();
-                await ref.read(chatProvider.notifier).send(text);
-              },
-              icon: const Icon(
-                Icons.arrow_upward_rounded,
+                        controller.clear();
+                        await ref.read(chatProvider.notifier).send(text);
+                      },
+                icon: const Icon(
+                  Icons.arrow_upward_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
             ),
           ],
@@ -139,11 +163,31 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.school_outlined,
-              size: 48,
+            // Avatar assistant avec halo dégradé
+            Container(
+              width: 84, height: 84,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [AppColors.cyan, AppColors.violet],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.cyan.withValues(alpha: 0.3),
+                    blurRadius: 24,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.smart_toy_rounded,
+                size: 40,
+                color: Colors.white,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               'Bonjour 😊',
               style: TextStyle(
@@ -165,10 +209,10 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
               spacing: 8,
               runSpacing: 8,
               children: const [
-                _SuggestionChip('Mes absences'),
-                _SuggestionChip('Mes notes'),
-                _SuggestionChip('Mon emploi du temps'),
-                _SuggestionChip('Mes notifications'),
+                _SuggestionChip('Mes absences', Icons.event_busy_outlined),
+                _SuggestionChip('Mes notes', Icons.grade_outlined),
+                _SuggestionChip('Mon emploi du temps', Icons.schedule_outlined),
+                _SuggestionChip('Mes notifications', Icons.notifications_outlined),
               ],
             ),
           ],
@@ -181,15 +225,18 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
 // Composant pour les puces de suggestion cliquables
 class _SuggestionChip extends ConsumerWidget {
   final String text;
+  final IconData icon;
 
-  const _SuggestionChip(this.text);
+  const _SuggestionChip(this.text, this.icon);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ActionChip(
+      avatar: Icon(icon, size: 15, color: AppColors.cyan),
       label: Text(text),
       backgroundColor: context.cardColor,
-      labelStyle: TextStyle(color: context.textPrimary),
+      side: BorderSide(color: context.borderColor),
+      labelStyle: TextStyle(color: context.textPrimary, fontSize: 12),
       onPressed: () async {
         await ref.read(chatProvider.notifier).send(text);
       },

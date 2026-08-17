@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../core/locale.dart';
 import '../../core/api_client.dart';
+import '../../core/widgets/ui_kit.dart';
 import '../auth/auth_provider.dart';
 
 // ══════════════════════════════════════════════════════════════════
@@ -223,7 +224,7 @@ class EtablissementsScreen extends ConsumerWidget {
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
               ),
               child: etabsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator(color: AppColors.cyan)),
+                loading: () => const ListSkeleton(rows: 4),
                 error: (err, _) => Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

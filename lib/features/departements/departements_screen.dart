@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
+import '../../core/widgets/ui_kit.dart';
 import '../auth/auth_provider.dart';
 
 // ══════════════════════════════════════════════════════════════════
@@ -155,7 +156,7 @@ class DepartementsScreen extends ConsumerWidget {
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
               ),
               child: deptsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const ListSkeleton(rows: 4                ),
                 error: (err, _) => _ErrorState(onRetry: () => ref.read(departementsProvider.notifier).charger()),
                 data: (depts) => depts.isEmpty
                     ? _EmptyState(onAction: () => _showAjouterModal(context, ref))

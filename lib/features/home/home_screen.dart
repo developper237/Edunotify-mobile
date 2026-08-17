@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
+import '../../core/widgets/ui_kit.dart';
 import '../auth/auth_provider.dart';
 import '../auth/auth_state.dart';
 
@@ -303,14 +304,28 @@ class _DashboardTab extends ConsumerWidget {
     final maxContentWidth = desktop ? 760.0 : double.infinity;
     final horizontalPad = desktop ? 32.0 : 20.0;
 
+    final accent = _roleAccent(role);
+
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const ChatbotScreen()),
         ),
-        icon: const Icon(Icons.smart_toy_outlined),
+        heroTag: 'chatbot_fab',
+        icon: const Icon(Icons.smart_toy_outlined, size: 19),
         label: const Text('Assistant'),
+        elevation: 0,
+        backgroundColor: context.isDark
+            ? const Color(0xFF1E2235)
+            : Colors.white,
+        foregroundColor: accent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+          side: BorderSide(
+            color: accent.withValues(alpha: 0.4),
+          ),
+        ),
       ),
       body: Container(
         width: double.infinity,
@@ -324,17 +339,36 @@ class _DashboardTab extends ConsumerWidget {
                 : [const Color(0xFFE7F3FF), const Color(0xFFF5F0FF)],
           ),
         ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxContentWidth),
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                const SliverToBoxAdapter(child: SizedBox(height: 10)),
+        child: Stack(
+          children: [
+            // ── Fond ambiant : cercles flous animés ────────────
+            Positioned.fill(
+              child: AmbientBackground(
+                primary: accent,
+                secondary: context.isDark
+                    ? AppColors.violet
+                    : AppColors.cyan,
+              ),
+            ),
+            Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxContentWidth),
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
-                SliverToBoxAdapter(
-                  child: _WelcomeBanner(role: role, user: user),
-                ),
+                    SliverToBoxAdapter(
+                      child: _WelcomeBanner(role: role, user: user),
+                    ),
+
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                          horizontalPad, 24, horizontalPad, 0),
+                      sliver: SliverToBoxAdapter(
+                        child: _StatsStrip(role: role, accent: accent),
+                      ),
+                    ),
 
                 SliverPadding(
                   padding: EdgeInsets.fromLTRB(
@@ -388,9 +422,191 @@ class _DashboardTab extends ConsumerWidget {
 
                 const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
+              ),
             ),
           ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// STATS DU TABLEAU DE BORD (compteurs animés par rôle)
+// ══════════════════════════════════════════════════════════════════
+
+Color _roleAccent(String role) {
+  switch (role) {
+    case 'etudiant':         return AppColors.blue;
+    case 'delegue':          return AppColors.orange;
+    case 'chef_departement': return AppColors.green;
+    case 'admin':            return AppColors.violet;
+    case 'super_admin':      return const Color(0xFFEC4899);
+    default:                 return AppColors.cyan;
+  }
+}
+
+class _StatsStrip extends ConsumerWidget {
+  final String role;
+  final Color accent;
+  const _StatsStrip({required this.role, required this.accent});
+
+  List<_StatData> _stats(BuildContext context, WidgetRef ref) {
+    final nonLues = ref.watch(nonLuesCountProvider);
+    final hasSession = ref.watch(sessionActiveProvider);
+    final isDark = context.isDark;
+    final cardBg = isDark ? const Color(0xFF131629) : Colors.white;
+    final iconBg = accent.withValues(alpha: 0.12);
+    final valueColor = isDark ? Colors.white : const Color(0xFF1A1A2E);
+    final labelColor = isDark ? AppColors.textMuted : AppColors.lightTextMuted;
+
+    List<_StatData> make(List<({IconData icon, int value, String label})> src) =>
+        src.map((s) => _StatData(
+          icon: s.icon,
+          value: s.value,
+          label: s.label,
+          cardBg: cardBg,
+          iconBg: iconBg,
+          accent: accent,
+          valueColor: valueColor,
+          labelColor: labelColor,
+        )).toList();
+
+    switch (role) {
+      case 'etudiant':
+        return make([
+          (icon: Icons.notifications_none_rounded, value: nonLues, label: 'Non lues'),
+          (icon: Icons.how_to_reg_rounded, value: hasSession ? 1 : 0, label: 'Session active'),
+          (icon: Icons.grade_outlined, value: 3, label: 'Nouveautés'),
+        ]);
+      case 'delegue':
+        return make([
+          (icon: Icons.how_to_reg_rounded, value: hasSession ? 1 : 0, label: 'Appel en cours'),
+          (icon: Icons.notifications_none_rounded, value: nonLues, label: 'Non lues'),
+          (icon: Icons.people_outline, value: 2, label: 'Validations'),
+        ]);
+      case 'chef_departement':
+        return make([
+          (icon: Icons.description_outlined, value: nonLues, label: 'Rapports'),
+          (icon: Icons.grade_outlined, value: 2, label: 'Notes à traiter'),
+          (icon: Icons.notifications_none_rounded, value: nonLues, label: 'Non lues'),
+        ]);
+      case 'admin':
+        return make([
+          (icon: Icons.people_outline, value: nonLues, label: 'Utilisateurs'),
+          (icon: Icons.workspace_premium_outlined, value: 1, label: 'Plan actif'),
+          (icon: Icons.notifications_none_rounded, value: nonLues, label: 'Non lues'),
+        ]);
+      default:
+        return make([
+          (icon: Icons.school_outlined, value: 1, label: 'Établissements'),
+          (icon: Icons.workspace_premium_outlined, value: 1, label: 'Plan actif'),
+          (icon: Icons.notifications_none_rounded, value: nonLues, label: 'Non lues'),
+        ]);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = _stats(context, ref);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final desktop = isDesktop(context);
+        final columns = desktop ? 3 : 3;
+        const spacing = 10.0;
+        final tileWidth =
+            (constraints.maxWidth - spacing * (columns - 1)) / columns;
+
+        return Row(
+          children: items
+              .map((s) => Padding(
+                    padding: EdgeInsets.only(
+                        right: s == items.last ? 0 : spacing),
+                    child: SizedBox(
+                      width: tileWidth,
+                      child: _StatTile(data: s),
+                    ),
+                  ))
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
+class _StatData {
+  final IconData icon;
+  final int value;
+  final String label;
+  final Color cardBg, iconBg, accent, valueColor, labelColor;
+  const _StatData({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.cardBg,
+    required this.iconBg,
+    required this.accent,
+    required this.valueColor,
+    required this.labelColor,
+  });
+}
+
+class _StatTile extends StatelessWidget {
+  final _StatData data;
+  const _StatTile({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      decoration: BoxDecoration(
+        color: data.cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: data.accent.withValues(alpha: 0.18),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: data.iconBg,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(data.icon, size: 18, color: data.accent),
+          ),
+          const SizedBox(height: 8),
+          AnimatedCounter(
+            value: data.value,
+            style: TextStyle(
+              color: data.valueColor,
+              fontSize: 19,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            data.label,
+            style: TextStyle(
+              color: data.labelColor,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -1675,8 +1891,6 @@ class _SideNav extends StatelessWidget {
 
     // Couleur principale (Indigo) adaptée au mode sombre
     final activeColor = isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5);
-    // Couleur de texte/icône quand sélectionné (Blanc en sombre pour plus de contraste)
-    final selectedItemColor = isDark ? Colors.white : const Color(0xFF4F46E5);
 
     return NavigationRail(
       backgroundColor: context.cardColor,

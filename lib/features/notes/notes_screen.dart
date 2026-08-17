@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
+import '../../core/widgets/ui_kit.dart';
 import '../auth/auth_provider.dart';
-import '../../core/widgets/main_layout.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // MODÈLES
@@ -450,7 +450,7 @@ class _PublicationsEtudiantTab extends ConsumerWidget {
     final pubs = ref.watch(mesPublicationsProvider);
 
     return pubs.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const ListSkeleton(),
       error: (e, _) => _ErreurView(
         message: 'Impossible de charger les résultats',
         onRetry: () {
@@ -714,7 +714,7 @@ class _BulletinDetailScreenState
           title: Text(widget.publication.titre,
               maxLines: 1, overflow: TextOverflow.ellipsis)),
       body: bulletin.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const ListSkeleton(rows: 3),
         error: (e, _) => _ErreurView(
           message: 'Impossible de charger ce bulletin',
           onRetry: () {
@@ -1186,7 +1186,7 @@ class _RequetesEtudiantTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final requetes = ref.watch(mesRequetesProvider);
     return requetes.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const ListSkeleton(),
       error: (e, _) => _ErreurView(
         message: 'Impossible de charger les requêtes',
         onRetry: () {
@@ -2076,7 +2076,7 @@ class _RequetesChefTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final requetes = ref.watch(requetesChefProvider);
     return requetes.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const ListSkeleton(),
       error: (_, __) => _ErreurView(
         message: 'Impossible de charger les requêtes',
         onRetry: () {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
-import '../auth/auth_provider.dart';
+import '../../core/widgets/ui_kit.dart';
 
 class UtilisateursScreen extends ConsumerStatefulWidget {
   const UtilisateursScreen({super.key});
@@ -143,33 +143,73 @@ class _UtilisateursScreenState extends ConsumerState<UtilisateursScreen> {
         ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const ListSkeleton()
           : _filteredUsers.isEmpty
-          ? const Center(child: Text("Aucun utilisateur trouvé"))
+          ? const EmptyStateView(
+              icon: Icons.people_outline,
+              title: "Aucun utilisateur trouvé",
+              message: "Modifiez votre recherche ou ajoutez de nouveaux utilisateurs.",
+            )
           : ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: _filteredUsers.length,
         itemBuilder: (ctx, i) {
           final u = _filteredUsers[i];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          final role = (u['role'] ?? 'etudiant').toString();
+          final roleColor = AppColors.forRole(role);
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            decoration: BoxDecoration(
+              color: context.cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: context.borderColor),
+            ),
             child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               leading: CircleAvatar(
-                backgroundColor: AppColors.cyan.withOpacity(0.1),
-                child: Text(u['nom']?[0] ?? '?', style: const TextStyle(color: AppColors.cyan, fontWeight: FontWeight.bold)),
+                backgroundColor: roleColor.withValues(alpha: 0.12),
+                child: Text(
+                  '${u['prenom']?[0] ?? u['nom']?[0] ?? '?'}'
+                      .toUpperCase(),
+                  style: TextStyle(
+                    color: roleColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-              title: Text("${u['prenom']} ${u['nom']}", style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text("${u['role']} • ${u['matricule'] ?? 'Pas de matricule'}"),
+              title: Text(
+                "${u['prenom']} ${u['nom']}",
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 3),
+                child: Row(
+                  children: [
+                    TagBadge(label: role, color: roleColor),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        u['matricule'] ?? 'Pas de matricule',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: context.textMuted, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+                    icon: const Icon(Icons.edit_outlined,
+                        color: AppColors.blue),
                     onPressed: () => _editUser(u),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    icon: const Icon(Icons.delete_outline,
+                        color: AppColors.red),
                     onPressed: () => _deleteUser(u['id']),
                   ),
                 ],

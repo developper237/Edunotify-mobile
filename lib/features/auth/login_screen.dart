@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:ui';
 import '../../core/theme.dart';
 import '../../core/locale.dart';
+import '../../core/widgets/ui_kit.dart';
 import 'auth_provider.dart';
-import 'register_screen.dart';
-import 'dart:ui';
-import 'force_change_password_screen.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -157,27 +156,58 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // LOGO CIRCULAIRE
+                          // LOGO CIRCULAIRE avec halo animé
                           Center(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-
-                              ),
-                              child: ClipOval(
-                                child: Image.asset(
-                                  'lib/assets/logos/logosmart.png',
-                                  width:  200, // Un peu plus petit pour le design glass
-                                  height: 200,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => Container(
-                                    width: 100,
-                                    height: 100,
-                                    color: AppColors.cyan.withValues(alpha: 0.2),
-                                    child: const Icon(Icons.school, color: AppColors.cyan, size: 40),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Halo dégradé tournant
+                                SizedBox(
+                                  width: 210, height: 210,
+                                  child: SpinningGlow(
+                                    duration: const Duration(seconds: 14),
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: SweepGradient(
+                                          colors: [
+                                            AppColors.cyan.withValues(alpha: 0.0),
+                                            AppColors.cyan.withValues(alpha: 0.35),
+                                            AppColors.violet.withValues(alpha: 0.35),
+                                            AppColors.cyan.withValues(alpha: 0.0),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.cyan.withValues(alpha: 0.25),
+                                        blurRadius: 30,
+                                        spreadRadius: 2,
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipOval(
+                                    child: Image.asset(
+                                      'lib/assets/logos/logosmart.png',
+                                      width:  168,
+                                      height: 168,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Container(
+                                        width: 100,
+                                        height: 100,
+                                        color: AppColors.cyan.withValues(alpha: 0.2),
+                                        child: const Icon(Icons.school, color: AppColors.cyan, size: 40),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
 
@@ -281,27 +311,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                           const SizedBox(height: 24),
 
-                          // BOUTON DE CONNEXION
-                          SizedBox(
-                            width: double.infinity,
-                            height: 55,
-                            child: ElevatedButton(
-                              onPressed: state.isLoading ? null : _login,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                foregroundColor: Colors.white,
-                                elevation: 8,
-                                shadowColor: AppColors.cyan.withOpacity(0.3),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-                              ),
-                              child: state.isLoading
-                                  ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                                  : Text(s.login, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            ),
+                          // BOUTON DE CONNEXION (dégradé)
+                          GradientButton(
+                            label: s.login,
+                            icon: Icons.login_rounded,
+                            loading: state.isLoading,
+                            onPressed: state.isLoading ? null : _login,
                           ),
 
                           const SizedBox(height: 24),

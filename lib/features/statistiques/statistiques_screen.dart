@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../core/locale.dart';
 import '../../core/api_client.dart';
+import '../../core/widgets/ui_kit.dart';
 import '../auth/auth_provider.dart';
 
 // ══════════════════════════════════════════════════════════════════
@@ -372,21 +373,41 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final intValue = int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    final suffix = value.contains('k') ? 'k' : '';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: context.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.borderColor),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 22),
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
           const Spacer(),
-          Text(value,
-              style: TextStyle(
-                  color: color, fontSize: 20, fontWeight: FontWeight.w700)),
+          AnimatedCounter(
+            value: intValue,
+            formatter: suffix == 'k' ? (n) => '${(n / 1000).toStringAsFixed(1)}k' : null,
+            style: TextStyle(
+                color: color, fontSize: 22, fontWeight: FontWeight.w800),
+          ),
           const SizedBox(height: 2),
           Text(label,
               style: TextStyle(color: context.textMuted, fontSize: 12)),

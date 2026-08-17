@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
+import '../../core/widgets/ui_kit.dart';
 
 // ── Providers pour les listes API ────────────────────────────────
 final departementsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
@@ -321,9 +322,10 @@ class _Page1 extends StatelessWidget {
             obscure: !showPass,
           ),
           const SizedBox(height: 32),
-          ElevatedButton(
+          GradientButton(
+            label: 'Continuer',
+            icon: Icons.arrow_forward_rounded,
             onPressed: onNext,
-            child: const Text('Continuer'),
           ),
         ],
       ),
@@ -444,12 +446,11 @@ class _Page2 extends StatelessWidget {
           ],
 
           const SizedBox(height: 32),
-          ElevatedButton(
+          GradientButton(
+            label: 'Créer mon compte',
+            icon: Icons.check_circle_outline_rounded,
+            loading: loading,
             onPressed: loading ? null : onSubmit,
-            child: loading
-                ? const SizedBox(width: 20, height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.dark))
-                : const Text('Créer mon compte'),
           ),
         ],
       ),

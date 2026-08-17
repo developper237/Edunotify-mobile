@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/app_theme.dart';
 import '../../core/locale.dart';
+import '../../core/widgets/ui_kit.dart';
 import '../auth/auth_provider.dart';
 import '../billing/subscription_screen.dart';
 
@@ -121,6 +122,9 @@ class ProfileScreen extends ConsumerWidget {
                         label: s.statusLabel,
                         value: user.statut == 'actif' ? s.active : s.inactive,
                         valueColor: user.statut == 'actif' ? AppColors.green : AppColors.red,
+                        trailing: user.statut == 'actif'
+                            ? const PulseDot(color: AppColors.green)
+                            : const PulseDot(color: AppColors.red),
                       ),
                     ],
                   ),
@@ -398,7 +402,8 @@ class _InfoTile extends StatelessWidget {
   final IconData icon;
   final String label, value;
   final Color? valueColor;
-  const _InfoTile({required this.icon, required this.label, required this.value, this.valueColor});
+  final Widget? trailing;
+  const _InfoTile({required this.icon, required this.label, required this.value, this.valueColor, this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -413,13 +418,16 @@ class _InfoTile extends StatelessWidget {
             child: Icon(icon, color: isDark ? AppColors.textMuted : AppColors.lightTextMuted, size: 18),
           ),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.lightTextMuted, fontSize: 11)),
-              Text(value, style: TextStyle(color: valueColor ?? (isDark ? AppColors.textPrimary : AppColors.lightTextPrimary), fontSize: 14, fontWeight: FontWeight.w600)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.lightTextMuted, fontSize: 11)),
+                Text(value, style: TextStyle(color: valueColor ?? (isDark ? AppColors.textPrimary : AppColors.lightTextPrimary), fontSize: 14, fontWeight: FontWeight.w600)),
+              ],
+            ),
           ),
+          if (trailing != null) trailing!,
         ],
       ),
     );
