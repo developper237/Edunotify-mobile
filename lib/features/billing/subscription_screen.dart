@@ -19,6 +19,27 @@ class SubscriptionScreen extends ConsumerStatefulWidget {
 }
 
 class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Mon abonnement')),
+      body: const SubscriptionBody(),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CONTENU RÉUTILISABLE (écran Profil + onglet Rapports admin)
+// ══════════════════════════════════════════════════════════════════
+
+class SubscriptionBody extends ConsumerStatefulWidget {
+  const SubscriptionBody({super.key});
+
+  @override
+  ConsumerState<SubscriptionBody> createState() => _SubscriptionBodyState();
+}
+
+class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
   String _planSelectionne = 'pro';
   String _cycle = 'mensuel';
   String? _methode = 'mtn_momo';
@@ -188,11 +209,11 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
         .where((p) => p.code == (abo?.planCode ?? 'free'))
         .firstOrNull;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Mon abonnement')),
-      body: state.isLoading && state.plans.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
+    if (state.isLoading && state.plans.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return RefreshIndicator(
         onRefresh: () => ref.read(billingProvider.notifier).charger(),
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -356,7 +377,6 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
             const SizedBox(height: 30),
           ],
         ),
-      ),
     );
   }
 

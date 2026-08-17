@@ -141,23 +141,25 @@ class ProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 24),
                   ],
 
-                  // ── Abonnement (plan + paiement Mobile Money) ──
-                  _Section(
-                    titre: 'Abonnement',
-                    enfants: [
-                      _ActionTile(
-                        icon: Icons.workspace_premium_outlined,
-                        label: 'Mon abonnement',
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SubscriptionScreen(),
+                  // ── Abonnement (réservé aux admins) ──
+                  if (user.role == 'admin' || user.role == 'super_admin') ...[
+                    _Section(
+                      titre: 'Abonnement',
+                      enfants: [
+                        _ActionTile(
+                          icon: Icons.workspace_premium_outlined,
+                          label: 'Mon abonnement',
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SubscriptionScreen(),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                  ],
 
                   _Section(
                     titre: s.settings,
