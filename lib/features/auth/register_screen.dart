@@ -212,7 +212,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -478,7 +477,6 @@ class _SuccessView extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.green.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.green.withValues(alpha: 0.3)),
                 ),
                 child: const Icon(Icons.mark_email_read_outlined,
                     color: AppColors.green, size: 40),

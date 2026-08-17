@@ -689,8 +689,6 @@ class _EtudiantSessionActiveState
                     decoration: BoxDecoration(
                       color: AppColors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: AppColors.red.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
@@ -1108,8 +1106,6 @@ class _SuccessView extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.green.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                      color: AppColors.green.withValues(alpha: 0.3)),
                 ),
                 child: const Icon(Icons.check_rounded,
                     color: AppColors.green, size: 44),
@@ -1432,7 +1428,6 @@ class _FormSessionState extends ConsumerState<_FormSession> {
     decoration: BoxDecoration(
       color:        const Color(0xFFFFF7ED),
       borderRadius: BorderRadius.circular(8),
-      border:       Border.all(color: const Color(0xFFFED7AA)),
     ),
     child: Row(
       children: [
@@ -1790,8 +1785,6 @@ class _FormSessionState extends ConsumerState<_FormSession> {
                 decoration: BoxDecoration(
                   color: AppColors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: AppColors.red.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -2040,10 +2033,6 @@ class _SessionActiveState extends ConsumerState<_SessionActive> {
                         ? AppColors.red.withValues(alpha: 0.08)
                         : AppColors.green.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: (expired ? AppColors.red : AppColors.green)
-                          .withValues(alpha: 0.35),
-                    ),
                   ),
                   child: Column(
                     children: [
@@ -2131,12 +2120,6 @@ class _SessionActiveState extends ConsumerState<_SessionActive> {
                   decoration: BoxDecoration(
                     color:        context.cardColor,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: expired
-                          ? AppColors.red.withValues(alpha: 0.4)
-                          : AppColors.orange.withValues(alpha: 0.4),
-                      width: 1.5,
-                    ),
                   ),
                   child: Column(
                     children: [
@@ -2380,13 +2363,14 @@ class _SessionActiveState extends ConsumerState<_SessionActive> {
 
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
+                  child: ElevatedButton.icon(
                     onPressed: _fermer,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.red,
-                      side: const BorderSide(color: AppColors.red),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.red,
+                      foregroundColor: Colors.white,
                       padding:
                       const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 0,
                     ),
                     icon: const Icon(Icons.stop_circle_outlined,
                         size: 20),

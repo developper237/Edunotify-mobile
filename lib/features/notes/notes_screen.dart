@@ -1841,13 +1841,13 @@ class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
           ],
 
           SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
+            width: double.infinity,              child: ElevatedButton.icon(
               onPressed: _loading ? null : _choisirFichier,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.cyan,
-                side:    const BorderSide(color: AppColors.cyan),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.cyan,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
+                elevation: 0,
               ),
               icon:  const Icon(Icons.upload_file_rounded, size: 20),
               label: Text(_fichier == null
@@ -2050,7 +2050,6 @@ class _MessageBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color:        color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border:       Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -2418,12 +2417,13 @@ class _TraiterRequeteModalState
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
+                  child: ElevatedButton.icon(
                     onPressed:
                     _loading ? null : () => _traiter('rejetee'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.red,
-                      side: const BorderSide(color: AppColors.red),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.red,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
                     ),
                     icon:  const Icon(Icons.cancel_rounded, size: 18),
                     label: const Text('Rejeter'),

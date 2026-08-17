@@ -435,7 +435,6 @@ class _FormulaireNotifState extends ConsumerState<_FormulaireNotif> {
               decoration: BoxDecoration(
                 color: AppColors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -842,7 +841,6 @@ class _FormulaireSondageState extends ConsumerState<_FormulaireSondage> {
               decoration: BoxDecoration(
                 color: AppColors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -994,7 +992,6 @@ class _SuccessView extends StatelessWidget {
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
-                border: Border.all(color: color.withValues(alpha: 0.3)),
               ),
               child: Icon(icon, color: color, size: 40),
             ),

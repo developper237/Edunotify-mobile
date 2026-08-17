@@ -133,13 +133,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     ref.read(navIndexProvider.notifier).state = i;
 
-    // 1. Refresh des Notifications
-    if (label == 'Notifs') {
-      ref.read(nonLuesCountProvider.notifier).reset();
-      ref.read(notifsProvider.notifier).charger();
-    }
-
-    // 2. Refresh de la Présence / Appel
+    // 1. Refresh de la Présence / Appel
     if (label == 'Présence' || label == 'Appel') {
       ref.invalidate(sessionActiveProvider);
       if (user != null) {
@@ -150,7 +144,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _chargerBadges();
     }
 
-    // 3. NOUVEAU : Refresh des Notes
+    // 2. NOUVEAU : Refresh des Notes
     if (label == 'Notes') {
       if (user != null) {
         // Recharge les publications (résultats)
@@ -163,14 +157,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  // ── NAVBAR ALLÉGÉE : écrans stratégiques uniquement (max 4) ──
+  // Les écrans secondaires vivent dans l'accès rapide de l'accueil.
+  // Les notifications sont accessibles via la cloche en haut à droite.
   List<_NavItem> _navConfig(String role, int nonLues, bool hasSession) {
     switch (role) {
       case 'etudiant':
         return [
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
-          _NavItem(Icons.notifications_rounded, 'Notifs',
-              const NotificationsScreen(),
-              badge: nonLues),
           _NavItem(Icons.how_to_reg_rounded, 'Présence',
               const PresenceScreen(),
               badge: hasSession ? 1 : 0,
@@ -181,41 +175,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       case 'delegue':
         return [
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
-          _NavItem(Icons.notifications_rounded, 'Notifs',
-              const NotificationsScreen(),
-              badge: nonLues),
           _NavItem(Icons.play_circle_filled, 'Appel', const PresenceScreen(),
               badge: hasSession ? 1 : 0,
               badgeColor: const Color(0xFF22C55E)),
-          _NavItem(Icons.history_rounded, 'Historique',
-              const HistoriqueScreen()),
           _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
-          _NavItem(Icons.people_rounded, 'Classe',
-              const ClasseDelegueScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
       case 'chef_departement':
         return [
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
-          _NavItem(Icons.notifications_rounded, 'Notifs',
-              const NotificationsScreen(),
-              badge: nonLues),
           _NavItem(Icons.description_rounded, 'Rapports',
               const RapportsChefScreen()),
-          _NavItem(Icons.class_rounded, 'Classes', const ClassesChefScreen()),
           _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
       case 'admin':
         return [
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
-          _NavItem(Icons.notifications_rounded, 'Notifs',
-              const NotificationsScreen(),
-              badge: nonLues),
           _NavItem(Icons.people_rounded, 'Utilisateurs',
               const UtilisateursScreen()),
-          _NavItem(Icons.category_rounded, 'Départements',
-              const DepartementsScreen()),
           _NavItem(Icons.bar_chart_rounded, 'Rapports',
               const RapportsAdminScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
@@ -223,9 +201,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       case 'super_admin':
         return [
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
-          _NavItem(Icons.notifications_rounded, 'Notifs',
-              const NotificationsScreen(),
-              badge: nonLues),
           _NavItem(Icons.school_rounded, 'Établissements',
               const EtablissementsScreen()),
           _NavItem(Icons.insights_rounded, 'Stats',
@@ -305,8 +280,73 @@ class _DashboardTab extends ConsumerWidget {
     final horizontalPad = desktop ? 32.0 : 20.0;
 
     final accent = _roleAccent(role);
+    final nonLues = ref.watch(nonLuesCountProvider);
 
     return Scaffold(
+      // ── AppBar avec la cloche de notifications (top-right) ──
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          'SmartCampus',
+          style: TextStyle(
+            color: context.textPrimary,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  onPressed: () {
+                    ref.read(nonLuesCountProvider.notifier).reset();
+                    ref.read(notifsProvider.notifier).charger();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const NotificationsScreen()),
+                    );
+                  },
+                  icon: Icon(
+                    Icons.notifications_none_rounded,
+                    color: context.textSecondary,
+                    size: 26,
+                  ),
+                  tooltip: 'Notifications',
+                ),
+                if (nonLues > 0)
+                  Positioned(
+                    right: 2,
+                    top: 4,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: AppColors.red,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: context.cardColor, width: 1.5),
+                      ),
+                      constraints: const BoxConstraints(
+                          minWidth: 17, minHeight: 17),
+                      child: Text(
+                        nonLues > 99 ? '99+' : '$nonLues',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(
           context,
@@ -322,9 +362,6 @@ class _DashboardTab extends ConsumerWidget {
         foregroundColor: accent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30),
-          side: BorderSide(
-            color: accent.withValues(alpha: 0.4),
-          ),
         ),
       ),
       body: Container(
@@ -563,9 +600,6 @@ class _StatTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: data.cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: data.accent.withValues(alpha: 0.18),
-        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -987,51 +1021,59 @@ class _QuickActions extends StatelessWidget {
   const _QuickActions({required this.role, required this.goTo});
 
   List<_QAction> _actions(BuildContext context) {
-    void ouvrirAbonnement() => Navigator.push(
+    // Écrans secondaires (plus dans la navbar) → ouverts en push
+    void ouvrir(Widget screen) => Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+      MaterialPageRoute(builder: (_) => screen),
     );
 
     switch (role) {
       case 'etudiant':
         return [
-          _QAction(Icons.how_to_reg_rounded, 'Présence', () => goTo(2)),
-          _QAction(Icons.grade_rounded, 'Notes', () => goTo(3)),
+          _QAction(Icons.how_to_reg_rounded, 'Présence', () => goTo(1)),
+          _QAction(Icons.grade_rounded, 'Notes', () => goTo(2)),
           _QAction(Icons.notifications_rounded, 'Notifications',
-                  () => goTo(1)),
-          _QAction(Icons.person_rounded, 'Profil', () => goTo(4)),
+                  () => ouvrir(const NotificationsScreen())),
+          _QAction(Icons.person_rounded, 'Profil', () => goTo(3)),
         ];
       case 'delegue':
         return [
-          _QAction(Icons.play_circle_filled, 'Lancer appel', () => goTo(2)),
-          _QAction(Icons.history_rounded, 'Historique', () => goTo(3)),
-          _QAction(Icons.people_rounded, 'Ma classe', () => goTo(5)),
-          _QAction(Icons.notifications_rounded, 'Notifs', () => goTo(1)),
+          _QAction(Icons.play_circle_filled, 'Lancer appel', () => goTo(1)),
+          _QAction(Icons.history_rounded, 'Historique',
+              () => ouvrir(const HistoriqueScreen())),
+          _QAction(Icons.people_rounded, 'Ma classe',
+              () => ouvrir(const ClasseDelegueScreen())),
+          _QAction(Icons.grade_rounded, 'Notes', () => goTo(2)),
         ];
       case 'chef_departement':
         return [
-          _QAction(Icons.description_rounded, 'Rapports', () => goTo(2)),
-          _QAction(Icons.grade_rounded, 'Notes', () => goTo(4)),
-          _QAction(Icons.class_rounded, 'Classes', () => goTo(3)),
-          _QAction(Icons.notifications_rounded, 'Notifs', () => goTo(1)),
+          _QAction(Icons.description_rounded, 'Rapports', () => goTo(1)),
+          _QAction(Icons.grade_rounded, 'Notes', () => goTo(2)),
+          _QAction(Icons.class_rounded, 'Classes',
+              () => ouvrir(const ClassesChefScreen())),
+          _QAction(Icons.notifications_rounded, 'Notifications',
+              () => ouvrir(const NotificationsScreen())),
         ];
       case 'admin':
         return [
-          _QAction(Icons.people_rounded, 'Utilisateurs', () => goTo(2)),
-          _QAction(Icons.category_rounded, 'Départements', () => goTo(3)),
-          _QAction(Icons.bar_chart_rounded, 'Rapports', () => goTo(4)),
-          _QAction(Icons.notifications_rounded, 'Notifs', () => goTo(1)),
+          _QAction(Icons.people_rounded, 'Utilisateurs', () => goTo(1)),
+          _QAction(Icons.bar_chart_rounded, 'Rapports', () => goTo(2)),
+          _QAction(Icons.category_rounded, 'Départements',
+              () => ouvrir(const DepartementsScreen())),
+          _QAction(Icons.notifications_rounded, 'Notifications',
+              () => ouvrir(const NotificationsScreen())),
           _QAction(Icons.workspace_premium_rounded, 'Abonnement',
-              ouvrirAbonnement),
+              () => ouvrir(const SubscriptionScreen())),
         ];
       case 'super_admin':
         return [
-          _QAction(Icons.school_rounded, 'Établissements', () => goTo(2)),
-          _QAction(Icons.insights_rounded, 'Stats', () => goTo(3)),
-          _QAction(Icons.notifications_rounded, 'Notifs', () => goTo(1)),
-          _QAction(Icons.person_rounded, 'Profil', () => goTo(4)),
+          _QAction(Icons.school_rounded, 'Établissements', () => goTo(1)),
+          _QAction(Icons.insights_rounded, 'Stats', () => goTo(2)),
+          _QAction(Icons.notifications_rounded, 'Notifications',
+              () => ouvrir(const NotificationsScreen())),
+          _QAction(Icons.person_rounded, 'Profil', () => goTo(3)),
           _QAction(Icons.workspace_premium_rounded, 'Abonnement',
-              ouvrirAbonnement),
+              () => ouvrir(const SubscriptionScreen())),
         ];
       default:
         return [];
@@ -1468,15 +1510,15 @@ class _TipTextBlock extends StatelessWidget {
 // ACTIVITÉ RÉCENTE
 // ══════════════════════════════════════════════════════════════════
 
-class _ActivityFeed extends StatefulWidget {
+class _ActivityFeed extends ConsumerStatefulWidget {
   final String role;
   const _ActivityFeed({required this.role});
 
   @override
-  State<_ActivityFeed> createState() => _ActivityFeedState();
+  ConsumerState<_ActivityFeed> createState() => _ActivityFeedState();
 }
 
-class _ActivityFeedState extends State<_ActivityFeed>
+class _ActivityFeedState extends ConsumerState<_ActivityFeed>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
 
@@ -1485,8 +1527,15 @@ class _ActivityFeedState extends State<_ActivityFeed>
     super.initState();
     _ctrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 600));
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (mounted) _ctrl.forward();
+    // Charge les vraies notifications (activité récente) depuis le backend
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final user = ref.read(currentUserProvider);
+      if (user == null) return;
+      ref.read(notifsProvider.notifier).charger();
+      Future.delayed(const Duration(milliseconds: 250), () {
+        if (mounted) _ctrl.forward();
+      });
     });
   }
 
@@ -1496,86 +1545,118 @@ class _ActivityFeedState extends State<_ActivityFeed>
     super.dispose();
   }
 
-  List<_ActivityItem> _items() {
-    switch (widget.role) {
-      case 'etudiant':
-        return [
-          _ActivityItem(Icons.grade_outlined, 'Notes publiées',
-              'Résultats S1 disponibles', '10 min', false),
-          _ActivityItem(Icons.how_to_reg_outlined, 'Présence confirmée',
-              'Algorithmique — Salle E302', '2h', true),
-          _ActivityItem(Icons.notifications_outlined,
-              'Nouvelle notification',
-              'Rappel : soutenance la semaine prochaine', 'Hier', true),
-          _ActivityItem(Icons.flag_outlined, 'Requête traitée',
-              'Votre contestation a été acceptée', '2j', true),
-        ];
-      case 'delegue':
-        return [
-          _ActivityItem(Icons.play_circle_outline, 'Appel lancé',
-              'POO · Salle E302 · 28 présents', '1h', true),
-          _ActivityItem(Icons.send_outlined, 'Rapport envoyé',
-              'Chef de département notifié', '3h', true),
-          _ActivityItem(Icons.person_add_outlined, 'Validation manuelle',
-              'Présence validée pour 2 étudiants', 'Hier', true),
-          _ActivityItem(Icons.notifications_outlined,
-              'Notification envoyée',
-              'Classe GL L3 — 31 destinataires', '2j', true),
-        ];
-      case 'chef_departement':
-        return [
-          _ActivityItem(Icons.description_outlined, 'Rapport reçu',
-              'Délégué E302 — Algorithmique · 87%', '30 min', false),
-          _ActivityItem(Icons.check_circle_outline, 'Requête traitée',
-              'Note de Rachel Kuissu corrigée', '2h', true),
-          _ActivityItem(Icons.upload_file_outlined, 'Notes publiées',
-              'Résultats SN S2 — GL L3 · 32 notes', 'Hier', true),
-          _ActivityItem(Icons.notifications_outlined,
-              'Notification envoyée',
-              'Département GI — 47 destinataires', '3j', true),
-        ];
-      default:
-        return [
-          _ActivityItem(Icons.people_outline, 'Utilisateur ajouté',
-              'Nouveau compte étudiant créé', '1h', false),
-          _ActivityItem(Icons.category_outlined,
-              'Département mis à jour',
-              'Génie Logiciel — 3 classes', 'Hier', true),
-          _ActivityItem(Icons.bar_chart_outlined, 'Rapport généré',
-              'Stats mensuelles disponibles', '2j', true),
-        ];
+  // ── Icône selon la catégorie de la notification ───────────────
+  IconData _iconFor(String categorie, {required bool estSondage}) {
+    if (estSondage) return Icons.poll_outlined;
+    switch (categorie) {
+      case 'examen':        return Icons.assignment_outlined;
+      case 'resultat':      return Icons.grade_outlined;
+      case 'cours':         return Icons.school_outlined;
+      case 'urgent':        return Icons.flag_outlined;
+      default:              return Icons.notifications_outlined;
     }
+  }
+
+  // ── Temps relatif lisible ("5 min", "2 h", "Hier") ───────────
+  String _tempsRelatif(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 1) return 'À l\'instant';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min';
+    if (diff.inHours < 24) return '${diff.inHours} h';
+    if (diff.inDays == 1) return 'Hier';
+    if (diff.inDays < 7) return '${diff.inDays} j';
+    return '${date.day}/${date.month}';
   }
 
   @override
   Widget build(BuildContext context) {
-    final items = _items();
-    return Column(
-      children: List.generate(items.length, (i) {
-        final delay = i * 0.12;
-        final begin = delay.clamp(0.0, 1.0);
-        final end = (delay + 0.4).clamp(0.0, 1.0);
+    final notifsAsync = ref.watch(notifsProvider);
 
-        final fade = Tween<double>(begin: 0, end: 1).animate(
-          CurvedAnimation(
-              parent: _ctrl,
-              curve: Interval(begin, end, curve: Curves.easeOut)),
+    return notifsAsync.when(
+      loading: () => const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SkeletonBox(width: double.infinity, height: 58, radius: 14, margin: EdgeInsets.only(bottom: 10)),
+          SkeletonBox(width: double.infinity, height: 58, radius: 14, margin: EdgeInsets.only(bottom: 10)),
+          SkeletonBox(width: double.infinity, height: 58, radius: 14),
+        ],
+      ),
+      error: (_, __) => _ActivityVide(message: 'Impossible de charger l\'activité'),
+      data: (notifs) {
+        // Les 5 dernières notifications = activité récente
+        final recentes = notifs.take(5).toList();
+        if (recentes.isEmpty) {
+          return _ActivityVide(message: 'Aucune activité récente pour le moment');
+        }
+
+        return Column(
+          children: List.generate(recentes.length, (i) {
+            final n = recentes[i];
+            final item = _ActivityItem(
+              _iconFor(n.categorie, estSondage: n.estSondage),
+              n.titre,
+              n.contenu.startsWith('PDF:')
+                  ? "Rapport d'appel reçu"
+                  : n.contenu,
+              _tempsRelatif(n.envoyeLe),
+              n.lue,
+            );
+
+            final delay = i * 0.12;
+            final begin = delay.clamp(0.0, 1.0);
+            final end = (delay + 0.4).clamp(0.0, 1.0);
+            final fade = Tween<double>(begin: 0, end: 1).animate(
+              CurvedAnimation(
+                  parent: _ctrl,
+                  curve: Interval(begin, end, curve: Curves.easeOut)),
+            );
+            final slide = Tween<Offset>(
+                begin: const Offset(0.04, 0), end: Offset.zero)
+                .animate(CurvedAnimation(
+                parent: _ctrl,
+                curve: Interval(begin, end, curve: Curves.easeOut)));
+
+            return FadeTransition(
+              opacity: fade,
+              child: SlideTransition(
+                position: slide,
+                child: _ActivityTile(
+                    item: item, isLast: i == recentes.length - 1),
+              ),
+            );
+          }),
         );
-        final slide = Tween<Offset>(
-            begin: const Offset(0.04, 0), end: Offset.zero)
-            .animate(CurvedAnimation(
-            parent: _ctrl,
-            curve: Interval(begin, end, curve: Curves.easeOut)));
+      },
+    );
+  }
+}
 
-        return FadeTransition(
-          opacity: fade,
-          child: SlideTransition(
-            position: slide,
-            child: _ActivityTile(
-                item: items[i], isLast: i == items.length - 1),
+class _ActivityVide extends StatelessWidget {
+  final String message;
+  const _ActivityVide({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.borderColor),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.hourglass_empty_rounded,
+              size: 20, color: context.textMuted),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(color: context.textMuted, fontSize: 13),
+            ),
           ),
-        );
-      }),
+        ],
+      ),
     );
   }
 }

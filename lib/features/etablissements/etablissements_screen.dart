@@ -196,7 +196,6 @@ class EtablissementsScreen extends ConsumerWidget {
                             decoration: BoxDecoration(
                               color: AppColors.cyan.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.cyan.withValues(alpha: 0.4)),
                             ),
                             child: const Row(
                               children: [
@@ -692,7 +691,7 @@ class _AjouterEtabModalState extends State<_AjouterEtabModal> {
                 decoration: BoxDecoration(
                   color: context.isDark ? AppColors.dark : AppColors.light,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _logoBytes != null ? AppColors.cyan : context.borderColor),
+                  border: Border.all(color: context.borderColor),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,

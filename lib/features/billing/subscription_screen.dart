@@ -337,11 +337,12 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
                   ],
                   if (abo.statut == 'actif' || abo.statut == 'essai')
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: ElevatedButton.icon(
                         onPressed: state.isSubscribing ? null : _annuler,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.red,
-                          side: const BorderSide(color: AppColors.red),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.red,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
                         ),
                         icon: const Icon(Icons.cancel_outlined),
                         label: const Text('Annuler'),

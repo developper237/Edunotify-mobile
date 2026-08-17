@@ -280,7 +280,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
