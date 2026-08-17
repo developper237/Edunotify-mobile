@@ -16,6 +16,7 @@ import '../home/home_screen.dart';
 import 'presence_archive.dart';
 import 'pdf_service.dart' as pdf_service;
 import 'qr_scanner_screen.dart';
+import 'offline_presence.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // MODÈLES & PROVIDERS
@@ -209,8 +210,14 @@ class _PresenceEtudiantState extends ConsumerState<_PresenceEtudiant> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _checkSessionActive());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _checkSessionActive();
+      // Charge les confirmations hors ligne et tente la sync immédiate
+      await rafraichirPendingOffline(ref);
+      if (ref.read(pendingOfflineProvider) > 0) {
+        await synchroniserConfirmationsOffline(ref);
+      }
+    });
   }
 
   @override
@@ -238,6 +245,11 @@ class _PresenceEtudiantState extends ConsumerState<_PresenceEtudiant> {
 
       final session = resp['session'];
       if (session != null) {
+        // En ligne avec une session active : on tente de synchroniser
+        // les confirmations hors ligne pour que le délégué voie l'étudiant.
+        if (ref.read(pendingOfflineProvider) > 0) {
+          await synchroniserConfirmationsOffline(ref);
+        }
         final dejaConfirme = session['dejaConfirme'] as bool? ?? false;
         if (dejaConfirme) {
           ref.read(presenceStatusProvider.notifier).state =
@@ -801,6 +813,123 @@ class _EtudiantSessionActiveState
 
 // ── Historique étudiant ───────────────────────────────────────────
 
+// ── Bandeau scanner QR permanent (étudiant, même hors ligne) ──────
+// Visible en permanence sur l'écran Présence de l'étudiant : il permet
+// de scanner le QR du délégué SANS session active ni connexion. La
+// confirmation est stockée localement puis synchronisée à la reconnexion.
+
+class _BandeauScanOffline extends ConsumerWidget {
+  const _BandeauScanOffline();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pending = ref.watch(pendingOfflineProvider);
+    return Column(
+      children: [
+        // ── Bannière confirmations en attente ─────────────────────
+        if (pending > 0) ...[
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.orange.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.cloud_off_outlined,
+                    color: AppColors.orange, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '$pending confirmation(s) en attente de synchronisation',
+                    style: const TextStyle(fontSize: 12.5, color: AppColors.orange),
+                  ),
+                ),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.orange,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () async {
+                    final n = await synchroniserConfirmationsOffline(ref);
+                    if (!context.mounted) return;
+                    if (n > 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('$n présence(s) synchronisée(s) ✅')),
+                      );
+                    }
+                  },
+                  child: const Text('Synchroniser'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        // ── Carte « Présent ? Scannez le QR » ────────────────────
+        Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: context.cardColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: context.borderColor),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.cyan.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.qr_code_scanner_rounded,
+                    color: AppColors.cyan, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Vous êtes présent ?',
+                        style: TextStyle(
+                            color: context.textPrimary,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Scannez le QR affiché par votre délégué, même sans connexion.',
+                      style: TextStyle(
+                          color: context.textMuted, fontSize: 11.5),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.cyan,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: () => scannerQrOffline(context, ref),
+                icon: const Icon(Icons.qr_code_scanner, size: 17),
+                label: const Text('Scanner',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _EtudiantHistorique extends ConsumerStatefulWidget {
   const _EtudiantHistorique();
 
@@ -834,29 +963,36 @@ class _EtudiantHistoriqueState extends ConsumerState<_EtudiantHistorique> {
       ),
       error: (e, _) => Scaffold(
         appBar: AppBar(title: const Text('Présence')),
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 40, color: context.textMuted),
-              const SizedBox(height: 12),
-              Text('Impossible de charger l\'historique',
-                  style: TextStyle(color: context.textMuted)),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () {
-                  final user = ref.read(currentUserProvider);
-                  if (user != null) {
-                    ref.read(historiqueEtudiantProvider.notifier).charger(
-                      user.id, user.role,
-                      classeId: user.classeId,
-                    );
-                  }
-                },
-                child: const Text('Réessayer'),
+        body: Column(
+          children: [
+            const _BandeauScanOffline(),
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline, size: 40, color: context.textMuted),
+                    const SizedBox(height: 12),
+                    Text('Impossible de charger l\'historique',
+                        style: TextStyle(color: context.textMuted)),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () {
+                        final user = ref.read(currentUserProvider);
+                        if (user != null) {
+                          ref.read(historiqueEtudiantProvider.notifier).charger(
+                            user.id, user.role,
+                            classeId: user.classeId,
+                          );
+                        }
+                      },
+                      child: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       data: (liste) => _EtudiantHistoriqueView(historique: liste),
@@ -896,9 +1032,12 @@ class _EtudiantHistoriqueView extends ConsumerWidget {
       ),
       body: Column(
         children: [
+          // Bandeau scanner QR permanent (même hors ligne)
+          const _BandeauScanOffline(),
+
           // Aucune session en cours
           Container(
-            margin: const EdgeInsets.all(16),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: context.cardColor,
