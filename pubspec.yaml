@@ -44,13 +44,15 @@ dependencies:
   rename: ^3.1.0
   #Chatbot
   google_generative_ai: ^0.4.7
+  #QR Code
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.4.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.13.1
   flutter_native_splash: ^2.4.0
-  qr_flutter: ^4.1.0
 
 flutter:
   uses-material-design: true

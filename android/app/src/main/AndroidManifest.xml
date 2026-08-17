@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- CAMÉRA : indispensable pour le scan QR de présence -->
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- INDISPENSABLE pour Android 13+ (Bannières et Sons) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>

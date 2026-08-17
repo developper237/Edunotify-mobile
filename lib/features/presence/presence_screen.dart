@@ -15,6 +15,7 @@ import '../auth/auth_provider.dart';
 import '../home/home_screen.dart';
 import 'presence_archive.dart';
 import 'pdf_service.dart' as pdf_service;
+import 'qr_scanner_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // MODÈLES & PROVIDERS
@@ -348,6 +349,7 @@ class _EtudiantSessionActiveState
   final _focuses     = List.generate(6, (_) => FocusNode());
   late final Stream<int> _ticker;
   bool    _gpsEnCours = false;
+  bool    _viaQr      = false; // code rempli par scan QR
   String? _gpsErreur;
 
   @override
@@ -376,7 +378,37 @@ class _EtudiantSessionActiveState
     _focuses[0].requestFocus();
     ref.read(presenceStatusProvider.notifier).state = PresenceStatus.idle;
     ref.read(presenceErrorProvider.notifier).state  = null;
-    setState(() { _gpsErreur = null; });
+    setState(() {
+      _gpsErreur = null;
+      _viaQr = false;
+    });
+  }
+
+  // ── Scanner le QR du délégué et remplir le code automatiquement ──
+  void _scannerQr(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => QrScannerScreen(
+          onScanned: (codeScanne) {
+            if (!mounted) return;
+            // Remplit les 6 champs OTP avec le code scanné
+            for (var i = 0; i < 6; i++) {
+              if (i < codeScanne.length) {
+                _controllers[i].text = codeScanne[i];
+              }
+            }
+            ref.read(presenceStatusProvider.notifier).state =
+                PresenceStatus.idle;
+            ref.read(presenceErrorProvider.notifier).state = null;
+            setState(() {
+              _gpsErreur = null;
+              _viaQr = true;
+            });
+          },
+        ),
+      ),
+    );
   }
   Future<String?> _getDeviceId() async {
     try {
@@ -440,6 +472,7 @@ class _EtudiantSessionActiveState
       if (latitude  != null) body['latitude']  = latitude;
       if (longitude != null) body['longitude'] = longitude;
       if (deviceId  != null) body['deviceId']  = deviceId; // ✅ envoyer au backend
+      if (_viaQr) body['methode'] = 'qr'; // traçabilité scan QR
 
       await ApiClient.postPresence(
         '/presence/confirmer',
@@ -704,7 +737,26 @@ class _EtudiantSessionActiveState
                     ),
                   ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
+
+                // ── Scanner le QR du délégué ───────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: expired || _gpsEnCours
+                        ? null
+                        : () => _scannerQr(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.orange,
+                      side: BorderSide(color: AppColors.orange.withValues(alpha: 0.5)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
+                    label: const Text('Scanner le QR du délégué'),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
 
                 SizedBox(
                   width: double.infinity,
