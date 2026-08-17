@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class MainLayout extends StatelessWidget {
   final String title;
@@ -31,6 +32,7 @@ class MainLayout extends StatelessWidget {
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent, // Important !
+        extendBodyBehindAppBar: true, // Le dégradé remonte derrière la barre de statut
         appBar: showAppBar
             ? AppBar(
           title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -38,10 +40,18 @@ class MainLayout extends StatelessWidget {
           elevation: 0,
           centerTitle: false,
           actions: actions,
-          foregroundColor: const Color(0xFF1A1A2E),
+          foregroundColor: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF1A1A2E),
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness:
+                isDark ? Brightness.light : Brightness.dark,
+          ),
         )
             : null,
-        body: child,
+        body: SafeArea(
+          bottom: false,
+          child: child,
+        ),
       ),
     );
   }

@@ -124,7 +124,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             color: isDesktop ? Colors.transparent : context.bgColor,
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+                padding: EdgeInsets.fromLTRB(
+                  40,
+                  MediaQuery.of(context).padding.top + 24,
+                  40,
+                  24,
+                ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(24),
                   child: BackdropFilter(

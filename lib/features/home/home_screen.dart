@@ -282,11 +282,23 @@ class _DashboardTab extends ConsumerWidget {
     final accent = _roleAccent(role);
     final nonLues = ref.watch(nonLuesCountProvider);
 
+    // Hauteur réservée pour la barre de statut (heure, réseau, batterie)
+    final topSafe = MediaQuery.of(context).padding.top;
+
     return Scaffold(
+      // ── Le dégradé remonte derrière la barre de statut (plus de blanc) ──
+      extendBodyBehindAppBar: true,
       // ── AppBar avec la cloche de notifications (top-right) ──
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness:
+              context.isDark ? Brightness.light : Brightness.dark,
+          statusBarBrightness:
+              context.isDark ? Brightness.dark : Brightness.light,
+        ),
         title: Text(
           'SmartCampus',
           style: TextStyle(
@@ -393,7 +405,11 @@ class _DashboardTab extends ConsumerWidget {
                 child: CustomScrollView(
                   physics: const BouncingScrollPhysics(),
                   slivers: [
-                    const SliverToBoxAdapter(child: SizedBox(height: 10)),
+                    // Marge de sécurité : barre de statut (heure, réseau) +
+                    // hauteur de l'AppBar transparente au-dessus
+                    SliverToBoxAdapter(
+                      child: SizedBox(height: topSafe + kToolbarHeight + 12),
+                    ),
 
                     SliverToBoxAdapter(
                       child: _WelcomeBanner(role: role, user: user),
@@ -808,13 +824,11 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
                   right: 20, top: 20,
                   child: _EtablissementLogo(url: widget.user!.etablissementLogo!),
                 ),
-              SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                       // ── Ligne avatar + nom ──────────────────
                       Row(
                         children: [
@@ -895,11 +909,10 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
     );
   }
 }
