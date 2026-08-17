@@ -21,7 +21,7 @@ class ApiClient {
   static String get _academicBaseUrl => 'https://academic-service-f5sm.onrender.com';
   static String get _chatbotBaseUrl  => 'https://chatbot-service-sh1b.onrender.com';
   // TODO: remplacer par l'URL Render du billing-service une fois déployé
-  static String get _billingBaseUrl  => 'https://billing-service.onrender.com';
+  static String get _billingBaseUrl  => 'https://billing-service-36of.onrender.com';
 
   // Initialisation des instances Dio basées sur les getters dynamiques
   static final _dio         = Dio(BaseOptions(baseUrl: _baseUrl, connectTimeout: const Duration(seconds: 10), receiveTimeout: const Duration(seconds: 60)))..interceptors.add(_AuthInterceptor());
