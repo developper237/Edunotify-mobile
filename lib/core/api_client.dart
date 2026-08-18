@@ -1,8 +1,6 @@
-import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'storage.dart';
-import 'dart:convert';
-import 'package:flutter/material.dart'; // Ou package:flutter/widgets.dart
+import 'package:flutter/widgets.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -14,6 +12,19 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
+  // Callback global pour déconnexion forcée (établissement suspendu)
+  static VoidCallback? _onForceLogout;
+  static bool _forceLogoutPending = false;
+  static void setForceLogoutCallback(VoidCallback cb) => _onForceLogout = cb;
+  static void triggerForceLogout() {
+    if (_forceLogoutPending) return;
+    _forceLogoutPending = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _onForceLogout?.call();
+      _forceLogoutPending = false;
+    });
+  }
+
   // URLs de production — services déployés sur Render
   static String get _baseUrl         => 'https://smartcampus-auth.onrender.com';
   static String get _presenceBaseUrl => 'https://presence-service-q9wq.onrender.com';
@@ -318,6 +329,7 @@ class ApiClient {
     if (code == 'ETABLISSEMENT_SUSPENDU') {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await Storage.clear();
+        ApiClient.triggerForceLogout();
       });
     }
 
@@ -347,7 +359,7 @@ class _AuthInterceptor extends Interceptor {
     if (err.response?.statusCode == 403 &&
         code == 'ETABLISSEMENT_SUSPENDU') {
       await Storage.clear();
-      // Le router détectera isAuthenticated=false → redirige vers /login
+      ApiClient.triggerForceLogout();
       handler.next(err);
       return;
     }

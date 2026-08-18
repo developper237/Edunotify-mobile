@@ -6,6 +6,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'core/theme.dart';
 import 'core/router.dart';
+import 'core/api_client.dart';
+import 'features/auth/auth_provider.dart';
 
 // 1. Canal de notification pour Android (doit matcher ton firebase.js backend)
 const AndroidNotificationChannel channel = AndroidNotificationChannel(
@@ -104,6 +106,11 @@ class SmartCampusApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // routerProvider doit être défini dans ton fichier core/router.dart
     final router = ref.watch(routerProvider);
+
+    // Déconnexion forcée quand un établissement est bloqué
+    ApiClient.setForceLogoutCallback(() {
+      ref.read(authProvider.notifier).logoutSilencieux();
+    });
 
     return MaterialApp.router(
       title: 'SmartCampus',
