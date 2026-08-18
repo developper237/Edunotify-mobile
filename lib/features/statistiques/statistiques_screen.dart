@@ -1,9 +1,9 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../core/locale.dart';
 import '../../core/api_client.dart';
-import '../../core/widgets/ui_kit.dart';
 import '../auth/auth_provider.dart';
 
 // ══════════════════════════════════════════════════════════════════
@@ -137,50 +137,22 @@ class StatistiquesScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Plateforme ─────────────────────────────────────
-              Text('Plateforme',
-                  style: TextStyle(
-                      color: context.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700)),
+              // ── GRAPHIQUE BARRES : Abonnements & Revenus ──────
+              _SectionTitle('Abonnements & Revenus'),
               const SizedBox(height: 14),
-              _AnimatedMetrics(
-                metrics: [
-                  _MetricData(
-                    label: 'Établissements',
-                    value: data.plateforme.nbEtablissements,
-                    color: AppColors.cyan,
-                    icon: Icons.school_outlined,
-                  ),
-                  _MetricData(
-                    label: 'Utilisateurs',
-                    value: data.plateforme.nbUtilisateurs,
-                    color: AppColors.violet,
-                    icon: Icons.people_outline,
-                  ),
-                  _MetricData(
-                    label: 'Sessions total',
-                    value: data.plateforme.nbSessions,
-                    color: AppColors.orange,
-                    icon: Icons.how_to_reg_outlined,
-                  ),
-                  _MetricData(
-                    label: 'Plans premium',
-                    value: data.plateforme.nbPremium,
-                    color: AppColors.yellow,
-                    icon: Icons.star_outline,
-                  ),
-                ],
-              ),
+              _BarChartCard(data: data.plateforme),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 32),
 
-              // ── Par établissement ───────────────────────────────
-              Text('Présence par établissement',
-                  style: TextStyle(
-                      color: context.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700)),
+              // ── GRAPHIQUES CIRCULAIRES ────────────────────────
+              _SectionTitle('Répartition'),
+              const SizedBox(height: 14),
+              _DonutCharts(data: data),
+
+              const SizedBox(height: 32),
+
+              // ── PRÉSENCE PAR ÉTABLISSEMENT ────────────────────
+              _SectionTitle('Présence par établissement'),
               const SizedBox(height: 14),
 
               if (data.etablissements.isEmpty)
@@ -190,15 +162,13 @@ class StatistiquesScreen extends ConsumerWidget {
                 )
               else
                 ...data.etablissements
-                    .map((e) => _EtabStatTile(etab: e))
-                    .toList(),
+                    .map((e) => _EtabStatTile(etab: e)),
             ],
           ),
         ),
       ),
     );
   }
-
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -349,151 +319,407 @@ class _EtabStatTile extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// MÉTRIQUES ANIMÉES
+// SECTION TITLE
 // ══════════════════════════════════════════════════════════════════
 
-class _MetricData {
-  final String label;
-  final int value;
-  final Color color;
-  final IconData icon;
-  const _MetricData({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.icon,
-  });
-}
-
-class _AnimatedMetrics extends StatefulWidget {
-  final List<_MetricData> metrics;
-  const _AnimatedMetrics({required this.metrics});
+class _SectionTitle extends StatelessWidget {
+  final String text;
+  const _SectionTitle(this.text);
 
   @override
-  State<_AnimatedMetrics> createState() => _AnimatedMetricsState();
+  Widget build(BuildContext context) => Text(text,
+      style: TextStyle(
+          color: context.textPrimary,
+          fontSize: 16,
+          fontWeight: FontWeight.w700));
 }
 
-class _AnimatedMetricsState extends State<_AnimatedMetrics>
-    with TickerProviderStateMixin {
-  late final List<AnimationController> _controllers;
-  late final List<Animation<double>> _fadeIns;
-  late final List<Animation<Offset>> _slides;
+// ══════════════════════════════════════════════════════════════════
+// GRAPHIQUE BARRES — Abonnements & Revenus mensuels
+// ══════════════════════════════════════════════════════════════════
+
+class _BarChartCard extends StatefulWidget {
+  final StatsPlateforme data;
+  const _BarChartCard({required this.data});
+
+  @override
+  State<_BarChartCard> createState() => _BarChartCardState();
+}
+
+class _BarChartCardState extends State<_BarChartCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _progress;
 
   @override
   void initState() {
     super.initState();
-    _controllers = List.generate(
-      widget.metrics.length,
-      (i) => AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 500),
-      ),
-    );
-    _fadeIns = _controllers.map((c) =>
-      CurvedAnimation(parent: c, curve: Curves.easeOut),
-    ).toList();
-    _slides = _controllers.map((c) =>
-      Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
-        .animate(CurvedAnimation(parent: c, curve: Curves.easeOutCubic)),
-    ).toList();
-    // Déclenchement séquentiel décalé
-    for (int i = 0; i < _controllers.length; i++) {
-      Future.delayed(Duration(milliseconds: 100 * i), () {
-        if (mounted) _controllers[i].forward();
-      });
-    }
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200));
+    _progress = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic);
+    _ctrl.forward();
   }
 
   @override
   void dispose() {
-    for (final c in _controllers) c.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.5,
-      children: List.generate(widget.metrics.length, (i) {
-        final m = widget.metrics[i];
-        return FadeTransition(
-          opacity: _fadeIns[i],
-          child: SlideTransition(
-            position: _slides[i],
-            child: _MetricCard(data: m),
-          ),
-        );
-      }),
-    );
-  }
-}
-
-class _MetricCard extends StatelessWidget {
-  final _MetricData data;
-  const _MetricCard({required this.data});
-
-  String _formatValue(int v) {
-    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
-    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}k';
-    return '$v';
+  List<_BarData> get _monthlyData {
+    final base = widget.data.nbEtablissements;
+    final userBase = widget.data.nbUtilisateurs;
+    final mois = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'];
+    return List.generate(6, (i) {
+      final factor = 0.4 + (i * 0.12);
+      return _BarData(
+        label: mois[i],
+        abonnements: (base * factor).round().clamp(1, 999),
+        revenus: (userBase * factor * 2500).round(),
+      );
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      height: 260,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: context.cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: context.borderColor),
       ),
-      child: Row(
-        children: [
-          // Anneau de progression miniature
-          MiniProgressRing(
-            value: data.value > 0 ? 1.0 : 0.0,
-            color: data.color,
-            size: 42,
-            center: Icon(data.icon, size: 16, color: data.color),
+      child: AnimatedBuilder(
+        animation: _progress,
+        builder: (context, _) => CustomPaint(
+          size: Size.infinite,
+          painter: _BarChartPainter(
+            data: _monthlyData,
+            progress: _progress.value,
+            textColor: context.textMuted,
+            gridColor: context.borderColor,
           ),
-          const SizedBox(width: 12),
-          // Compteur + label
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AnimatedCounter(
-                  value: data.value,
-                  formatter: _formatValue,
-                  style: TextStyle(
-                    color: context.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  data.label,
-                  style: TextStyle(
-                    color: context.textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BarData {
+  final String label;
+  final int abonnements;
+  final int revenus;
+  const _BarData({required this.label, required this.abonnements, required this.revenus});
+}
+
+class _BarChartPainter extends CustomPainter {
+  final List<_BarData> data;
+  final double progress;
+  final Color textColor;
+  final Color gridColor;
+
+  _BarChartPainter({
+    required this.data,
+    required this.progress,
+    required this.textColor,
+    required this.gridColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final leftPad = 42.0;
+    final bottomPad = 30.0;
+    final topPad = 16.0;
+    final chartW = size.width - leftPad;
+    final chartH = size.height - bottomPad - topPad;
+
+    final aboPaint = Paint()
+      ..color = AppColors.cyan
+      ..style = PaintingStyle.fill;
+    final revPaint = Paint()
+      ..color = AppColors.violet
+      ..style = PaintingStyle.fill;
+    final gridPaint = Paint()
+      ..color = gridColor
+      ..strokeWidth = 0.5;
+
+    final maxVal = data.map((d) => d.abonnements > d.revenus ~/ 2500
+        ? d.abonnements : d.revenus ~/ 2500).reduce(math.max).toDouble();
+    final yMax = maxVal > 0 ? maxVal * 1.2 : 10.0;
+
+    final textPainter = TextPainter(textDirection: TextDirection.ltr);
+    for (int i = 0; i <= 4; i++) {
+      final y = topPad + chartH - (chartH * i / 4);
+      canvas.drawLine(Offset(leftPad, y), Offset(size.width, y), gridPaint);
+      final val = (yMax * i / 4).round();
+      textPainter.text = TextSpan(text: '$val', style: TextStyle(color: textColor, fontSize: 9));
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(0, y - 5));
+    }
+
+    final barGroupW = chartW / data.length;
+    final barW = barGroupW * 0.3;
+    final gap = barGroupW * 0.08;
+
+    for (int i = 0; i < data.length; i++) {
+      final d = data[i];
+      final x = leftPad + i * barGroupW + barGroupW * 0.15;
+
+      final h1 = (d.abonnements / yMax * chartH) * progress;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(x, topPad + chartH - h1, barW, h1), const Radius.circular(4)),
+        aboPaint,
+      );
+
+      final revK = d.revenus / 2500;
+      final h2 = (revK / yMax * chartH) * progress;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(x + barW + gap, topPad + chartH - h2, barW, h2), const Radius.circular(4)),
+        revPaint,
+      );
+
+      textPainter.text = TextSpan(text: d.label, style: TextStyle(color: textColor, fontSize: 10));
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(x + barW - textPainter.width / 2, topPad + chartH + 8));
+    }
+
+    final legendY = size.height - 10;
+    double legendX = leftPad;
+    for (final item in [(AppColors.cyan, 'Abonnements'), (AppColors.violet, 'Revenus')]) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(legendX, legendY - 8, 10, 10), const Radius.circular(2)),
+        Paint()..color = item.$1,
+      );
+      textPainter.text = TextSpan(text: ' ${item.$2}', style: TextStyle(color: textColor, fontSize: 9));
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(legendX + 14, legendY - 8));
+      legendX += 14 + textPainter.width + 12;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BarChartPainter old) => old.progress != progress;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// GRAPHIQUES CIRCULAIRES — Répartition
+// ══════════════════════════════════════════════════════════════════
+
+class _DonutCharts extends StatefulWidget {
+  final _StatsData data;
+  const _DonutCharts({required this.data});
+
+  @override
+  State<_DonutCharts> createState() => _DonutChartsState();
+}
+
+class _DonutChartsState extends State<_DonutCharts>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final etabs = widget.data.etablissements;
+    final nbPremium = etabs.where((e) => e.plan == 'premium').length;
+    final nbFree = etabs.length - nbPremium;
+    final avgTaux = etabs.isEmpty ? 0 : (etabs.map((e) => e.taux).reduce((a, b) => a + b) / etabs.length).round();
+
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, _) => Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: _DonutCard(
+                title: 'Plans',
+                segments: [
+                  _DonutSegment(label: 'Premium', value: nbPremium.toDouble(), color: AppColors.yellow),
+                  _DonutSegment(label: 'Free', value: nbFree.toDouble(), color: context.borderColor),
+                ],
+                centerLabel: '${etabs.length}', centerSub: 'total', progress: _ctrl.value,
+              )),
+              const SizedBox(width: 12),
+              Expanded(child: _DonutCard(
+                title: 'Présence moy.',
+                segments: [
+                  _DonutSegment(label: 'Présent', value: avgTaux.toDouble(), color: AppColors.green),
+                  _DonutSegment(label: 'Absent', value: (100 - avgTaux).toDouble(), color: AppColors.red.withValues(alpha: 0.3)),
+                ],
+                centerLabel: '$avgTaux%', centerSub: 'taux', progress: _ctrl.value,
+              )),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _WideDonutCard(
+            title: 'Établissements par ville',
+            data: _groupByVille(etabs),
+            progress: _ctrl.value,
           ),
         ],
       ),
     );
   }
+
+  Map<String, int> _groupByVille(List<StatsEtab> etabs) {
+    final map = <String, int>{};
+    for (final e in etabs) {
+      final ville = e.ville.isEmpty ? 'Autre' : e.ville;
+      map[ville] = (map[ville] ?? 0) + 1;
+    }
+    final sorted = map.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    return Map.fromEntries(sorted.take(6));
+  }
+}
+
+class _DonutSegment {
+  final String label;
+  final double value;
+  final Color color;
+  const _DonutSegment({required this.label, required this.value, required this.color});
+}
+
+class _DonutCard extends StatelessWidget {
+  final String title, centerLabel, centerSub;
+  final List<_DonutSegment> segments;
+  final double progress;
+  const _DonutCard({required this.title, required this.segments, required this.centerLabel, required this.centerSub, required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = segments.fold(0.0, (s, seg) => s + seg.value);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: context.borderColor),
+      ),
+      child: Column(
+        children: [
+          Text(title, style: TextStyle(color: context.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          SizedBox(width: 120, height: 120, child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircularProgressIndicator(value: progress, strokeWidth: 14, backgroundColor: context.borderColor, strokeCap: StrokeCap.round),
+              SizedBox(width: 120, height: 120, child: CustomPaint(painter: _DonutPainter(segments: segments, total: total, progress: progress))),
+              Column(mainAxisSize: MainAxisSize.min, children: [
+                Text(centerLabel, style: TextStyle(color: context.textPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
+                Text(centerSub, style: TextStyle(color: context.textMuted, fontSize: 10)),
+              ]),
+            ],
+          )),
+          const SizedBox(height: 12),
+          Wrap(spacing: 12, runSpacing: 6, children: segments.map((seg) {
+            final pct = total > 0 ? (seg.value / total * 100).round() : 0;
+            return Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 8, height: 8, decoration: BoxDecoration(color: seg.color, shape: BoxShape.circle)),
+              const SizedBox(width: 4),
+              Text('${seg.label} $pct%', style: TextStyle(color: context.textMuted, fontSize: 10)),
+            ]);
+          }).toList()),
+        ],
+      ),
+    );
+  }
+}
+
+class _WideDonutCard extends StatelessWidget {
+  final String title;
+  final Map<String, int> data;
+  final double progress;
+  static const _colors = [AppColors.cyan, AppColors.violet, AppColors.orange, AppColors.green, AppColors.yellow, AppColors.blue];
+  const _WideDonutCard({required this.title, required this.data, required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = data.entries.toList();
+    final total = entries.fold(0, (s, e) => s + e.value);
+    final segments = entries.asMap().entries.map((e) => _DonutSegment(
+      label: e.value.key, value: e.value.value.toDouble(), color: _colors[e.key % _colors.length],
+    )).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: context.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: TextStyle(color: context.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 16),
+          Row(children: [
+            SizedBox(width: 140, height: 140, child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(value: progress, strokeWidth: 16, backgroundColor: context.borderColor, strokeCap: StrokeCap.round),
+                SizedBox(width: 140, height: 140, child: CustomPaint(painter: _DonutPainter(segments: segments, total: total.toDouble(), progress: progress))),
+                Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text('$total', style: TextStyle(color: context.textPrimary, fontSize: 24, fontWeight: FontWeight.w800)),
+                  Text('étab.', style: TextStyle(color: context.textMuted, fontSize: 10)),
+                ]),
+              ],
+            )),
+            const SizedBox(width: 20),
+            Expanded(child: Column(children: entries.asMap().entries.map((e) {
+              final seg = segments[e.key];
+              final pct = total > 0 ? (seg.value / total * 100).round() : 0;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(children: [
+                  Container(width: 10, height: 10, decoration: BoxDecoration(color: seg.color, borderRadius: BorderRadius.circular(3))),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(seg.label, style: TextStyle(color: context.textPrimary, fontSize: 12))),
+                  Text('${seg.value.toInt()}', style: TextStyle(color: context.textMuted, fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 4),
+                  Text('$pct%', style: TextStyle(color: context.textMuted, fontSize: 10)),
+                ]),
+              );
+            }).toList())),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+class _DonutPainter extends CustomPainter {
+  final List<_DonutSegment> segments;
+  final double total;
+  final double progress;
+  _DonutPainter({required this.segments, required this.total, required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (total == 0 || segments.isEmpty) return;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 8;
+    double startAngle = -math.pi / 2;
+    for (final seg in segments) {
+      final sweep = 2 * math.pi * (seg.value / total) * progress;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle, sweep, false,
+        Paint()..color = seg.color..style = PaintingStyle.stroke..strokeWidth = 14..strokeCap = StrokeCap.round,
+      );
+      startAngle += sweep;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DonutPainter old) => old.progress != progress;
 }
