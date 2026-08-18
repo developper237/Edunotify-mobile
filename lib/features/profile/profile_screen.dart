@@ -207,7 +207,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 32),
                   Text(
-                    'EduNotify v2.0',
+                    'SmartCampus v2.0',
                     style: TextStyle(
                       color: (isDark ? AppColors.textMuted : AppColors.lightTextMuted).withValues(alpha: 0.5),
                       fontSize: 11,

@@ -97,7 +97,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (code == 'COMPTE_SUSPENDU') {
         message = 'Votre compte est suspendu. Contactez votre administrateur.';
       } else if (code == 'ETABLISSEMENT_SUSPENDU') {
-        message = 'Votre établissement est suspendu. Contactez le support EduNotify.';
+        message = 'Votre établissement est suspendu. Contactez le support SmartCampus.';
       }
       state = state.copyWith(isLoading: false, error: message);
     } catch (_) {
