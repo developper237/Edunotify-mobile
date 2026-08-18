@@ -144,36 +144,31 @@ class StatistiquesScreen extends ConsumerWidget {
                       fontSize: 16,
                       fontWeight: FontWeight.w700)),
               const SizedBox(height: 14),
-              GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _StatCard(
+              _AnimatedMetrics(
+                metrics: [
+                  _MetricData(
                     label: 'Établissements',
-                    value: '${data.plateforme.nbEtablissements}',
+                    value: data.plateforme.nbEtablissements,
                     color: AppColors.cyan,
-                    icon:  Icons.school_outlined,
+                    icon: Icons.school_outlined,
                   ),
-                  _StatCard(
+                  _MetricData(
                     label: 'Utilisateurs',
-                    value: _formatNb(data.plateforme.nbUtilisateurs),
+                    value: data.plateforme.nbUtilisateurs,
                     color: AppColors.violet,
-                    icon:  Icons.people_outline,
+                    icon: Icons.people_outline,
                   ),
-                  _StatCard(
+                  _MetricData(
                     label: 'Sessions total',
-                    value: _formatNb(data.plateforme.nbSessions),
+                    value: data.plateforme.nbSessions,
                     color: AppColors.orange,
-                    icon:  Icons.how_to_reg_outlined,
+                    icon: Icons.how_to_reg_outlined,
                   ),
-                  _StatCard(
+                  _MetricData(
                     label: 'Plans premium',
-                    value: '${data.plateforme.nbPremium}',
+                    value: data.plateforme.nbPremium,
                     color: AppColors.yellow,
-                    icon:  Icons.star_outline,
+                    icon: Icons.star_outline,
                   ),
                 ],
               ),
@@ -204,10 +199,6 @@ class StatistiquesScreen extends ConsumerWidget {
     );
   }
 
-  String _formatNb(int n) {
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
-    return '$n';
-  }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -358,58 +349,149 @@ class _EtabStatTile extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// STAT CARD
+// MÉTRIQUES ANIMÉES
 // ══════════════════════════════════════════════════════════════════
 
-class _StatCard extends StatelessWidget {
-  final String label, value;
+class _MetricData {
+  final String label;
+  final int value;
   final Color color;
   final IconData icon;
-
-  const _StatCard({
-    required this.label, required this.value,
-    required this.color, required this.icon,
+  const _MetricData({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.icon,
   });
+}
+
+class _AnimatedMetrics extends StatefulWidget {
+  final List<_MetricData> metrics;
+  const _AnimatedMetrics({required this.metrics});
+
+  @override
+  State<_AnimatedMetrics> createState() => _AnimatedMetricsState();
+}
+
+class _AnimatedMetricsState extends State<_AnimatedMetrics>
+    with TickerProviderStateMixin {
+  late final List<AnimationController> _controllers;
+  late final List<Animation<double>> _fadeIns;
+  late final List<Animation<Offset>> _slides;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = List.generate(
+      widget.metrics.length,
+      (i) => AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 500),
+      ),
+    );
+    _fadeIns = _controllers.map((c) =>
+      CurvedAnimation(parent: c, curve: Curves.easeOut),
+    ).toList();
+    _slides = _controllers.map((c) =>
+      Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
+        .animate(CurvedAnimation(parent: c, curve: Curves.easeOutCubic)),
+    ).toList();
+    // Déclenchement séquentiel décalé
+    for (int i = 0; i < _controllers.length; i++) {
+      Future.delayed(Duration(milliseconds: 100 * i), () {
+        if (mounted) _controllers[i].forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers) c.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final intValue = int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-    final suffix = value.contains('k') ? 'k' : '';
+    return GridView.count(
+      crossAxisCount: 2,
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      childAspectRatio: 1.5,
+      children: List.generate(widget.metrics.length, (i) {
+        final m = widget.metrics[i];
+        return FadeTransition(
+          opacity: _fadeIns[i],
+          child: SlideTransition(
+            position: _slides[i],
+            child: _MetricCard(data: m),
+          ),
+        );
+      }),
+    );
+  }
+}
 
+class _MetricCard extends StatelessWidget {
+  final _MetricData data;
+  const _MetricCard({required this.data});
+
+  String _formatValue(int v) {
+    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}k';
+    return '$v';
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: context.cardColor,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.borderColor),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+          // Anneau de progression miniature
+          MiniProgressRing(
+            value: data.value > 0 ? 1.0 : 0.0,
+            color: data.color,
+            size: 42,
+            center: Icon(data.icon, size: 16, color: data.color),
+          ),
+          const SizedBox(width: 12),
+          // Compteur + label
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AnimatedCounter(
+                  value: data.value,
+                  formatter: _formatValue,
+                  style: TextStyle(
+                    color: context.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  data.label,
+                  style: TextStyle(
+                    color: context.textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            child: Icon(icon, color: color, size: 20),
           ),
-          const Spacer(),
-          AnimatedCounter(
-            value: intValue,
-            formatter: suffix == 'k' ? (n) => '${(n / 1000).toStringAsFixed(1)}k' : null,
-            style: TextStyle(
-                color: color, fontSize: 22, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 2),
-          Text(label,
-              style: TextStyle(color: context.textMuted, fontSize: 12)),
         ],
       ),
     );
