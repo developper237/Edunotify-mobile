@@ -26,6 +26,7 @@ import '../classes/classes_chef_screen.dart';
 import '../rapports/rapport_chef_screen.dart';
 import '../chatbot/chatbot_screen.dart';
 import '../billing/subscription_screen.dart';
+import '../leads/leads_admin_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // PROVIDERS
@@ -1082,6 +1083,8 @@ class _QuickActions extends StatelessWidget {
         return [
           _QAction(Icons.school_rounded, 'Établissements', () => goTo(1)),
           _QAction(Icons.insights_rounded, 'Stats', () => goTo(2)),
+          _QAction(Icons.mark_email_unread_rounded, 'Demandes',
+              () => ouvrir(const LeadsAdminScreen())),
           _QAction(Icons.notifications_rounded, 'Notifications',
               () => ouvrir(const NotificationsScreen())),
           _QAction(Icons.person_rounded, 'Profil', () => goTo(3)),
