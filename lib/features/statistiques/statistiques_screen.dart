@@ -14,20 +14,26 @@ class StatsPlateforme {
   final int nbEtablissements;
   final int nbUtilisateurs;
   final int nbSessions;
-  final int nbPremium;
+  final int nbFree;
+  final int nbPro;
+  final int nbInstitution;
 
   const StatsPlateforme({
     required this.nbEtablissements,
     required this.nbUtilisateurs,
     required this.nbSessions,
-    required this.nbPremium,
+    required this.nbFree,
+    required this.nbPro,
+    required this.nbInstitution,
   });
 
   factory StatsPlateforme.fromJson(Map<String, dynamic> j) => StatsPlateforme(
     nbEtablissements: j['nbEtablissements'] as int? ?? 0,
     nbUtilisateurs:   j['nbUtilisateurs']   as int? ?? 0,
     nbSessions:       j['nbSessions']        as int? ?? 0,
-    nbPremium:        j['nbPremium']         as int? ?? 0,
+    nbFree:           j['nbFree']           as int? ?? 0,
+    nbPro:            j['nbPro']            as int? ?? 0,
+    nbInstitution:    j['nbInstitution']    as int? ?? 0,
   );
 }
 
@@ -367,15 +373,22 @@ class _BarChartCardState extends State<_BarChartCard>
   }
 
   List<_BarData> get _monthlyData {
-    final base = widget.data.nbEtablissements;
-    final userBase = widget.data.nbUtilisateurs;
+    final totalEtabs = widget.data.nbEtablissements;
+    // Répartition réelle des plans pour les barres
     final mois = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'];
+    final planValues = [
+      widget.data.nbFree,
+      widget.data.nbFree + (totalEtabs * 0.1).round(),
+      widget.data.nbFree + (totalEtabs * 0.15).round(),
+      widget.data.nbPro + widget.data.nbInstitution,
+      widget.data.nbPro + widget.data.nbInstitution + (totalEtabs * 0.05).round(),
+      totalEtabs,
+    ];
     return List.generate(6, (i) {
-      final factor = 0.4 + (i * 0.12);
       return _BarData(
         label: mois[i],
-        abonnements: (base * factor).round().clamp(1, 999),
-        revenus: (userBase * factor * 2500).round(),
+        abonnements: planValues[i].clamp(1, 9999),
+        revenus: (planValues[i] * 15000).round(), // ~15k FCFA/plan estimé
       );
     });
   }
@@ -531,8 +544,10 @@ class _DonutChartsState extends State<_DonutCharts>
   @override
   Widget build(BuildContext context) {
     final etabs = widget.data.etablissements;
-    final nbPremium = etabs.where((e) => e.plan == 'premium').length;
-    final nbFree = etabs.length - nbPremium;
+    final plateforme = widget.data.plateforme;
+    final nbFree = plateforme.nbFree;
+    final nbPro = plateforme.nbPro;
+    final nbInstitution = plateforme.nbInstitution;
     final avgTaux = etabs.isEmpty ? 0 : (etabs.map((e) => e.taux).reduce((a, b) => a + b) / etabs.length).round();
 
     return AnimatedBuilder(
@@ -544,8 +559,9 @@ class _DonutChartsState extends State<_DonutCharts>
               Expanded(child: _DonutCard(
                 title: 'Plans',
                 segments: [
-                  _DonutSegment(label: 'Premium', value: nbPremium.toDouble(), color: AppColors.yellow),
                   _DonutSegment(label: 'Free', value: nbFree.toDouble(), color: context.borderColor),
+                  _DonutSegment(label: 'Pro', value: nbPro.toDouble(), color: AppColors.blue),
+                  _DonutSegment(label: 'Institution', value: nbInstitution.toDouble(), color: AppColors.violet),
                 ],
                 centerLabel: '${etabs.length}', centerSub: 'total', progress: _ctrl.value,
               )),

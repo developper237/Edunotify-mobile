@@ -33,7 +33,9 @@ class Etablissement {
     this.logoUrl,
   });
 
-  bool get isPremium => plan == 'premium';
+  bool get isPremium => plan == 'pro' || plan == 'institution';
+  bool get isFree => plan == 'free';
+  bool get isInstitution => plan == 'institution';
 
   factory Etablissement.fromJson(Map<String, dynamic> j) => Etablissement(
     id:         j['id'] ?? '',
@@ -110,27 +112,6 @@ class EtablissementsNotifier
     } catch (_) {
       state = AsyncData(
         (state.value ?? []).map((e) => e.id == id ? e.copyWith(actif: etab.actif) : e).toList(),
-      );
-    }
-  }
-
-  Future<void> togglePlan(String id) async {
-    final etabs   = state.value ?? [];
-    final etab    = etabs.firstWhere((e) => e.id == id);
-    final newPlan = etab.isPremium ? 'free' : 'premium';
-
-    state = AsyncData(
-      etabs.map((e) => e.id == id ? e.copyWith(plan: newPlan) : e).toList(),
-    );
-
-    try {
-      await ApiClient.patch(
-        '/auth/cascade/etablissement/$id/plan',
-        data: {'plan': newPlan},
-      );
-    } catch (_) {
-      state = AsyncData(
-        (state.value ?? []).map((e) => e.id == id ? e.copyWith(plan: etab.plan) : e).toList(),
       );
     }
   }
@@ -348,13 +329,6 @@ class _EtabTile extends ConsumerWidget {
                 color: etab.actif ? AppColors.red : AppColors.green,
                 onTap: () => _confirmToggleActif(context, ref),
               ),
-              const SizedBox(width: 8),
-              _ActionBtn(
-                label: etab.isPremium ? 'Free' : 'Premium',
-                icon: Icons.star_rounded,
-                color: AppColors.yellow,
-                onTap: () => _confirmTogglePlan(context, ref),
-              ),
             ],
           ),
         ],
@@ -406,27 +380,6 @@ class _EtabTile extends ConsumerWidget {
     );
   }
 
-  void _confirmTogglePlan(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: context.cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(etab.isPremium ? 'Rétrograder ?' : 'Passer Premium ?', style: const TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler', style: TextStyle(color: context.textMuted))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.yellow),
-            onPressed: () {
-              Navigator.pop(context);
-              ref.read(etablissementsProvider.notifier).togglePlan(etab.id);
-            },
-            child: const Text('Confirmer', style: TextStyle(color: Colors.black)),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -439,7 +392,11 @@ class _PlanBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = etab.isPremium ? AppColors.yellow : context.textMuted;
+    final (color, label) = switch (etab.plan) {
+      'institution' => (AppColors.violet, 'INSTITUTION'),
+      'pro'         => (AppColors.blue, 'PRO'),
+      _             => (context.textMuted, 'FREE'),
+    };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -447,7 +404,7 @@ class _PlanBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        etab.plan.toUpperCase(),
+        label,
         style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5),
       ),
     );
@@ -529,7 +486,7 @@ class _DetailsModal extends StatelessWidget {
               child: Row(
                 children: [
                   _statDashboard('Inscrits', '${etab.etudiants}', AppColors.cyan),
-                  _statDashboard('Plan', etab.plan.toUpperCase(), etab.isPremium ? AppColors.yellow : AppColors.textMuted),
+                  _statDashboard('Plan', etab.plan.toUpperCase(), etab.isPremium ? AppColors.blue : etab.isInstitution ? AppColors.violet : AppColors.textMuted),
                   _statDashboard('Statut', etab.actif ? 'Actif' : 'Inactif', etab.actif ? AppColors.green : AppColors.red),
                 ],
               ),
@@ -719,29 +676,33 @@ class _AjouterEtabModalState extends State<_AjouterEtabModal> {
             const SizedBox(height: 10),
             _FieldLabel('Plan d\'abonnement', context),
             const SizedBox(height: 10),
-            Row(
-              children: ['free', 'premium'].map((p) {
-                final selected = _plan == p;
-                final color = p == 'premium' ? AppColors.yellow : AppColors.cyan;
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _plan = p),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: EdgeInsets.only(right: p == 'free' ? 8 : 0),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: selected ? color.withValues(alpha: 0.1) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: selected ? color : context.borderColor, width: selected ? 2 : 1),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(p == 'premium' ? Icons.workspace_premium_rounded : Icons.star_border_rounded, color: selected ? color : context.textMuted),
-                          const SizedBox(height: 4),
-                          Text(p.toUpperCase(), style: TextStyle(color: selected ? color : context.textMuted, fontWeight: FontWeight.bold, fontSize: 12)),
-                        ],
-                      ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                {'code': 'free', 'label': 'FREE', 'icon': Icons.star_border_rounded, 'color': context.textMuted},
+                {'code': 'pro', 'label': 'PRO', 'icon': Icons.workspace_premium_rounded, 'color': AppColors.blue},
+                {'code': 'institution', 'label': 'INSTITUTION', 'icon': Icons.apartment_rounded, 'color': AppColors.violet},
+              ].map((p) {
+                final selected = _plan == p['code'];
+                final color = p['color'] as Color;
+                return GestureDetector(
+                  onTap: () => setState(() => _plan = p['code'] as String),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: selected ? color.withValues(alpha: 0.1) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: selected ? color : context.borderColor, width: selected ? 2 : 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(p['icon'] as IconData, color: selected ? color : context.textMuted, size: 18),
+                        const SizedBox(width: 8),
+                        Text(p['label'] as String, style: TextStyle(color: selected ? color : context.textMuted, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ],
                     ),
                   ),
                 );
