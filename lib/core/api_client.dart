@@ -31,8 +31,9 @@ class ApiClient {
   static String get _notifBaseUrl    => 'https://notification-service-1o8a.onrender.com';
   static String get _academicBaseUrl => 'https://academic-service-f5sm.onrender.com';
   static String get _chatbotBaseUrl  => 'https://chatbot-service-sh1b.onrender.com';
-  // TODO: remplacer par l'URL Render du billing-service une fois déployé
   static String get _billingBaseUrl  => 'https://billing-service-efm6.onrender.com';
+  static String get _libraryBaseUrl  => 'https://library-service-x3s0.onrender.com';
+  static String get _examBaseUrl     => 'https://exam-service-8c5j.onrender.com';
 
   // Initialisation des instances Dio basées sur les getters dynamiques
   static final _dio         = Dio(BaseOptions(baseUrl: _baseUrl, connectTimeout: const Duration(seconds: 10), receiveTimeout: const Duration(seconds: 60)))..interceptors.add(_AuthInterceptor());
@@ -41,6 +42,8 @@ class ApiClient {
   static final _dioAcademic = Dio(BaseOptions(baseUrl: _academicBaseUrl))..interceptors.add(_AuthInterceptor());
   static final _dioChatbot  = Dio(BaseOptions(baseUrl: _chatbotBaseUrl))..interceptors.add(_AuthInterceptor());
   static final _dioBilling  = Dio(BaseOptions(baseUrl: _billingBaseUrl))..interceptors.add(_AuthInterceptor());
+  static final _dioLibrary  = Dio(BaseOptions(baseUrl: _libraryBaseUrl))..interceptors.add(_AuthInterceptor());
+  static final _dioExam     = Dio(BaseOptions(baseUrl: _examBaseUrl))..interceptors.add(_AuthInterceptor());
 
   static Future<bool> isLoggedIn() async {
     final token = await Storage.getAccessToken();
@@ -300,6 +303,89 @@ class ApiClient {
         'x-user-role': role,
         'x-dept-id':   departementId ?? '',
         'x-classe-id': classeId      ?? '',
+      }));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
+  // ── LIBRARY SERVICE ──────────────────────────────────────────
+  static Future<Map<String, dynamic>> getLibrary(String path, {required String userId, required String role, String? etablissementId, Map<String, dynamic>? params}) async {
+    try {
+      final resp = await _dioLibrary.get(path, queryParameters: params, options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
+      }));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
+  static Future<Map<String, dynamic>> postLibrary(String path, {Map<String, dynamic>? data, required String userId, required String role, String? etablissementId}) async {
+    try {
+      final resp = await _dioLibrary.post(path, data: data, options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
+      }));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
+  static Future<Map<String, dynamic>> uploadDocument(String path, {required List<int> fileBytes, required String filename, required Map<String, String> fields, required String userId, required String role, String? etablissementId}) async {
+    try {
+      final formData = FormData.fromMap({
+        'fichier': MultipartFile.fromBytes(fileBytes, filename: filename),
+        ...fields,
+      });
+      final resp = await _dioLibrary.post(path, data: formData, options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
+      }));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
+  static Future<Map<String, dynamic>> deleteLibrary(String path, {required String userId, required String role, String? etablissementId}) async {
+    try {
+      final resp = await _dioLibrary.delete(path, options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
+      }));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
+  // ── EXAM SERVICE ─────────────────────────────────────────────
+  static Future<Map<String, dynamic>> getExam(String path, {required String userId, required String role, String? etablissementId, Map<String, dynamic>? params}) async {
+    try {
+      final resp = await _dioExam.get(path, queryParameters: params, options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
+      }));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
+  static Future<Map<String, dynamic>> postExam(String path, {Map<String, dynamic>? data, required String userId, required String role, String? etablissementId}) async {
+    try {
+      final resp = await _dioExam.post(path, data: data, options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
+      }));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
+  static Future<Map<String, dynamic>> patchExam(String path, {Map<String, dynamic>? data, required String userId, required String role, String? etablissementId}) async {
+    try {
+      final resp = await _dioExam.patch(path, data: data, options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
       }));
       return resp.data as Map<String, dynamic>;
     } on DioException catch (e) { throw _handle(e); }
