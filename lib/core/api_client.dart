@@ -32,8 +32,8 @@ class ApiClient {
   static String get _academicBaseUrl => 'https://academic-service-f5sm.onrender.com';
   static String get _chatbotBaseUrl  => 'https://chatbot-service-sh1b.onrender.com';
   static String get _billingBaseUrl  => 'https://billing-service-efm6.onrender.com';
-  static String get _libraryBaseUrl  => 'https://library-service-x3s0.onrender.com';
-  static String get _examBaseUrl     => 'https://exam-service-8c5j.onrender.com';
+  static String get _libraryBaseUrl  => 'https://billing-service-efm6.onrender.com';
+  static String get _examBaseUrl     => 'https://billing-service-efm6.onrender.com';
 
   // Initialisation des instances Dio basées sur les getters dynamiques
   static final _dio         = Dio(BaseOptions(baseUrl: _baseUrl, connectTimeout: const Duration(seconds: 10), receiveTimeout: const Duration(seconds: 60)))..interceptors.add(_AuthInterceptor());
