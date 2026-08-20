@@ -21,14 +21,14 @@ class BillingPlan {
   });
 
   factory BillingPlan.fromJson(Map<String, dynamic> j) => BillingPlan(
-    code:            j['code']            as String? ?? 'free',
-    nom:             j['nom']             as String? ?? '',
-    description:     j['description']     as String?,
-    maxEtudiants:    j['maxEtudiants']    as int?,
-    prixMensuelXAF:  j['prixMensuelXAF']  as int? ?? 0,
-    prixAnnuelXAF:   j['prixAnnuelXAF']   as int? ?? 0,
-    fonctionnalites: j['fonctionnalites'] as Map<String, dynamic>?,
-  );
+        code: j['code'] as String? ?? 'free',
+        nom: j['nom'] as String? ?? '',
+        description: j['description'] as String?,
+        maxEtudiants: j['maxEtudiants'] as int?,
+        prixMensuelXAF: j['prixMensuelXAF'] as int? ?? 0,
+        prixAnnuelXAF: j['prixAnnuelXAF'] as int? ?? 0,
+        fonctionnalites: j['fonctionnalites'] as Map<String, dynamic>?,
+      );
 
   String prixPour(String cycle) {
     final xaf = cycle == 'annuel' ? prixAnnuelXAF : prixMensuelXAF;
@@ -41,7 +41,7 @@ class BillingPlan {
 class SubscriptionInfo {
   final String planCode;
   final String statut; // essai | actif | expire | annule | impaye
-  final String cycle;  // mensuel | annuel
+  final String cycle; // mensuel | annuel
   final DateTime? essaiJusqua;
   final DateTime? finPeriode;
   final DateTime? debutPeriode;
@@ -62,19 +62,24 @@ class SubscriptionInfo {
   });
 
   bool get estGratuit => planCode == 'free';
-  bool get enEssai    => statut == 'essai';
+  bool get enEssai => statut == 'essai';
 
   factory SubscriptionInfo.fromJson(Map<String, dynamic> j) => SubscriptionInfo(
-    id:                 j['id']                 as String?,
-    planCode:           j['planCode']           as String? ?? 'free',
-    statut:             j['statut']             as String? ?? 'actif',
-    cycle:              j['cycle']              as String? ?? 'mensuel',
-    essaiJusqua:        j['essaiJusqua'] != null ? DateTime.tryParse(j['essaiJusqua']) : null,
-    finPeriode:         j['finPeriode']  != null ? DateTime.tryParse(j['finPeriode'])  : null,
-    debutPeriode:       j['debutPeriode'] != null ? DateTime.tryParse(j['debutPeriode']) : null,
-    prixXAF:            j['prixXAF']            as int?,
-    renouvellementAuto: j['renouvellementAuto'] as bool? ?? true,
-  );
+        id: j['id'] as String?,
+        planCode: j['planCode'] as String? ?? 'free',
+        statut: j['statut'] as String? ?? 'actif',
+        cycle: j['cycle'] as String? ?? 'mensuel',
+        essaiJusqua: j['essaiJusqua'] != null
+            ? DateTime.tryParse(j['essaiJusqua'])
+            : null,
+        finPeriode:
+            j['finPeriode'] != null ? DateTime.tryParse(j['finPeriode']) : null,
+        debutPeriode: j['debutPeriode'] != null
+            ? DateTime.tryParse(j['debutPeriode'])
+            : null,
+        prixXAF: j['prixXAF'] as int?,
+        renouvellementAuto: j['renouvellementAuto'] as bool? ?? true,
+      );
 }
 
 class InvoiceInfo {
@@ -97,12 +102,13 @@ class InvoiceInfo {
   });
 
   factory InvoiceInfo.fromJson(Map<String, dynamic> j) => InvoiceInfo(
-    id:              j['id']              as String?,
-    numero:          j['numero']          as String? ?? '',
-    montantXAF:      j['montantXAF']      as int? ?? 0,
-    statut:          j['statut']          as String? ?? 'en_attente',
-    methodePaiement: j['methodePaiement'] as String?,
-    urlPaiement:     j['urlPaiement']     as String?,
-    createdAt:       j['createdAt'] != null ? DateTime.tryParse(j['createdAt']) : null,
-  );
+        id: j['id'] as String?,
+        numero: j['numero'] as String? ?? '',
+        montantXAF: j['montantXAF'] as int? ?? 0,
+        statut: j['statut'] as String? ?? 'en_attente',
+        methodePaiement: j['methodePaiement'] as String?,
+        urlPaiement: j['urlPaiement'] as String?,
+        createdAt:
+            j['createdAt'] != null ? DateTime.tryParse(j['createdAt']) : null,
+      );
 }

@@ -67,22 +67,33 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
 
   Color _statutColor(String statut) {
     switch (statut) {
-      case 'actif':   return AppColors.green;
-      case 'essai':   return AppColors.blue;
-      case 'impaye':  return AppColors.orange;
-      case 'annule':  return AppColors.yellow;
-      default:        return AppColors.red;
+      case 'actif':
+        return AppColors.green;
+      case 'essai':
+        return AppColors.blue;
+      case 'impaye':
+        return AppColors.orange;
+      case 'annule':
+        return AppColors.yellow;
+      default:
+        return AppColors.red;
     }
   }
 
   String _statutLabel(String statut) {
     switch (statut) {
-      case 'actif':   return 'Actif';
-      case 'essai':   return 'Essai gratuit';
-      case 'impaye':  return 'Paiement en attente';
-      case 'annule':  return 'Annulé';
-      case 'expire':  return 'Expiré';
-      default:        return statut;
+      case 'actif':
+        return 'Actif';
+      case 'essai':
+        return 'Essai gratuit';
+      case 'impaye':
+        return 'Paiement en attente';
+      case 'annule':
+        return 'Annulé';
+      case 'expire':
+        return 'Expiré';
+      default:
+        return statut;
     }
   }
 
@@ -90,48 +101,67 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
     final notifier = ref.read(billingProvider.notifier);
     final abo = ref.read(billingProvider).abonnement;
 
-    try {
-      final url = await notifier.souscrire(
-        planCode: _planSelectionne,
-        cycle:    _cycle,
-        methodePaiement: _planSelectionne == 'free' ? null : _methode,
-        telephone: _telController.text.trim(),
-        email:    ref.read(currentUserProvider)?.email,
+    // Validation téléphone pour plans payants
+    if (_planSelectionne != 'free' && _telController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Veuillez saisir votre numéro Mobile Money')),
       );
+      return;
+    }
 
-      if (!mounted) return;
-
-      // Plan gratuit → confirmation directe
+    try {
+      // Plan gratuit → activation directe
       if (_planSelectionne == 'free') {
+        await notifier.souscrire(
+          planCode: 'free',
+          cycle: _cycle,
+        );
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Plan gratuit activé ✅')),
+          const SnackBar(content: Text('Plan gratuit activé')),
         );
         await notifier.charger();
         return;
       }
 
-      // Paiement Mobile Money → ouvrir l'URL CinetPay
-      if (url != null && url.isNotEmpty) {
-        final ouvert = await ouvrirUrlPaiement(url);
-        if (ouvert && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Paiement lancé — confirmez le paiement sur votre téléphone 📲'),
-            ),
-          );
-        }
+      // 1. Souscrire (crée la facture)
+      await notifier.souscrire(
+        planCode: _planSelectionne,
+        cycle: _cycle,
+        email: ref.read(currentUserProvider)?.email,
+      );
+
+      // 2. Lancer le Direct Pay (push MoMo/OM)
+      final aboAfterSub = ref.read(billingProvider).abonnement;
+      if (aboAfterSub?.id == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur : abonnement non trouvé')),
+        );
+        return;
+      }
+
+      final transId = await notifier.payerDirect(
+        subscriptionId: aboAfterSub!.id!,
+        methodePaiement: _methode ?? 'mtn_momo',
+        telephone: _telController.text.trim(),
+        email: ref.read(currentUserProvider)?.email,
+      );
+
+      if (!mounted) return;
+
+      if (transId != null) {
+        // 3. Afficher le dialogue de polling
+        _afficherPollingPaiement(transId);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              abo?.enEssai == true
-                  ? 'Abonnement activé avec 14 jours d\'essai gratuit 🎉'
-                  : 'Abonnement enregistré. Une facture a été créée.',
-            ),
-          ),
+          const SnackBar(
+              content:
+                  Text('Paiement enregistré. Activez votre essai gratuit.')),
         );
+        await notifier.charger();
       }
-      await notifier.charger();
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -149,31 +179,46 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
     final abo = ref.read(billingProvider).abonnement;
     if (abo?.id == null) return;
 
-    try {
-      final url = await ref.read(billingProvider.notifier).payerFacture(
-        subscriptionId: abo!.id!,
-        methodePaiement: _methode ?? 'mtn_momo',
-        telephone: _telController.text.trim(),
+    if (_telController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Veuillez saisir votre numéro Mobile Money')),
       );
+      return;
+    }
+
+    try {
+      final transId = await ref.read(billingProvider.notifier).payerDirect(
+            subscriptionId: abo!.id!,
+            methodePaiement: _methode ?? 'mtn_momo',
+            telephone: _telController.text.trim(),
+            email: ref.read(currentUserProvider)?.email,
+          );
       if (!mounted) return;
-      if (url != null && url.isNotEmpty) {
-        await ouvrirUrlPaiement(url);
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Paiement lancé 📲')),
-        );
+      if (transId != null) {
+        _afficherPollingPaiement(transId);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Aucune facture en attente')),
         );
       }
-      await ref.read(billingProvider.notifier).charger();
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Impossible de lancer le paiement')),
       );
     }
+  }
+
+  void _afficherPollingPaiement(String transId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _PollingDialog(transId: transId),
+    ).then((_) async {
+      // Recharger les données après fermeture du dialogue
+      await ref.read(billingProvider.notifier).charger();
+    });
   }
 
   Future<void> _annuler() async {
@@ -184,10 +229,13 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
         content: const Text(
             'Vous garderez vos fonctionnalités jusqu\'à la fin de la période payée.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Non')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Non')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Annuler', style: TextStyle(color: AppColors.red)),
+            child:
+                const Text('Annuler', style: TextStyle(color: AppColors.red)),
           ),
         ],
       ),
@@ -214,175 +262,185 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
     }
 
     return RefreshIndicator(
-        onRefresh: () => ref.read(billingProvider.notifier).charger(),
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _StatusCard(
-              abo: abo,
-              plan: planActuel,
-              nbEtudiants: state.nbEtudiants,
-              formatDate: _formatDate,
-              statutColor: _statutColor,
-              statutLabel: _statutLabel,
-            ),
-            const SizedBox(height: 24),
+      onRefresh: () => ref.read(billingProvider.notifier).charger(),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _StatusCard(
+            abo: abo,
+            plan: planActuel,
+            nbEtudiants: state.nbEtudiants,
+            formatDate: _formatDate,
+            statutColor: _statutColor,
+            statutLabel: _statutLabel,
+          ),
+          const SizedBox(height: 24),
 
-            // ── Choix du plan ──
-            const _SectionTitle('Choisissez votre plan'),
-            const SizedBox(height: 12),
-            ...state.plans.map((p) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _PlanCard(
-                plan: p,
-                cycle: _cycle,
-                selectionne: _planSelectionne == p.code,
-                surbrillance: p.code == 'pro',
-                onTap: () {
-                  if (!_peutSouscrire) return;
-                  setState(() => _planSelectionne = p.code);
-                },
-                bloque: !_peutSouscrire,
-              ),
-            )),
+          // ── Choix du plan ──
+          const _SectionTitle('Choisissez votre plan'),
+          const SizedBox(height: 12),
+          ...state.plans.map((p) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _PlanCard(
+                  plan: p,
+                  cycle: _cycle,
+                  selectionne: _planSelectionne == p.code,
+                  surbrillance: p.code == 'pro',
+                  onTap: () {
+                    if (!_peutSouscrire) return;
+                    setState(() => _planSelectionne = p.code);
+                  },
+                  bloque: !_peutSouscrire,
+                ),
+              )),
 
-            if (_peutSouscrire) ...[
-              const SizedBox(height: 16),
-              const _SectionTitle('Cycle de facturation'),
-              const SizedBox(height: 10),
-              _CycleToggle(cycle: _cycle, onChanged: (c) => setState(() => _cycle = c)),
+          if (_peutSouscrire) ...[
+            const SizedBox(height: 16),
+            const _SectionTitle('Cycle de facturation'),
+            const SizedBox(height: 10),
+            _CycleToggle(
+                cycle: _cycle, onChanged: (c) => setState(() => _cycle = c)),
 
-              // ── Paiement (uniquement plan payant) ──
-              if (_planSelectionne != 'free') ...[
-                const SizedBox(height: 20),
-                const _SectionTitle('Paiement Mobile Money'),
-                const SizedBox(height: 10),
-                _MethodeSelector(
-                  methode: _methode,
-                  onChanged: (m) => setState(() => _methode = m),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _telController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Numéro Mobile Money (6XXXXXXXX)',
-                    prefixIcon: Icon(Icons.phone_android_rounded),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Le paiement est sécurisé via CinetPay (MTN MoMo / Orange Money).',
-                  style: TextStyle(fontSize: 11, color: context.textMuted),
-                ),
-              ],
+            // ── Paiement (uniquement plan payant) ──
+            if (_planSelectionne != 'free') ...[
               const SizedBox(height: 20),
-
-              // ── Bouton principal ──
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: state.isSubscribing ? null : _souscrire,
-                  child: state.isSubscribing
-                      ? const SizedBox(
-                    width: 22, height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                      : Text(
-                    _planSelectionne == 'free'
-                        ? 'Passer au plan gratuit'
-                        : 'Souscrire — ${_prixSelectionne()}',
-                  ),
+              const _SectionTitle('Paiement Mobile Money'),
+              const SizedBox(height: 10),
+              _MethodeSelector(
+                methode: _methode,
+                onChanged: (m) => setState(() => _methode = m),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _telController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Numéro Mobile Money (6XXXXXXXX)',
+                  prefixIcon: Icon(Icons.phone_android_rounded),
                 ),
               ),
-            ] else
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.admin_panel_settings_outlined,
-                          color: AppColors.orange),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'La gestion de l\'abonnement est réservée à l\'administrateur de l\'établissement.',
-                          style: TextStyle(fontSize: 12.5, color: context.textSecondary),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-            // ── Actions sur l'abonnement actuel ──
-            if (abo != null && !abo.estGratuit && _peutSouscrire) ...[
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  if (abo.statut == 'impaye' || (state.facture?.statut ?? '') == 'en_attente') ...[
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: state.isSubscribing ? null : _payerFacture,
-                        icon: const Icon(Icons.payment_rounded),
-                        label: const Text('Payer la facture'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                  ],
-                  if (abo.statut == 'actif' || abo.statut == 'essai')
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: state.isSubscribing ? null : _annuler,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.red,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                        ),
-                        icon: const Icon(Icons.cancel_outlined),
-                        label: const Text('Annuler'),
-                      ),
-                    ),
-                ],
+              const SizedBox(height: 6),
+              Text(
+                'Le paiement est sécurisé via CinetPay (MTN MoMo / Orange Money).',
+                style: TextStyle(fontSize: 11, color: context.textMuted),
               ),
             ],
+            const SizedBox(height: 20),
 
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: context.borderColor),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.verified_user_outlined, color: context.textMuted, size: 18),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Essai gratuit de 14 jours sur les plans payants. Paiement 100% sécurisé par CinetPay. '
-                          'Annulable à tout moment.',
-                      style: TextStyle(fontSize: 12, color: context.textSecondary, height: 1.4),
-                    ),
-                  ),
-                ],
+            // ── Bouton principal ──
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: state.isSubscribing ? null : _souscrire,
+                child: state.isSubscribing
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        _planSelectionne == 'free'
+                            ? 'Passer au plan gratuit'
+                            : 'Souscrire — ${_prixSelectionne()}',
+                      ),
               ),
             ),
-            const SizedBox(height: 30),
+          ] else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.admin_panel_settings_outlined,
+                        color: AppColors.orange),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'La gestion de l\'abonnement est réservée à l\'administrateur de l\'établissement.',
+                        style: TextStyle(
+                            fontSize: 12.5, color: context.textSecondary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // ── Actions sur l'abonnement actuel ──
+          if (abo != null && !abo.estGratuit && _peutSouscrire) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                if (abo.statut == 'impaye' ||
+                    (state.facture?.statut ?? '') == 'en_attente') ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: state.isSubscribing ? null : _payerFacture,
+                      icon: const Icon(Icons.payment_rounded),
+                      label: const Text('Payer la facture'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                if (abo.statut == 'actif' || abo.statut == 'essai')
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: state.isSubscribing ? null : _annuler,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.red,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.cancel_outlined),
+                      label: const Text('Annuler'),
+                    ),
+                  ),
+              ],
+            ),
           ],
-        ),
+
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkCard : AppColors.lightCard,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: context.borderColor),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.verified_user_outlined,
+                    color: context.textMuted, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Essai gratuit de 14 jours sur les plans payants. Paiement 100% sécurisé par CinetPay. '
+                    'Annulable à tout moment.',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: context.textSecondary,
+                        height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 30),
+        ],
+      ),
     );
   }
 
   String _prixSelectionne() {
-    final plan = ref.read(billingProvider).plans
+    final plan = ref
+        .read(billingProvider)
+        .plans
         .where((p) => p.code == _planSelectionne)
         .firstOrNull;
     if (plan == null) return '';
@@ -443,7 +501,8 @@ class _StatusCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: couleur.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
@@ -488,8 +547,14 @@ class _StatusCard extends StatelessWidget {
             style: TextStyle(fontSize: 12.5, color: context.textSecondary),
           ),
           const SizedBox(height: 14),
-          _InfoRow(label: 'Fin d\'essai', value: formatDate(abo?.essaiJusqua), icone: Icons.timer_outlined),
-          _InfoRow(label: 'Fin de période', value: formatDate(abo?.finPeriode), icone: Icons.event_outlined),
+          _InfoRow(
+              label: 'Fin d\'essai',
+              value: formatDate(abo?.essaiJusqua),
+              icone: Icons.timer_outlined),
+          _InfoRow(
+              label: 'Fin de période',
+              value: formatDate(abo?.finPeriode),
+              icone: Icons.event_outlined),
           if (abo != null && !abo!.estGratuit)
             _InfoRow(
               label: 'Cycle',
@@ -505,7 +570,8 @@ class _StatusCard extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final String label, value;
   final IconData icone;
-  const _InfoRow({required this.label, required this.value, required this.icone});
+  const _InfoRow(
+      {required this.label, required this.value, required this.icone});
 
   @override
   Widget build(BuildContext context) {
@@ -517,7 +583,11 @@ class _InfoRow extends StatelessWidget {
           const SizedBox(width: 8),
           Text(label, style: TextStyle(fontSize: 12, color: context.textMuted)),
           const Spacer(),
-          Text(value, style: TextStyle(fontSize: 12.5, color: context.textPrimary, fontWeight: FontWeight.w600)),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 12.5,
+                  color: context.textPrimary,
+                  fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -534,13 +604,13 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-    text,
-    style: TextStyle(
-      color: context.textPrimary,
-      fontSize: 15,
-      fontWeight: FontWeight.w800,
-    ),
-  );
+        text,
+        style: TextStyle(
+          color: context.textPrimary,
+          fontSize: 15,
+          fontWeight: FontWeight.w800,
+        ),
+      );
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -585,18 +655,18 @@ class _PlanCard extends StatelessWidget {
               color: selectionne
                   ? AppColors.cyan
                   : surbrillance
-                  ? AppColors.cyan.withValues(alpha: 0.4)
-                  : context.borderColor,
+                      ? AppColors.cyan.withValues(alpha: 0.4)
+                      : context.borderColor,
               width: selectionne ? 2 : 1,
             ),
             boxShadow: selectionne
                 ? [
-              BoxShadow(
-                color: AppColors.cyan.withValues(alpha: 0.15),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ]
+                    BoxShadow(
+                      color: AppColors.cyan.withValues(alpha: 0.15),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
                 : null,
           ),
           child: Row(
@@ -618,7 +688,8 @@ class _PlanCard extends StatelessWidget {
                         if (surbrillance) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
                               color: AppColors.cyan.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(20),
@@ -641,13 +712,15 @@ class _PlanCard extends StatelessWidget {
                       plan.maxEtudiants == null
                           ? 'Effectif illimité'
                           : 'Jusqu\'à ${plan.maxEtudiants} étudiants',
-                      style: TextStyle(fontSize: 12, color: context.textSecondary),
+                      style:
+                          TextStyle(fontSize: 12, color: context.textSecondary),
                     ),
                     if (plan.description != null) ...[
                       const SizedBox(height: 2),
                       Text(
                         plan.description!,
-                        style: TextStyle(fontSize: 11.5, color: context.textMuted),
+                        style:
+                            TextStyle(fontSize: 11.5, color: context.textMuted),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -694,9 +767,147 @@ class _PlanCard extends StatelessWidget {
     final txt = milliers >= 1000
         ? '${(milliers / 1000).toStringAsFixed(1)}M'
         : milliers == milliers.roundToDouble()
-        ? '${milliers.round()}k'
-        : '${milliers.toStringAsFixed(1)}k';
+            ? '${milliers.round()}k'
+            : '${milliers.toStringAsFixed(1)}k';
     return '$txt FCFA';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DIALOGUE DE POLLING PAIEMENT DIRECT
+// Poll le statut toutes les 5s. Se ferme automatiquement
+// quand le paiement est ACCEPTED ou REFUSED.
+// ══════════════════════════════════════════════════════════════════
+
+class _PollingDialog extends ConsumerStatefulWidget {
+  final String transId;
+  const _PollingDialog({required this.transId});
+
+  @override
+  ConsumerState<_PollingDialog> createState() => _PollingDialogState();
+}
+
+class _PollingDialogState extends ConsumerState<_PollingDialog>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animCtrl;
+  String _statut = 'PENDING';
+  bool _polling = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+    _demarrerPolling();
+  }
+
+  @override
+  void dispose() {
+    _polling = false;
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _demarrerPolling() async {
+    while (_polling && mounted) {
+      await Future.delayed(const Duration(seconds: 5));
+      if (!_polling || !mounted) break;
+
+      final statut = await ref
+          .read(billingProvider.notifier)
+          .verifierStatutPaiement(widget.transId);
+
+      if (!mounted) break;
+
+      setState(() => _statut = statut);
+
+      if (statut == 'ACCEPTED') {
+        _polling = false;
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) Navigator.of(context).pop('success');
+        return;
+      }
+      if (statut == 'REFUSED') {
+        _polling = false;
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) Navigator.of(context).pop('failed');
+        return;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          RotationTransition(
+            turns: _animCtrl,
+            child:
+                const Icon(Icons.sync_rounded, size: 48, color: AppColors.cyan),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            _statut == 'ACCEPTED'
+                ? 'Paiement confirmé !'
+                : _statut == 'REFUSED'
+                    ? 'Paiement refusé'
+                    : 'Confirmez le paiement sur votre téléphone',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: _statut == 'ACCEPTED'
+                  ? AppColors.green
+                  : _statut == 'REFUSED'
+                      ? AppColors.red
+                      : null,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_statut == 'PENDING') ...[
+            const LinearProgressIndicator(),
+            const SizedBox(height: 12),
+            Text(
+              'Validez la notification MoMo/Orange Money\\nsur votre téléphone.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: context.textSecondary),
+            ),
+          ],
+          if (_statut == 'ACCEPTED') ...[
+            const Icon(Icons.check_circle, color: AppColors.green, size: 56),
+            const SizedBox(height: 8),
+            Text(
+              'Votre abonnement est maintenant actif !',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: context.textSecondary),
+            ),
+          ],
+          if (_statut == 'REFUSED') ...[
+            const Icon(Icons.cancel, color: AppColors.red, size: 56),
+            const SizedBox(height: 8),
+            Text(
+              'Le paiement a été refusé. Veuillez réessayer.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: context.textSecondary),
+            ),
+          ],
+          const SizedBox(height: 20),
+          if (_statut != 'PENDING')
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Continuer'),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 
@@ -744,7 +955,8 @@ class _CycleButton extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _CycleButton({required this.label, required this.selected, required this.onTap});
+  const _CycleButton(
+      {required this.label, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

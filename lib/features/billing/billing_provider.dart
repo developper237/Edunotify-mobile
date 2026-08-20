@@ -35,20 +35,20 @@ class BillingState {
     String? error,
   }) =>
       BillingState(
-        plans:        plans        ?? this.plans,
-        abonnement:   abonnement   ?? this.abonnement,
-        facture:      facture      ?? this.facture,
-        nbEtudiants:  nbEtudiants  ?? this.nbEtudiants,
-        isLoading:    isLoading    ?? this.isLoading,
+        plans: plans ?? this.plans,
+        abonnement: abonnement ?? this.abonnement,
+        facture: facture ?? this.facture,
+        nbEtudiants: nbEtudiants ?? this.nbEtudiants,
+        isLoading: isLoading ?? this.isLoading,
         isSubscribing: isSubscribing ?? this.isSubscribing,
-        error:        error,
+        error: error,
       );
 
   bool get peutSouscrirePayant => plans.any((p) => p.code != 'free');
 }
 
 final billingProvider = StateNotifierProvider<BillingNotifier, BillingState>(
-      (ref) => BillingNotifier(ref),
+  (ref) => BillingNotifier(ref),
 );
 
 class BillingNotifier extends StateNotifier<BillingState> {
@@ -80,9 +80,9 @@ class BillingNotifier extends StateNotifier<BillingState> {
 
       final aboRaw = subResp['abonnement'] as Map<String, dynamic>?;
       state = BillingState(
-        plans:       plans,
-        abonnement:  aboRaw == null ? null : SubscriptionInfo.fromJson(aboRaw),
-        facture:     subResp['facture'] == null
+        plans: plans,
+        abonnement: aboRaw == null ? null : SubscriptionInfo.fromJson(aboRaw),
+        facture: subResp['facture'] == null
             ? null
             : InvoiceInfo.fromJson(subResp['facture'] as Map<String, dynamic>),
         nbEtudiants: subResp['nbEtudiants'] as int?,
@@ -110,14 +110,14 @@ class BillingNotifier extends StateNotifier<BillingState> {
       final resp = await ApiClient.postBilling(
         '/billing/subscriptions',
         data: {
-          'planCode':        planCode,
-          'cycle':           cycle,
+          'planCode': planCode,
+          'cycle': cycle,
           if (methodePaiement != null) 'methodePaiement': methodePaiement,
           if (telephone != null && telephone.isNotEmpty) 'telephone': telephone,
           if (email != null && email.isNotEmpty) 'email': email,
         },
-        userId:        user.userId,
-        role:          user.role,
+        userId: user.userId,
+        role: user.role,
         etablissementId: user.etabId,
       );
 
@@ -125,8 +125,10 @@ class BillingNotifier extends StateNotifier<BillingState> {
       final abo = resp['abonnement'] as Map<String, dynamic>?;
       final facture = resp['facture'] as Map<String, dynamic>?;
       state = state.copyWith(
-        abonnement:  abo == null ? state.abonnement : SubscriptionInfo.fromJson(abo),
-        facture:     facture == null ? state.facture : InvoiceInfo.fromJson(facture),
+        abonnement:
+            abo == null ? state.abonnement : SubscriptionInfo.fromJson(abo),
+        facture:
+            facture == null ? state.facture : InvoiceInfo.fromJson(facture),
         isSubscribing: false,
       );
       return resp['paiementUrl'] as String?;
@@ -156,13 +158,14 @@ class BillingNotifier extends StateNotifier<BillingState> {
           'methodePaiement': methodePaiement,
           if (telephone != null && telephone.isNotEmpty) 'telephone': telephone,
         },
-        userId:          user.userId,
-        role:            user.role,
+        userId: user.userId,
+        role: user.role,
         etablissementId: user.etabId,
       );
       final facture = resp['facture'] as Map<String, dynamic>?;
       state = state.copyWith(
-        facture: facture == null ? state.facture : InvoiceInfo.fromJson(facture),
+        facture:
+            facture == null ? state.facture : InvoiceInfo.fromJson(facture),
         isSubscribing: false,
       );
       return resp['paiementUrl'] as String?;
@@ -175,6 +178,59 @@ class BillingNotifier extends StateNotifier<BillingState> {
     }
   }
 
+  /// Initie un paiement direct (push MoMo/OM, pas de redirect).
+  /// Retourne le transactionId pour le polling.
+  Future<String?> payerDirect({
+    required String subscriptionId,
+    required String methodePaiement,
+    required String telephone,
+    String? email,
+  }) async {
+    final user = _user;
+    if (user == null) return null;
+
+    state = state.copyWith(isSubscribing: true, error: null);
+    try {
+      final resp = await ApiClient.postBilling(
+        '/billing/subscriptions/$subscriptionId/payer-direct',
+        data: {
+          'methodePaiement': methodePaiement,
+          'telephone': telephone,
+          if (email != null && email.isNotEmpty) 'email': email,
+        },
+        userId: user.userId,
+        role: user.role,
+        etablissementId: user.etabId,
+      );
+      state = state.copyWith(isSubscribing: false);
+      return resp['transactionId'] as String?;
+    } on ApiException catch (e) {
+      state = state.copyWith(isSubscribing: false, error: e.message);
+      rethrow;
+    } catch (_) {
+      state = state.copyWith(isSubscribing: false, error: 'Erreur réseau');
+      rethrow;
+    }
+  }
+
+  /// Vérifie le statut d'un paiement (polling côté app).
+  Future<String> verifierStatutPaiement(String transId) async {
+    final user = _user;
+    if (user == null) return 'ERROR';
+
+    try {
+      final resp = await ApiClient.getBilling(
+        '/billing/payment-status/$transId',
+        userId: user.userId,
+        role: user.role,
+        etablissementId: user.etabId,
+      );
+      return resp['statut'] as String? ?? 'PENDING';
+    } catch (_) {
+      return 'PENDING';
+    }
+  }
+
   Future<void> annuler() async {
     final user = _user;
     if (user == null) return;
@@ -183,8 +239,8 @@ class BillingNotifier extends StateNotifier<BillingState> {
     try {
       await ApiClient.postBilling(
         '/billing/subscriptions/cancel',
-        userId:          user.userId,
-        role:            user.role,
+        userId: user.userId,
+        role: user.role,
         etablissementId: user.etabId,
       );
       await charger();
