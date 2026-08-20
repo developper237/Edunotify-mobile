@@ -10,7 +10,7 @@ import '../auth/auth_provider.dart';
 
 String _normalize(String input) {
   const avecAccents = 'àâäáãåéèêëíìîïóòôöõúùûüçñ';
-  const sansAccents  = 'aaaaaaeeeeiiiiooooouuuucn';
+  const sansAccents = 'aaaaaaeeeeiiiiooooouuuucn';
   var out = input.toLowerCase();
   for (var i = 0; i < avecAccents.length; i++) {
     out = out.replaceAll(avecAccents[i], sansAccents[i]);
@@ -126,10 +126,10 @@ final List<_DepartementFilieres> _departements = [
 ];
 
 final List<String> _toutesLesFilieres =
-_departements.expand((d) => d.filieres).toSet().toList();
+    _departements.expand((d) => d.filieres).toSet().toList();
 
 final filieresProvider = Provider<List<String>>((ref) {
-  final user    = ref.watch(currentUserProvider);
+  final user = ref.watch(currentUserProvider);
   final deptNom = _normalize(user?.departementNom ?? '');
 
   if (deptNom.isEmpty) return _toutesLesFilieres;
@@ -167,15 +167,15 @@ class ClasseSalle {
   });
 
   factory ClasseSalle.fromJson(Map<String, dynamic> j) => ClasseSalle(
-    id:           j['id']           ?? '',
-    nomSalle:     j['nom']          ?? j['nomSalle'] ?? '',
-    filiere:      j['filiere']      ?? '',
-    niveau:       j['niveau']       ?? '',
-    formation:    j['formation']    ?? 'FI',
-    codeGenere:   j['codeGenere']   ?? '',
-    emailDelegue: j['emailDelegue'] ?? '',
-    nbEtudiants:  j['nbEtudiants']  ?? j['_count']?['etudiants'] ?? 0,
-  );
+        id: j['id'] ?? '',
+        nomSalle: j['nom'] ?? j['nomSalle'] ?? '',
+        filiere: j['filiere'] ?? '',
+        niveau: j['niveau'] ?? '',
+        formation: j['formation'] ?? 'FI',
+        codeGenere: j['codeGenere'] ?? '',
+        emailDelegue: j['emailDelegue'] ?? '',
+        nbEtudiants: j['nbEtudiants'] ?? j['_count']?['etudiants'] ?? 0,
+      );
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -188,43 +188,46 @@ String genererCodeClasse(
     String nomSalle, String filiere, String niveau, String formation) {
   final salle = nomSalle.trim().replaceAll(' ', '');
   final sigles = {
-    'Genie Logiciel':                                         'GL',
-    'Administration et Securite des Reseaux':                 'ASR',
-    'Genie Informatique':                                     'GI',
-    'Genie Reseau et Telecommunications':                     'GRT',
-    'Genie Electrique et Informatique Industrielle':          'GEII',
-    'Genie Industriel et Maintenance':                        'GIM',
-    'Genie Mecanique et Productique':                         'GMP',
-    'Genie Thermique et Energie':                             'GTE',
-    'Genie Biomedical':                                       'GBM',
-    'Genie Civil':                                            'GC',
-    'Genie des Mines':                                        'GMI',
-    'Genie Metallurgique':                                    'GME',
-    'Genie Ferroviaire':                                      'GFE',
-    'Meteorologie':                                           'MET',
-    'Licence en Petrole et Gaz':                              'PG',
-    'Logistique Industrielle':                                'LI',
-    "Economie d'Energie et Environnement":                    'EEE',
-    'Valorisation des Energies Renouvelables':                'VER',
-    'Chimie Pharmaceutique':                                  'CP',
-    'Qualite, Hygiene et Salubrite des Aliments':             'QHSA',
-    'Gestion des Entreprises et des Administrations':         'GEA',
-    'Genie Logistique et Transport':                          'GLT',
-    'Techniques de Commercialisation':                        'TC',
-    'Organisation et Gestion Administrative':                 'OGA',
-    'Gestion Appliquee aux Petites et Moyennes Organisations':'GAPMO',
-    'Gestion Comptable et Financiere':                        'GCF',
-    'Negociation Vente':                                      'CNV',
-    'Gestion des Ressources Humaines':                        'GRH',
-    'Gestion Bancaire et Financiere':                         'GBF',
-    'Banque et Finances':                                     'BAF',
-    'Assistant Manager':                                      'AMA',
-    'Chimie Industrielle et Pharmaceutique':                  'CIP',
-    'Mecatronique':                                           'MECA',
+    'Genie Logiciel': 'GL',
+    'Administration et Securite des Reseaux': 'ASR',
+    'Genie Informatique': 'GI',
+    'Genie Reseau et Telecommunications': 'GRT',
+    'Genie Electrique et Informatique Industrielle': 'GEII',
+    'Genie Industriel et Maintenance': 'GIM',
+    'Genie Mecanique et Productique': 'GMP',
+    'Genie Thermique et Energie': 'GTE',
+    'Genie Biomedical': 'GBM',
+    'Genie Civil': 'GC',
+    'Genie des Mines': 'GMI',
+    'Genie Metallurgique': 'GME',
+    'Genie Ferroviaire': 'GFE',
+    'Meteorologie': 'MET',
+    'Licence en Petrole et Gaz': 'PG',
+    'Logistique Industrielle': 'LI',
+    "Economie d'Energie et Environnement": 'EEE',
+    'Valorisation des Energies Renouvelables': 'VER',
+    'Chimie Pharmaceutique': 'CP',
+    'Qualite, Hygiene et Salubrite des Aliments': 'QHSA',
+    'Gestion des Entreprises et des Administrations': 'GEA',
+    'Genie Logistique et Transport': 'GLT',
+    'Techniques de Commercialisation': 'TC',
+    'Organisation et Gestion Administrative': 'OGA',
+    'Gestion Appliquee aux Petites et Moyennes Organisations': 'GAPMO',
+    'Gestion Comptable et Financiere': 'GCF',
+    'Negociation Vente': 'CNV',
+    'Gestion des Ressources Humaines': 'GRH',
+    'Gestion Bancaire et Financiere': 'GBF',
+    'Banque et Finances': 'BAF',
+    'Assistant Manager': 'AMA',
+    'Chimie Industrielle et Pharmaceutique': 'CIP',
+    'Mecatronique': 'MECA',
     'Mention des technologies de l\'information et du numérique': 'MTIN',
   };
   final sigle = sigles[filiere] ??
-      filiere.split(' ').map((w) => w.isNotEmpty ? w[0].toUpperCase() : '').join();
+      filiere
+          .split(' ')
+          .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
+          .join();
   return '$salle-$sigle-$niveau-$formation';
 }
 
@@ -233,12 +236,11 @@ String genererCodeClasse(
 // ══════════════════════════════════════════════════════════════════
 
 final classesChefProvider =
-StateNotifierProvider<ClassesChefNotifier, AsyncValue<List<ClasseSalle>>>(
-      (ref) => ClassesChefNotifier(ref),
+    StateNotifierProvider<ClassesChefNotifier, AsyncValue<List<ClasseSalle>>>(
+  (ref) => ClassesChefNotifier(ref),
 );
 
-class ClassesChefNotifier
-    extends StateNotifier<AsyncValue<List<ClasseSalle>>> {
+class ClassesChefNotifier extends StateNotifier<AsyncValue<List<ClasseSalle>>> {
   final Ref _ref;
   ClassesChefNotifier(this._ref) : super(const AsyncLoading()) {
     charger();
@@ -252,13 +254,13 @@ class ClassesChefNotifier
 
       final resp = await ApiClient.getAcademic(
         '/academic/mes-classes',
-        userId:        user.id,
-        role:          user.role,
+        userId: user.id,
+        role: user.role,
         departementId: user.departementId,
       );
 
       final filieres = resp['filieres'] as Map<String, dynamic>? ?? {};
-      final classes  = <ClasseSalle>[];
+      final classes = <ClasseSalle>[];
       for (final liste in filieres.values) {
         for (final c in (liste as List)) {
           classes.add(ClasseSalle.fromJson(c as Map<String, dynamic>));
@@ -274,7 +276,7 @@ class ClassesChefNotifier
   Future<void> supprimer(String classeId) async {
     await ApiClient.delete('/auth/cascade/classe/$classeId');
     state = state.whenData(
-          (liste) => liste.where((c) => c.id != classeId).toList(),
+      (liste) => liste.where((c) => c.id != classeId).toList(),
     );
   }
 }
@@ -299,8 +301,8 @@ class ClassesChefScreen extends ConsumerWidget {
             child: GestureDetector(
               onTap: () => _showCreerModal(context, ref),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.green,
                   borderRadius: BorderRadius.circular(20),
@@ -350,48 +352,48 @@ class ClassesChefScreen extends ConsumerWidget {
         ),
         data: (classes) => classes.isEmpty
             ? Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.class_outlined,
-                  size: 48, color: context.textMuted),
-              const SizedBox(height: 12),
-              Text('Aucune classe',
-                  style: TextStyle(
-                      color: context.textMuted, fontSize: 14)),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => _showCreerModal(context, ref),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.green,
-                  foregroundColor: Colors.white,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.class_outlined,
+                        size: 48, color: context.textMuted),
+                    const SizedBox(height: 12),
+                    Text('Aucune classe',
+                        style:
+                            TextStyle(color: context.textMuted, fontSize: 14)),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => _showCreerModal(context, ref),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Creer une salle'),
+                    ),
+                  ],
                 ),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Creer une salle'),
-              ),
-            ],
-          ),
-        )
+              )
             : RefreshIndicator(
-          color: AppColors.green,
-          onRefresh: () =>
-              ref.read(classesChefProvider.notifier).charger(),
-          child: ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: classes.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (_, i) => _ClasseTile(classe: classes[i]),
-          ),
-        ),
+                color: AppColors.green,
+                onRefresh: () =>
+                    ref.read(classesChefProvider.notifier).charger(),
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: classes.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (_, i) => _ClasseTile(classe: classes[i]),
+                ),
+              ),
       ),
     );
   }
 
   void _showCreerModal(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
-      context:            context,
+      context: context,
       isScrollControlled: true,
-      backgroundColor:    Colors.transparent,
+      backgroundColor: Colors.transparent,
       builder: (_) => _CreerSalleModal(
         // On recharge la liste complète depuis le serveur après création,
         // au lieu d'ajouter localement un objet avec un id fictif.
@@ -419,7 +421,7 @@ class _ClasseTile extends ConsumerWidget {
         title: const Text('Supprimer la classe ?'),
         content: Text(
           'La classe ${classe.codeGenere} et toutes ses données '
-              '(présences, notes, étudiants) seront supprimées définitivement.',
+          '(présences, notes, étudiants) seront supprimées définitivement.',
         ),
         actions: [
           TextButton(
@@ -429,8 +431,7 @@ class _ClasseTile extends ConsumerWidget {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.red,
-                foregroundColor: Colors.white),
+                backgroundColor: AppColors.red, foregroundColor: Colors.white),
             child: const Text('Supprimer'),
           ),
         ],
@@ -459,35 +460,34 @@ class _ClasseTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isFI           = classe.formation == 'FI';
+    final isFI = classe.formation == 'FI';
     final formationColor = isFI ? AppColors.green : AppColors.violet;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color:        context.cardColor,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(16),
-        border:       Border.all(color: context.borderColor),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           // ── Ligne 1 : code + filière + nb étudiants ───────────
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color:        AppColors.green,
+                  color: AppColors.green,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(classe.codeGenere,
                     style: const TextStyle(
-                        color:       Colors.white,
-                        fontSize:    13,
-                        fontWeight:  FontWeight.w700,
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 0.5)),
               ),
               const SizedBox(width: 10),
@@ -497,22 +497,21 @@ class _ClasseTile extends ConsumerWidget {
                   children: [
                     Text(classe.filiere,
                         style: TextStyle(
-                            color:      context.textPrimary,
-                            fontSize:   13,
+                            color: context.textPrimary,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                     Text('Niveau ${classe.niveau}',
-                        style: TextStyle(
-                            color: context.textMuted, fontSize: 12)),
+                        style:
+                            TextStyle(color: context.textMuted, fontSize: 12)),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color:        AppColors.cyan,
+                  color: AppColors.cyan,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -523,8 +522,8 @@ class _ClasseTile extends ConsumerWidget {
                     const SizedBox(width: 4),
                     Text('${classe.nbEtudiants}',
                         style: const TextStyle(
-                            color:      Colors.white,
-                            fontSize:   12,
+                            color: Colors.white,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600)),
                   ],
                 ),
@@ -541,17 +540,14 @@ class _ClasseTile extends ConsumerWidget {
                   size: 13, color: context.textMuted),
               const SizedBox(width: 4),
               Text('Salle ${classe.nomSalle}',
-                  style:
-                  TextStyle(color: context.textMuted, fontSize: 12)),
+                  style: TextStyle(color: context.textMuted, fontSize: 12)),
               const SizedBox(width: 16),
               if (classe.emailDelegue.isNotEmpty) ...[
-                Icon(Icons.email_outlined,
-                    size: 13, color: context.textMuted),
+                Icon(Icons.email_outlined, size: 13, color: context.textMuted),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(classe.emailDelegue,
-                      style: TextStyle(
-                          color: context.textMuted, fontSize: 12),
+                      style: TextStyle(color: context.textMuted, fontSize: 12),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                 ),
@@ -565,10 +561,8 @@ class _ClasseTile extends ConsumerWidget {
           Row(
             children: [
               Icon(
-                isFI
-                    ? Icons.wb_sunny_outlined
-                    : Icons.nights_stay_outlined,
-                size:  13,
+                isFI ? Icons.wb_sunny_outlined : Icons.nights_stay_outlined,
+                size: 13,
                 color: formationColor,
               ),
               const SizedBox(width: 4),
@@ -577,8 +571,8 @@ class _ClasseTile extends ConsumerWidget {
                     ? 'Formation Initiale (cours du jour)'
                     : 'Formation par Alternance (cours du soir)',
                 style: TextStyle(
-                    color:      formationColor,
-                    fontSize:   11,
+                    color: formationColor,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500),
               ),
             ],
@@ -592,13 +586,13 @@ class _ClasseTile extends ConsumerWidget {
             child: GestureDetector(
               onTap: () => _confirmerSuppression(context, ref),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color:        AppColors.red.withValues(alpha: 0.08),
+                  color: AppColors.red.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: AppColors.red.withValues(alpha: 0.25)),
+                  border:
+                      Border.all(color: AppColors.red.withValues(alpha: 0.25)),
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
@@ -608,8 +602,8 @@ class _ClasseTile extends ConsumerWidget {
                     SizedBox(width: 4),
                     Text('Supprimer',
                         style: TextStyle(
-                            color:      AppColors.red,
-                            fontSize:   12,
+                            color: AppColors.red,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600)),
                   ],
                 ),
@@ -638,15 +632,17 @@ class _CreerSalleModal extends ConsumerStatefulWidget {
 }
 
 class _CreerSalleModalState extends ConsumerState<_CreerSalleModal> {
-  final _nomSalle         = TextEditingController();
-  final _emailDelegue     = TextEditingController();
+  final _nomSalle = TextEditingController();
+  final _emailDelegue = TextEditingController();
   final _matriculeDelegue = TextEditingController();
-  String  _filiere   = 'Genie Logiciel';
-  String  _niveau    = 'L1';
-  String  _formation = 'FI';
-  bool    _loading   = false;
-  bool    _done      = false;
+  String _filiere = 'Genie Logiciel';
+  String _niveau = 'L1';
+  String _formation = 'FI';
+  bool _loading = false;
+  bool _done = false;
   String? _error;
+  bool _filiereCustomMode = false;
+  final _filiereCustomCtrl = TextEditingController();
 
   static const _niveaux = ['L1', 'L2', 'L3', 'M1', 'M2'];
 
@@ -655,13 +651,19 @@ class _CreerSalleModalState extends ConsumerState<_CreerSalleModal> {
     _nomSalle.dispose();
     _emailDelegue.dispose();
     _matriculeDelegue.dispose();
+    _filiereCustomCtrl.dispose();
     super.dispose();
+  }
+
+  String get _filiereEffective {
+    if (_filiereCustomMode) return _filiereCustomCtrl.text.trim();
+    return _filiere;
   }
 
   String get _codePreview {
     if (_nomSalle.text.trim().isEmpty) return '---';
     return genererCodeClasse(
-        _nomSalle.text.trim(), _filiere, _niveau, _formation);
+        _nomSalle.text.trim(), _filiereEffective, _niveau, _formation);
   }
 
   void _selectionnerNiveau(String n) {
@@ -672,8 +674,8 @@ class _CreerSalleModalState extends ConsumerState<_CreerSalleModal> {
   }
 
   Future<void> _creer() async {
-    final nom       = _nomSalle.text.trim();
-    final email     = _emailDelegue.text.trim();
+    final nom = _nomSalle.text.trim();
+    final email = _emailDelegue.text.trim();
     final matricule = _matriculeDelegue.text.trim();
 
     if (nom.isEmpty || email.isEmpty || matricule.isEmpty) {
@@ -685,18 +687,21 @@ class _CreerSalleModalState extends ConsumerState<_CreerSalleModal> {
       return;
     }
 
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     try {
       await ApiClient.post('/auth/cascade/classe', data: {
-        'nomSalle':         nom,
-        'filiere':          _filiere,
-        'niveau':           _niveau,
-        'formation':        _formation,
-        'emailDelegue':     email,
+        'nomSalle': nom,
+        'filiere': _filiereEffective,
+        'niveau': _niveau,
+        'formation': _formation,
+        'emailDelegue': email,
         'matriculeDelegue': matricule,
-        'prenomDelegue':    'Delegue',
-        'nomDelegue':       nom,
+        'prenomDelegue': 'Delegue',
+        'nomDelegue': nom,
       });
 
       // On ne fabrique plus de ClasseSalle locale avec un id fictif
@@ -706,13 +711,19 @@ class _CreerSalleModalState extends ConsumerState<_CreerSalleModal> {
       // sur cette classe échoue avec un 404 car l'id n'existe pas en DB.
       widget.onCreer();
 
-      setState(() { _loading = false; _done = true; });
+      setState(() {
+        _loading = false;
+        _done = true;
+      });
     } on ApiException catch (e) {
-      setState(() { _loading = false; _error = e.message; });
+      setState(() {
+        _loading = false;
+        _error = e.message;
+      });
     } catch (_) {
       setState(() {
         _loading = false;
-        _error   = 'Erreur de connexion au serveur';
+        _error = 'Erreur de connexion au serveur';
       });
     }
   }
@@ -726,419 +737,462 @@ class _CreerSalleModalState extends ConsumerState<_CreerSalleModal> {
 
     return Container(
       decoration: BoxDecoration(
-        color:        context.cardColor,
+        color: context.cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.only(
-        left: 24, right: 24, top: 24,
+        left: 24,
+        right: 24,
+        top: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: _done
           ? _SuccessView(
-        titre:   'Classe creee !',
-        message: 'La classe $_codePreview a ete creee.\n'
-            'Les identifiants ont ete envoyes a ${_emailDelegue.text.trim()}.',
-        color:   AppColors.green,
-        onClose: () => Navigator.pop(context),
-      )
+              titre: 'Classe creee !',
+              message: 'La classe $_codePreview a ete creee.\n'
+                  'Les identifiants ont ete envoyes a ${_emailDelegue.text.trim()}.',
+              color: AppColors.green,
+              onClose: () => Navigator.pop(context),
+            )
           : SingleChildScrollView(
-        child: Column(
-          mainAxisSize:       MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-
-            // Handle
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                    color:        context.borderColor,
-                    borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            Text('Creer une salle',
-                style: TextStyle(
-                    color:      context.textPrimary,
-                    fontSize:   17,
-                    fontWeight: FontWeight.w700)),
-
-            const SizedBox(height: 8),
-
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color:        context.isDark
-                    ? AppColors.dark
-                    : AppColors.light,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline,
-                      color: context.textMuted, size: 15),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Un compte delegue sera cree et les identifiants '
-                          'envoyes par email. Le matricule permet au systeme '
-                          'de retrouver ses notes comme les autres etudiants.',
-                      style: TextStyle(
-                          color:  context.textSecondary,
-                          fontSize: 12,
-                          height: 1.4),
+                  // Handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                          color: context.borderColor,
+                          borderRadius: BorderRadius.circular(2)),
                     ),
                   ),
-                ],
-              ),
-            ),
+                  const SizedBox(height: 20),
 
-            const SizedBox(height: 20),
-
-            // Aperçu code
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color:        AppColors.green,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  const Text('Code de la classe',
+                  Text('Creer une salle',
                       style: TextStyle(
-                          color: Colors.white70, fontSize: 12)),
-                  const SizedBox(height: 6),
-                  Text(_codePreview,
-                      style: const TextStyle(
-                          color:       Colors.white,
-                          fontSize:    22,
-                          fontWeight:  FontWeight.w700,
-                          letterSpacing: 2)),
+                          color: context.textPrimary,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700)),
+
+                  const SizedBox(height: 8),
+
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: context.isDark ? AppColors.dark : AppColors.light,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline,
+                            color: context.textMuted, size: 15),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Un compte delegue sera cree et les identifiants '
+                            'envoyes par email. Le matricule permet au systeme '
+                            'de retrouver ses notes comme les autres etudiants.',
+                            style: TextStyle(
+                                color: context.textSecondary,
+                                fontSize: 12,
+                                height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Aperçu code
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.green,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text('Code de la classe',
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 12)),
+                        const SizedBox(height: 6),
+                        Text(_codePreview,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 2)),
+                        const SizedBox(height: 4),
+                        const Text('Genere automatiquement',
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Nom salle ──
+                  _FieldLabel('Nom de la salle *', context),
                   const SizedBox(height: 4),
-                  const Text('Genere automatiquement',
-                      style: TextStyle(
-                          color: Colors.white70, fontSize: 11)),
-                ],
-              ),
-            ),
+                  Text('Ex: B1, C2, Amphi A...',
+                      style: TextStyle(color: context.textMuted, fontSize: 11)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _nomSalle,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: 'B1',
+                      prefixIcon: Icon(Icons.door_front_door_outlined,
+                          color: context.textMuted, size: 20),
+                    ),
+                  ),
 
-            const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
-            // ── Nom salle ──
-            _FieldLabel('Nom de la salle *', context),
-            const SizedBox(height: 4),
-            Text('Ex: B1, C2, Amphi A...',
-                style: TextStyle(
-                    color: context.textMuted, fontSize: 11)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _nomSalle,
-              onChanged:  (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText:   'B1',
-                prefixIcon: Icon(Icons.door_front_door_outlined,
-                    color: context.textMuted, size: 20),
-              ),
-            ),
+                  // ── Filiere ──
+                  _FieldLabel('Filiere *', context),
+                  const SizedBox(height: 4),
+                  Text('${filieres.length} filiere(s) dans votre departement',
+                      style: TextStyle(color: AppColors.green, fontSize: 11)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: context.isDark ? AppColors.dark : AppColors.light,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _filiereCustomMode
+                            ? '__custom__'
+                            : (filieres.contains(_filiere)
+                                ? _filiere
+                                : filieres.first),
+                        isExpanded: true,
+                        dropdownColor: context.cardColor,
+                        icon: Icon(Icons.keyboard_arrow_down,
+                            color: context.textMuted),
+                        items: [
+                          ...filieres.map((f) => DropdownMenuItem(
+                                value: f,
+                                child: Text(f,
+                                    style: TextStyle(
+                                        color: context.textPrimary,
+                                        fontSize: 14)),
+                              )),
+                          const DropdownMenuItem(
+                            value: '__custom__',
+                            child: Row(
+                              children: [
+                                Icon(Icons.add_circle_outline,
+                                    size: 18, color: AppColors.cyan),
+                                SizedBox(width: 8),
+                                Text('Autre (personnaliser)',
+                                    style: TextStyle(
+                                        color: AppColors.cyan,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ),
+                        ],
+                        onChanged: (v) {
+                          if (v == '__custom__') {
+                            setState(() {
+                              _filiereCustomMode = true;
+                              _filiereCustomCtrl.clear();
+                            });
+                          } else if (v != null) {
+                            setState(() {
+                              _filiereCustomMode = false;
+                              _filiere = v;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  if (_filiereCustomMode) ...[
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _filiereCustomCtrl,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Nom de la filière',
+                        prefixIcon: Icon(Icons.edit_outlined,
+                            color: context.textMuted, size: 20),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          color: context.textMuted,
+                          onPressed: () {
+                            setState(() {
+                              _filiereCustomMode = false;
+                              _filiere = filieres.first;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
 
-            const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-            // ── Filiere ──
-            _FieldLabel('Filiere *', context),
-            const SizedBox(height: 4),
-            Text('${filieres.length} filiere(s) dans votre departement',
-                style: TextStyle(
-                    color: AppColors.green, fontSize: 11)),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color:        context.isDark
-                    ? AppColors.dark
-                    : AppColors.light,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: filieres.contains(_filiere)
-                      ? _filiere
-                      : filieres.first,
-                  isExpanded:    true,
-                  dropdownColor: context.cardColor,
-                  icon: Icon(Icons.keyboard_arrow_down,
-                      color: context.textMuted),
-                  items: filieres
-                      .map((f) => DropdownMenuItem(
-                    value: f,
-                    child: Text(f,
-                        style: TextStyle(
-                            color:    context.textPrimary,
-                            fontSize: 14)),
-                  ))
-                      .toList(),
-                  onChanged: (v) {
-                    if (v != null) setState(() => _filiere = v);
-                  },
-                ),
-              ),
-            ),
+                  // ── Niveau ──
+                  _FieldLabel('Niveau *', context),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: _niveaux.map((n) {
+                      final selected = _niveau == n;
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: () => _selectionnerNiveau(n),
+                          child: Container(
+                            margin: EdgeInsets.only(
+                                right: n != _niveaux.last ? 8 : 0),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? AppColors.green
+                                  : context.isDark
+                                      ? AppColors.dark
+                                      : AppColors.light,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(n,
+                                  style: TextStyle(
+                                      color: selected
+                                          ? Colors.white
+                                          : context.textSecondary,
+                                      fontSize: 13,
+                                      fontWeight: selected
+                                          ? FontWeight.w700
+                                          : FontWeight.w400)),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
 
-            const SizedBox(height: 16),
-
-            // ── Niveau ──
-            _FieldLabel('Niveau *', context),
-            const SizedBox(height: 8),
-            Row(
-              children: _niveaux.map((n) {
-                final selected = _niveau == n;
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => _selectionnerNiveau(n),
-                    child: Container(
-                      margin: EdgeInsets.only(
-                          right: n != _niveaux.last ? 8 : 0),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                  // ── Formation ──
+                  if (formationModifiable) ...[
+                    const SizedBox(height: 16),
+                    _FieldLabel('Type de formation *', context),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _formation = 'FI'),
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: _formation == 'FI'
+                                    ? AppColors.green
+                                    : context.isDark
+                                        ? AppColors.dark
+                                        : AppColors.light,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.wb_sunny_outlined,
+                                      color: _formation == 'FI'
+                                          ? Colors.white
+                                          : context.textMuted,
+                                      size: 24),
+                                  const SizedBox(height: 6),
+                                  Text('FI',
+                                      style: TextStyle(
+                                          color: _formation == 'FI'
+                                              ? Colors.white
+                                              : context.textSecondary,
+                                          fontSize: 15,
+                                          fontWeight: _formation == 'FI'
+                                              ? FontWeight.w700
+                                              : FontWeight.w400)),
+                                  const SizedBox(height: 2),
+                                  Text('Cours du jour',
+                                      style: TextStyle(
+                                          color: _formation == 'FI'
+                                              ? Colors.white70
+                                              : context.textMuted,
+                                          fontSize: 11),
+                                      textAlign: TextAlign.center),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _formation = 'FA'),
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: _formation == 'FA'
+                                    ? AppColors.violet
+                                    : context.isDark
+                                        ? AppColors.dark
+                                        : AppColors.light,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.nights_stay_outlined,
+                                      color: _formation == 'FA'
+                                          ? Colors.white
+                                          : context.textMuted,
+                                      size: 24),
+                                  const SizedBox(height: 6),
+                                  Text('FA',
+                                      style: TextStyle(
+                                          color: _formation == 'FA'
+                                              ? Colors.white
+                                              : context.textSecondary,
+                                          fontSize: 15,
+                                          fontWeight: _formation == 'FA'
+                                              ? FontWeight.w700
+                                              : FontWeight.w400)),
+                                  const SizedBox(height: 2),
+                                  Text('Cours du soir',
+                                      style: TextStyle(
+                                          color: _formation == 'FA'
+                                              ? Colors.white70
+                                              : context.textMuted,
+                                          fontSize: 11),
+                                      textAlign: TextAlign.center),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: selected
-                            ? AppColors.green
-                            : context.isDark
-                            ? AppColors.dark
-                            : AppColors.light,
+                        color: AppColors.violet,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Center(
-                        child: Text(n,
-                            style: TextStyle(
-                                color:      selected
-                                    ? Colors.white
-                                    : context.textSecondary,
-                                fontSize:   13,
-                                fontWeight: selected
-                                    ? FontWeight.w700
-                                    : FontWeight.w400)),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.nights_stay_outlined,
+                              color: Colors.white, size: 16),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'A partir de la L3, la formation par alternance '
+                              'est appliquee automatiquement.',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 12),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
+                  ],
 
-            // ── Formation ──
-            if (formationModifiable) ...[
-              const SizedBox(height: 16),
-              _FieldLabel('Type de formation *', context),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _formation = 'FI'),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: _formation == 'FI'
-                              ? AppColors.green
-                              : context.isDark
-                              ? AppColors.dark
-                              : AppColors.light,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(Icons.wb_sunny_outlined,
-                                color: _formation == 'FI'
-                                    ? Colors.white
-                                    : context.textMuted,
-                                size: 24),
-                            const SizedBox(height: 6),
-                            Text('FI',
-                                style: TextStyle(
-                                    color: _formation == 'FI'
-                                        ? Colors.white
-                                        : context.textSecondary,
-                                    fontSize:   15,
-                                    fontWeight: _formation == 'FI'
-                                        ? FontWeight.w700
-                                        : FontWeight.w400)),
-                            const SizedBox(height: 2),
-                            Text('Cours du jour',
-                                style: TextStyle(
-                                    color: _formation == 'FI'
-                                        ? Colors.white70
-                                        : context.textMuted,
-                                    fontSize: 11),
-                                textAlign: TextAlign.center),
-                          ],
-                        ),
-                      ),
+                  const SizedBox(height: 16),
+
+                  // ── Email délégué ──
+                  _FieldLabel('Email du delegue *', context),
+                  const SizedBox(height: 4),
+                  Text('Ce compte recevra les identifiants par email',
+                      style: TextStyle(color: context.textMuted, fontSize: 11)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _emailDelegue,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      hintText: 'delegue@classe.cm',
+                      prefixIcon: Icon(Icons.email_outlined,
+                          color: context.textMuted, size: 20),
                     ),
                   ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _formation = 'FA'),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: _formation == 'FA'
-                              ? AppColors.violet
-                              : context.isDark
-                              ? AppColors.dark
-                              : AppColors.light,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(Icons.nights_stay_outlined,
-                                color: _formation == 'FA'
-                                    ? Colors.white
-                                    : context.textMuted,
-                                size: 24),
-                            const SizedBox(height: 6),
-                            Text('FA',
-                                style: TextStyle(
-                                    color: _formation == 'FA'
-                                        ? Colors.white
-                                        : context.textSecondary,
-                                    fontSize:   15,
-                                    fontWeight: _formation == 'FA'
-                                        ? FontWeight.w700
-                                        : FontWeight.w400)),
-                            const SizedBox(height: 2),
-                            Text('Cours du soir',
-                                style: TextStyle(
-                                    color: _formation == 'FA'
-                                        ? Colors.white70
-                                        : context.textMuted,
-                                    fontSize: 11),
-                                textAlign: TextAlign.center),
-                          ],
-                        ),
-                      ),
+
+                  const SizedBox(height: 16),
+
+                  // ── Matricule délégué ──
+                  _FieldLabel('Matricule du delegue *', context),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Permet au delegue de recevoir ses notes comme les autres etudiants',
+                    style: TextStyle(color: context.textMuted, fontSize: 11),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _matriculeDelegue,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: InputDecoration(
+                      hintText: 'Ex: 21G0042',
+                      prefixIcon: Icon(Icons.badge_outlined,
+                          color: context.textMuted, size: 20),
                     ),
                   ),
+
+                  // Erreur
+                  if (_error != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.red,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline,
+                              color: Colors.white, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(_error!,
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _loading ? null : _creer,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                      icon: _loading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.add, size: 18),
+                      label: Text(_loading
+                          ? 'Creation en cours...'
+                          : 'Creer la classe'),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
                 ],
               ),
-            ] else ...[
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color:        AppColors.violet,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.nights_stay_outlined,
-                        color: Colors.white, size: 16),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'A partir de la L3, la formation par alternance '
-                            'est appliquee automatiquement.',
-                        style: TextStyle(
-                            color: Colors.white, fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 16),
-
-            // ── Email délégué ──
-            _FieldLabel('Email du delegue *', context),
-            const SizedBox(height: 4),
-            Text('Ce compte recevra les identifiants par email',
-                style: TextStyle(
-                    color: context.textMuted, fontSize: 11)),
-            const SizedBox(height: 8),
-            TextField(
-              controller:  _emailDelegue,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                hintText:   'delegue@classe.cm',
-                prefixIcon: Icon(Icons.email_outlined,
-                    color: context.textMuted, size: 20),
-              ),
             ),
-
-            const SizedBox(height: 16),
-
-            // ── Matricule délégué ──
-            _FieldLabel('Matricule du delegue *', context),
-            const SizedBox(height: 4),
-            Text(
-              'Permet au delegue de recevoir ses notes comme les autres etudiants',
-              style: TextStyle(
-                  color: context.textMuted, fontSize: 11),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller:           _matriculeDelegue,
-              textCapitalization:   TextCapitalization.characters,
-              decoration: InputDecoration(
-                hintText:   'Ex: 21G0042',
-                prefixIcon: Icon(Icons.badge_outlined,
-                    color: context.textMuted, size: 20),
-              ),
-            ),
-
-            // Erreur
-            if (_error != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color:        AppColors.red,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline,
-                        color: Colors.white, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(_error!,
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 13)),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 24),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _loading ? null : _creer,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.green,
-                  foregroundColor: Colors.white,
-                ),
-                icon: _loading
-                    ? const SizedBox(
-                    width: 18, height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white))
-                    : const Icon(Icons.add, size: 18),
-                label: Text(_loading
-                    ? 'Creation en cours...'
-                    : 'Creer la classe'),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -1154,13 +1208,13 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-    text,
-    style: TextStyle(
-      color:      ctx.textSecondary,
-      fontSize:   13,
-      fontWeight: FontWeight.w500,
-    ),
-  );
+        text,
+        style: TextStyle(
+          color: ctx.textSecondary,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+      );
 }
 
 class _SuccessView extends StatelessWidget {
@@ -1182,33 +1236,32 @@ class _SuccessView extends StatelessWidget {
       children: [
         Center(
           child: Container(
-            width: 40, height: 4,
+            width: 40,
+            height: 4,
             decoration: BoxDecoration(
-                color:        context.borderColor,
+                color: context.borderColor,
                 borderRadius: BorderRadius.circular(2)),
           ),
         ),
         const SizedBox(height: 32),
         Container(
-          width: 72, height: 72,
+          width: 72,
+          height: 72,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          child: const Icon(Icons.check_rounded,
-              color: Colors.white, size: 36),
+          child: const Icon(Icons.check_rounded, color: Colors.white, size: 36),
         ),
         const SizedBox(height: 20),
         Text(titre,
             style: TextStyle(
-                color:      context.textPrimary,
-                fontSize:   18,
+                color: context.textPrimary,
+                fontSize: 18,
                 fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(message,
               style: TextStyle(
-                  color:    context.textMuted,
-                  fontSize: 13,
-                  height:   1.5),
+                  color: context.textMuted, fontSize: 13, height: 1.5),
               textAlign: TextAlign.center),
         ),
         const SizedBox(height: 32),
