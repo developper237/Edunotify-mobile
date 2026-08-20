@@ -99,7 +99,6 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
 
   Future<void> _souscrire() async {
     final notifier = ref.read(billingProvider.notifier);
-    final abo = ref.read(billingProvider).abonnement;
 
     // Validation téléphone pour plans payants
     if (_planSelectionne != 'free' && _telController.text.trim().isEmpty) {
@@ -998,9 +997,7 @@ class _MethodeSelector extends StatelessWidget {
       children: [
         Expanded(
           child: _MethodeCard(
-            icone: Icons.phone_android_rounded,
-            label: 'MTN MoMo',
-            couleur: const Color(0xFFFFCC00),
+            methode: 'mtn_momo',
             selected: methode == 'mtn_momo',
             onTap: () => onChanged('mtn_momo'),
           ),
@@ -1008,9 +1005,7 @@ class _MethodeSelector extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: _MethodeCard(
-            icone: Icons.smartphone_rounded,
-            label: 'Orange Money',
-            couleur: const Color(0xFFFF7900),
+            methode: 'orange_money',
             selected: methode == 'orange_money',
             onTap: () => onChanged('orange_money'),
           ),
@@ -1021,18 +1016,16 @@ class _MethodeSelector extends StatelessWidget {
 }
 
 class _MethodeCard extends StatelessWidget {
-  final IconData icone;
-  final String label;
-  final Color couleur;
+  final String methode;
   final bool selected;
   final VoidCallback onTap;
   const _MethodeCard({
-    required this.icone,
-    required this.label,
-    required this.couleur,
+    required this.methode,
     required this.selected,
     required this.onTap,
   });
+
+  bool get _isMtn => methode == 'mtn_momo';
 
   @override
   Widget build(BuildContext context) {
@@ -1041,32 +1034,86 @@ class _MethodeCard extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
           color: isDark ? AppColors.darkCard : AppColors.lightCard,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? couleur : context.borderColor,
-            width: selected ? 2 : 1,
+            color: selected
+                ? (_isMtn ? const Color(0xFFFFCC00) : const Color(0xFFFF7900))
+                : context.borderColor,
+            width: selected ? 2.5 : 1,
           ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: (_isMtn
+                            ? const Color(0xFFFFCC00)
+                            : const Color(0xFFFF7900))
+                        .withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
         child: Column(
           children: [
-            Icon(icone, color: couleur, size: 26),
-            const SizedBox(height: 6),
+            // Logo de la marque
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color:
+                    _isMtn ? const Color(0xFFFFCC00) : const Color(0xFFFF7900),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: _isMtn
+                    ? const Text(
+                        'MTN',
+                        style: TextStyle(
+                          color: Color(0xFF004F71),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      )
+                    : const Text(
+                        'OM',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 8),
             Text(
-              label,
+              _isMtn ? 'MTN MoMo' : 'Orange Money',
               style: TextStyle(
                 color: context.textPrimary,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
+            Text(
+              _isMtn ? 'Mobile Money' : 'Money',
+              style: TextStyle(
+                color: context.textMuted,
+                fontSize: 10.5,
+              ),
+            ),
+            const SizedBox(height: 6),
             Icon(
               selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-              color: selected ? couleur : context.textMuted,
-              size: 14,
+              color: selected
+                  ? (_isMtn ? const Color(0xFFFFCC00) : const Color(0xFFFF7900))
+                  : context.textMuted,
+              size: 16,
             ),
           ],
         ),
