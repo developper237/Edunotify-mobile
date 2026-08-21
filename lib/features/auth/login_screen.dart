@@ -6,6 +6,7 @@ import '../../core/locale.dart';
 import '../../core/widgets/ui_kit.dart';
 import 'auth_provider.dart';
 import 'forgot_password_screen.dart';
+import 'register_teacher_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -308,7 +309,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   color: AppColors.cyan,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
 
+                          const SizedBox(height: 16),
+
+                          // LIEN INSCRIPTION PROFESSEUR
+                          Align(
+                            alignment: Alignment.center,
+                            child: TextButton(
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(0, 32),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const RegisterTeacherScreen(),
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                'Vous êtes professeur et n\'avez pas encore de compte ? Créez-en un',
+                                style: TextStyle(
+                                  color: AppColors.orange,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),

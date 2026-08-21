@@ -110,6 +110,30 @@ class ApiClient {
     } on DioException catch (e) { throw _handle(e); }
   }
 
+  // ── ROUTES PUBLIQUES (pas d'authentification) ──────────────────
+  static Future<Map<String, dynamic>?> getPublic(String path) async {
+    try {
+      final resp = await _dio.get(path);
+      return resp.data as Map<String, dynamic>?;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      throw _handle(e);
+    }
+  }
+
+  static Future<Map<String, dynamic>?> postPublic(String path, {Map<String, dynamic>? data}) async {
+    try {
+      final resp = await _dio.post(path, data: data);
+      return resp.data as Map<String, dynamic>?;
+    } on DioException catch (e) {
+      if (e.response?.data != null && e.response?.data is Map) {
+        final errorData = e.response!.data as Map<String, dynamic>;
+        throw ApiException(errorData['error'] ?? 'Erreur serveur', statusCode: e.response?.statusCode);
+      }
+      throw _handle(e);
+    }
+  }
+
   // ── PRESENCE SERVICE ──────────────────────────────────────────
   static Future<Map<String, dynamic>> postPresence(String path, {Map<String, dynamic>? data, required String userId, required String role, String? classeId}) async {
     try {
