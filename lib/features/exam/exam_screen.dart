@@ -252,9 +252,12 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
     final statut = r['statut'] as String? ?? '';
     final matiere = r['matiere'] as String? ?? '';
     final titre = r['titre'] as String? ?? '';
-    final noteSur20 = r['noteSur20'] as double?;
-    final score = r['score'] as double?;
-    final totalPoints = r['totalPoints'] as int? ?? 0;
+    final rawNote = r['noteSur20'];
+    final noteSur20 = rawNote is num ? rawNote.toDouble() : null;
+    final rawScore = r['score'];
+    final score = rawScore is num ? rawScore.toDouble() : null;
+    final rawTotal = r['totalPoints'];
+    final totalPoints = rawTotal is num ? rawTotal.toInt() : 0;
     final debut = r['debut'] as String?;
     final fin = r['fin'] as String?;
     final dateCreation = r['dateCreation'] as String?;
@@ -404,14 +407,19 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   void _afficherDetailResultat(Map<String, dynamic> r) {
     final titre = r['titre'] as String? ?? '';
     final matiere = r['matiere'] as String? ?? '';
-    final noteSur20 = r['noteSur20'] as double?;
-    final score = r['score'] as double?;
-    final totalPoints = r['totalPoints'] as int? ?? 0;
-    final avertissements = r['avertissements'] as int? ?? 0;
+    final rawNote2 = r['noteSur20'];
+    final noteSur20 = rawNote2 is num ? rawNote2.toDouble() : null;
+    final rawScore2 = r['score'];
+    final score = rawScore2 is num ? rawScore2.toDouble() : null;
+    final rawTotal2 = r['totalPoints'];
+    final totalPoints = rawTotal2 is num ? rawTotal2.toInt() : 0;
+    final rawAvis = r['avertissements'];
+    final avertissements = rawAvis is num ? rawAvis.toInt() : 0;
     final statutParticipant = r['statutParticipant'] as String? ?? '';
     final debut = r['debut'] as String?;
     final profNom = r['profNom'] as String? ?? '';
-    final nbSujets = r['nbSujets'] as int? ?? 0;
+    final rawNb = r['nbSujets'];
+    final nbSujets = rawNb is num ? rawNb.toInt() : 0;
 
     String dateStr = '';
     if (debut != null) {
@@ -729,7 +737,8 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
     } catch (_) {
       // Fallback : calcul local si le backend est injoignable
       for (final sujet in _sujets) {
-        final points = (sujet['points'] as int?) ?? 1;
+        final rawPts = sujet['points'];
+        final points = rawPts is num ? rawPts.toInt() : 1;
         totalPoints += points;
         final options =
             (sujet['options'] as Map<String, dynamic>?) ?? {};

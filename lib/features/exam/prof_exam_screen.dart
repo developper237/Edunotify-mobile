@@ -335,14 +335,18 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
                           final nom = '${user['prenom'] ?? ''} ${user['nom'] ?? ''}'.trim();
                           final email = user['email'] as String? ?? '';
                           final rawScore = p['score'];
-                          final score = rawScore is num ? rawScore.toDouble() : (rawScore as double?);
+                          final score = rawScore is num ? rawScore.toDouble() : null;
                           final pStatut = p['statut'] as String? ?? '';
-                          final avertissements = p['avertissements'] as int? ?? 0;
+                          final rawAvis = p['avertissements'];
+                          final avertissements = rawAvis is num ? rawAvis.toInt() : 0;
                           final nbReponses = (p['reponses'] as List?)?.length ?? 0;
 
                           // Calculer la note sur 20
                           final totalPoints = participants.isNotEmpty && i == 0
-                              ? (p['reponses'] as List?)?.fold<int>(0, (sum, r) => sum + ((r as Map)['pointsObtenus'] as int? ?? 0)) ?? 0
+                              ? (p['reponses'] as List?)?.fold<int>(0, (sum, r) {
+                                  final pts = (r as Map)['pointsObtenus'];
+                                  return sum + (pts is num ? pts.toInt() : 0);
+                                }) ?? 0
                               : 0;
 
                           return ListTile(
