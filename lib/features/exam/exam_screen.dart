@@ -79,7 +79,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
         etablissementId: user?.etablissementId ?? '',
       );
 
-      final session = resp['session'] as Map<String, dynamic>?>;
+      final session = resp['session'] as Map<String, dynamic>?;
       if (session == null) throw Exception('Session invalide');
 
       // Vérifier si la session est terminée
