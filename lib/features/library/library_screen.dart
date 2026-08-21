@@ -160,7 +160,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   Future<void> _uploaderDocument() async {
-    final result = await FilePicker().pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: [
         'pdf',
