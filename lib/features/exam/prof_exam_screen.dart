@@ -556,6 +556,10 @@ class _CreerExamenScreenState extends ConsumerState<_CreerExamenScreen> {
           final letter = String.fromCharCode(65 + j); // A, B, C, D
           options[letter] = q.optionControllers[j].text.trim();
         }
+        // Inclure la bonne réponse dans les options pour la correction auto
+        if (q.correctAnswer != null) {
+          options['correct'] = q.correctAnswer!;
+        }
         return {
           'intitule': q.intituleController.text.trim(),
           'enonce': q.enonceController.text.trim(),
