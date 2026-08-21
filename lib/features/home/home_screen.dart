@@ -29,6 +29,7 @@ import '../billing/subscription_screen.dart';
 import '../leads/leads_admin_screen.dart';
 import '../library/library_screen.dart';
 import '../exam/exam_screen.dart';
+import '../exam/prof_exam_screen.dart';
 import '../chat_group/chat_group_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════
@@ -1162,7 +1163,7 @@ class _QuickActions extends StatelessWidget {
         return [
           _QAction(Icons.grade_rounded, 'Notes', () => goTo(1)),
           _QAction(Icons.quiz_rounded, 'Salle d\'examen',
-              () => ouvrir(const ExamScreen())),
+              () => ouvrir(const ProfExamScreen())),
           _QAction(Icons.menu_book_rounded, 'Bibliothèque',
               () => ouvrir(const LibraryScreen())),
           _QAction(Icons.chat_bubble_rounded, 'Messages',

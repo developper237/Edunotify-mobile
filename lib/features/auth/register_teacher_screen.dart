@@ -24,16 +24,61 @@ class EtablissementInfo {
     this.filieres = const [],
   });
 
-  factory EtablissementInfo.fromJson(Map<String, dynamic> j) =>
-      EtablissementInfo(
-        id: j['id'] ?? '',
-        nom: j['nom'] ?? '',
-        ville: j['ville'] ?? '',
-        filieres: (j['filieres'] as List<dynamic>?)
-                ?.map((e) => e.toString())
-                .toList() ??
-            [],
-      );
+  factory EtablissementInfo.fromJson(Map<String, dynamic> j) {
+    // Filières retournées par le backend (depuis la table Classe)
+    final backendFilieres = (j['filieres'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        [];
+
+    // Liste complète de fallback (toutes les filières connues)
+    const defaultFilieres = [
+      'Génie Logiciel',
+      'Administration et Sécurité des Réseaux',
+      'Génie Informatique',
+      'Génie Réseau et Télécommunications',
+      'Mention des technologies de l'information et du numérique',
+      'Génie Électrique et Informatique Industrielle',
+      'Mécatronique',
+      'Génie Industriel et Maintenance',
+      'Génie Mécanique et Productique',
+      'Logistique Industrielle',
+      'Génie Thermique et Énergie',
+      "Économie d'Énergie et Environnement",
+      'Valorisation des Énergies Renouvelables',
+      'Génie Civil',
+      'Génie des Mines',
+      'Génie Métallurgique',
+      'Génie Ferroviaire',
+      'Météorologie',
+      'Licence en Pétrole et Gaz',
+      'Génie Biomédical',
+      'Chimie Pharmaceutique',
+      'Qualité, Hygiène et Salubrité des Aliments',
+      'Chimie Industrielle et Pharmaceutique',
+      'Gestion des Entreprises et des Administrations',
+      'Génie Logistique et Transport',
+      'Techniques de Commercialisation',
+      'Négociation Vente',
+      'Gestion des Ressources Humaines',
+      'Assistant Manager',
+      'Organisation et Gestion Administrative',
+      'Gestion Appliquée aux Petites et Moyennes Organisations',
+      'Gestion Comptable et Financière',
+      'Gestion Bancaire et Financière',
+      'Banque et Finances',
+    ];
+
+    // Merger : backend d'abord, puis défaut sans doublons
+    final all = {...backendFilieres, ...defaultFilieres}.toList()..sort();
+
+    return EtablissementInfo(
+      id: j['id'] ?? '',
+      nom: j['nom'] ?? '',
+      ville: j['ville'] ?? '',
+      filieres: all,
+    );
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════

@@ -300,13 +300,52 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
     setState(() => _isFinished = true);
     _timer?.cancel();
 
+    // Calculer la note côté client (estimation)
+    int totalPoints = 0;
+    int pointsObtenus = 0;
+    for (final sujet in _sujets) {
+      final points = sujet['points'] ?? 1;
+      totalPoints += points;
+      final options = (sujet['options'] as Map<String, dynamic>?) ?? {};
+      final correctKey = options['correct'];
+      if (correctKey != null && _reponses[sujet['id']] == correctKey) {
+        pointsObtenus += points;
+      }
+    }
+    final note20 = totalPoints > 0 ? (pointsObtenus / totalPoints * 20).toStringAsFixed(1) : '0.0';
+
     if (mounted) {
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (_) => AlertDialog(
-          title: const Text('Examen terminé'),
-          content: const Text('Vos réponses ont été enregistrées.'),
+          title: const Text('Examen terminé !'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.emoji_events_rounded, size: 48, color: AppColors.orange),
+              const SizedBox(height: 12),
+              Text(
+                'Votre note : $note20 / 20',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.cyan,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '$pointsObtenus / $totalPoints points',
+                style: TextStyle(color: context.textMuted, fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Vos réponses ont été enregistrées et corrigées.',
+                style: TextStyle(color: context.textMuted, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
           actions: [
             ElevatedButton(
               onPressed: () {
