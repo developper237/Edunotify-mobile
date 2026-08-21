@@ -79,7 +79,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
         etablissementId: user?.etablissementId ?? '',
       );
 
-      final session = resp['session'] as Map<String, dynamic>?;
+      final session = resp['session'] as Map<String, dynamic>?>;
       if (session == null) throw Exception('Session invalide');
 
       // Vérifier si la session est terminée
@@ -91,6 +91,19 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
           );
         }
         setState(() => _isLoading = false);
+        return;
+      }
+
+      // Vérifier si l'étudiant a déjà passé cet examen
+      final participant = resp['participant'] as Map<String, dynamic>?;
+      if (participant != null && participant['statut'] == 'termine') {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Vous avez déjà passé cet examen')),
+          );
+        }
+        setState(() => _isLoading = false);
+        _chargerResultats();
         return;
       }
 
@@ -559,7 +572,7 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
         return;
       }
 
-      // Vérifier si le participant a déjà soumis
+      // Vérifier si le participant a déjà soumis ou est invalidé
       final participants = session?['participants'] as List? ?? [];
       if (participants.isNotEmpty) {
         final p = participants.first;
@@ -567,6 +580,13 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
         if (pStatut == 'termine') {
           setState(() {
             _isFinished = true;
+            _isLoading = false;
+          });
+          return;
+        }
+        if (pStatut == 'invalide') {
+          setState(() {
+            _erreur = 'Votre session a été invalidée';
             _isLoading = false;
           });
           return;

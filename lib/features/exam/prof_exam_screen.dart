@@ -334,7 +334,8 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
                           final user = p['user'] as Map<String, dynamic>? ?? {};
                           final nom = '${user['prenom'] ?? ''} ${user['nom'] ?? ''}'.trim();
                           final email = user['email'] as String? ?? '';
-                          final score = p['score'] as double?;
+                          final rawScore = p['score'];
+                          final score = rawScore is num ? rawScore.toDouble() : (rawScore as double?);
                           final pStatut = p['statut'] as String? ?? '';
                           final avertissements = p['avertissements'] as int? ?? 0;
                           final nbReponses = (p['reponses'] as List?)?.length ?? 0;
