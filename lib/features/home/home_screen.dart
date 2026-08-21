@@ -572,7 +572,12 @@ class _StatsStrip extends ConsumerWidget {
         return make([
           (icon: Icons.description_outlined, value: nonLues, label: 'Rapports'),
           (icon: Icons.grade_outlined, value: 2, label: 'Notes à traiter'),
-
+          (
+            icon: Icons.notifications_none_rounded,
+            value: nonLues,
+            label: 'Non lues'
+          ),
+        ]);
       case 'professeur':
         return make([
           (icon: Icons.quiz_outlined, value: 1, label: 'Examens'),

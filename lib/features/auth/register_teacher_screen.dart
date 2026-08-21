@@ -605,7 +605,7 @@ class _RegisterTeacherScreenState
                                     },
                                     selectedColor:
                                         AppColors.orange.withValues(alpha: 0.2),
-                                    checkColor: AppColors.orange,
+                                    checkmarkColor: AppColors.orange,
                                   );
                                 }).toList(),
                               ),
