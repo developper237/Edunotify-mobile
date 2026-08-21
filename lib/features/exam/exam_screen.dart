@@ -704,22 +704,45 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
     setState(() => _isFinished = true);
     _timer?.cancel();
 
+    // Appeler le backend pour corriger et calculer la note
     int totalPoints = 0;
     int pointsObtenus = 0;
-    for (final sujet in _sujets) {
-      final points = (sujet['points'] as int?) ?? 1;
-      totalPoints += points;
-      final options =
-          (sujet['options'] as Map<String, dynamic>?) ?? {};
-      final correctKey = options['correct'];
-      if (correctKey != null &&
-          _reponses[sujet['id']] == correctKey) {
-        pointsObtenus += points;
+    double note20 = 0.0;
+    bool backendOk = false;
+
+    try {
+      final user = ref.read(currentUserProvider);
+      final resp = await ApiClient.postExam(
+        '/exam/sessions/${widget.sessionId}/submit',
+        data: {},
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
+      );
+      backendOk = true;
+      final rawScore = resp['score'];
+      final rawTotal = resp['totalPoints'];
+      final rawNote = resp['noteSur20'];
+      pointsObtenus = rawScore is num ? rawScore.toInt() : 0;
+      totalPoints = rawTotal is num ? rawTotal.toInt() : 0;
+      note20 = rawNote is num ? rawNote.toDouble() : 0.0;
+    } catch (_) {
+      // Fallback : calcul local si le backend est injoignable
+      for (final sujet in _sujets) {
+        final points = (sujet['points'] as int?) ?? 1;
+        totalPoints += points;
+        final options =
+            (sujet['options'] as Map<String, dynamic>?) ?? {};
+        final correctKey = options['correct'];
+        if (correctKey != null &&
+            _reponses[sujet['id']] == correctKey) {
+          pointsObtenus += points;
+        }
       }
+      note20 = totalPoints > 0
+          ? (pointsObtenus / totalPoints * 20)
+          : 0.0;
     }
-    final note20 = totalPoints > 0
-        ? (pointsObtenus / totalPoints * 20).toStringAsFixed(1)
-        : '0.0';
 
     if (mounted) {
       showDialog(
@@ -734,7 +757,7 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
                   size: 48, color: AppColors.orange),
               const SizedBox(height: 12),
               Text(
-                'Votre note : $note20 / 20',
+                'Votre note : ${note20.toStringAsFixed(1)} / 20',
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
@@ -749,7 +772,9 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'Vos réponses ont été enregistrées et corrigées.',
+                backendOk
+                    ? 'Vos réponses ont été corrigées par le serveur.'
+                    : 'Réponses enregistrées (correction en attente).',
                 style: TextStyle(
                     color: context.textMuted, fontSize: 12),
                 textAlign: TextAlign.center,
