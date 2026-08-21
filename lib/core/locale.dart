@@ -45,6 +45,7 @@ class Strings {
   String get roleSuperAdmin   => isFr ? 'Super Administrateur' : 'Super Administrator';
   String get roleAdmin        => isFr ? 'Administrateur'       : 'Administrator';
   String get roleChef         => isFr ? 'Chef de Département'  : 'Department Head';
+  String get roleProfesseur   => isFr ? 'Professeur'           : 'Professor';
   String get roleDelegue      => isFr ? 'Délégué'              : 'Class Representative';
   String get roleEtudiant     => isFr ? 'Étudiant'             : 'Student';
 
@@ -53,6 +54,7 @@ class Strings {
       case 'super_admin':      return roleSuperAdmin;
       case 'admin':            return roleAdmin;
       case 'chef_departement': return roleChef;
+      case 'professeur':       return roleProfesseur;
       case 'delegue':          return roleDelegue;
       case 'etudiant':         return roleEtudiant;
       default:                 return role;

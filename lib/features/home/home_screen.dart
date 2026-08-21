@@ -188,6 +188,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
+      case 'professeur':
+        return [
+          _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
+          _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
+          _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
+        ];
       case 'admin':
         return [
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
@@ -493,6 +499,8 @@ Color _roleAccent(String role) {
       return AppColors.orange;
     case 'chef_departement':
       return AppColors.green;
+    case 'professeur':
+      return AppColors.red;
     case 'admin':
       return AppColors.violet;
     case 'super_admin':
@@ -563,6 +571,11 @@ class _StatsStrip extends ConsumerWidget {
       case 'chef_departement':
         return make([
           (icon: Icons.description_outlined, value: nonLues, label: 'Rapports'),
+          (icon: Icons.grade_outlined, value: 2, label: 'Notes à traiter'),
+
+      case 'professeur':
+        return make([
+          (icon: Icons.quiz_outlined, value: 1, label: 'Examens'),
           (icon: Icons.grade_outlined, value: 2, label: 'Notes à traiter'),
           (
             icon: Icons.notifications_none_rounded,
@@ -755,6 +768,8 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
         return 'Lancez l\'appel de présence et gérez votre classe.';
       case 'chef_departement':
         return 'Suivez les rapports d\'appel et gérez les notes.';
+      case 'professeur':
+        return 'Gérez vos examens et partagez des ressources avec vos étudiants.';
       case 'admin':
         return 'Administrez les utilisateurs et les départements.';
       case 'super_admin':
@@ -769,6 +784,7 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
       'super_admin': 'Super Admin',
       'admin': 'Administrateur',
       'chef_departement': 'Chef de département',
+      'professeur': 'Professeur',
       'delegue': 'Délégué',
       'etudiant': 'Étudiant',
     };
@@ -783,6 +799,8 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
         return const Color(0xFFF97316);
       case 'chef_departement':
         return const Color(0xFF10B981);
+      case 'professeur':
+        return const Color(0xFFF43F5E);
       case 'admin':
         return const Color(0xFF8B5CF6);
       case 'super_admin':
@@ -1128,6 +1146,18 @@ class _QuickActions extends StatelessWidget {
           _QAction(Icons.grade_rounded, 'Notes', () => goTo(2)),
           _QAction(Icons.class_rounded, 'Classes',
               () => ouvrir(const ClassesChefScreen())),
+          _QAction(Icons.menu_book_rounded, 'Bibliothèque',
+              () => ouvrir(const LibraryScreen())),
+          _QAction(Icons.chat_bubble_rounded, 'Messages',
+              () => ouvrir(const ChatGroupScreen())),
+          _QAction(Icons.notifications_rounded, 'Notifications',
+              () => ouvrir(const NotificationsScreen())),
+        ];
+      case 'professeur':
+        return [
+          _QAction(Icons.grade_rounded, 'Notes', () => goTo(1)),
+          _QAction(Icons.quiz_rounded, 'Salle d\'examen',
+              () => ouvrir(const ExamScreen())),
           _QAction(Icons.menu_book_rounded, 'Bibliothèque',
               () => ouvrir(const LibraryScreen())),
           _QAction(Icons.chat_bubble_rounded, 'Messages',

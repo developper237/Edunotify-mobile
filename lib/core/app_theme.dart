@@ -34,6 +34,7 @@ class AppColors {
       case 'super_admin':      return violet;
       case 'admin':            return blue;
       case 'chef_departement': return green;
+      case 'professeur':       return red;
       case 'delegue':          return orange;
       case 'etudiant':         return cyan;
       default:                 return cyan;
