@@ -37,7 +37,7 @@ class EtablissementInfo {
       'Administration et Sécurité des Réseaux',
       'Génie Informatique',
       'Génie Réseau et Télécommunications',
-      'Mention des technologies de l'information et du numérique',
+      "Mention des technologies de l'information et du numérique",
       'Génie Électrique et Informatique Industrielle',
       'Mécatronique',
       'Génie Industriel et Maintenance',

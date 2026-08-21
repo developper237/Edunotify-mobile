@@ -304,7 +304,7 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
     int totalPoints = 0;
     int pointsObtenus = 0;
     for (final sujet in _sujets) {
-      final points = sujet['points'] ?? 1;
+      final points = (sujet['points'] as int?) ?? 1;
       totalPoints += points;
       final options = (sujet['options'] as Map<String, dynamic>?) ?? {};
       final correctKey = options['correct'];
