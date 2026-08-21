@@ -170,8 +170,17 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
                                           color: AppColors.red),
                                       tooltip: 'Terminer',
                                     )
-                                  : null,
-                          onTap: () => _afficherCode(s['codeInvitation'], s['titre']),
+                                  : statut == 'termine'
+                                      ? IconButton(
+                                          onPressed: () => _afficherResultats(s['id'], s['titre'] ?? ''),
+                                          icon: const Icon(Icons.bar_chart_rounded,
+                                              color: AppColors.cyan),
+                                          tooltip: 'Résultats',
+                                        )
+                                      : null,
+                          onTap: statut == 'termine'
+                              ? () => _afficherResultats(s['id'], s['titre'] ?? '')
+                              : () => _afficherCode(s['codeInvitation'], s['titre']),
                         ),
                       );
                     },
@@ -228,6 +237,166 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _afficherResultats(String sessionId, String titre) async {
+    // Afficher un loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final user = ref.read(currentUserProvider);
+      final resp = await ApiClient.getExam(
+        '/exam/sessions/$sessionId/results',
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
+      );
+      if (!mounted) return;
+      Navigator.pop(context); // dismiss loading
+
+      final participants = (resp['participants'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) => DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          maxChildSize: 0.9,
+          minChildSize: 0.4,
+          expand: false,
+          builder: (ctx, scrollController) => Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.textMuted,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(Icons.emoji_events_rounded, color: AppColors.orange),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(titre,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 16)),
+                          Text('${participants.length} participant(s)',
+                              style: TextStyle(
+                                  color: context.textMuted, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: participants.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.people_outline,
+                                size: 40, color: context.textMuted),
+                            const SizedBox(height: 8),
+                            Text('Aucun participant',
+                                style: TextStyle(color: context.textMuted)),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: scrollController,
+                        itemCount: participants.length,
+                        itemBuilder: (c, i) {
+                          final p = participants[i];
+                          final user = p['user'] as Map<String, dynamic>? ?? {};
+                          final nom = '${user['prenom'] ?? ''} ${user['nom'] ?? ''}'.trim();
+                          final email = user['email'] as String? ?? '';
+                          final score = p['score'] as double?;
+                          final pStatut = p['statut'] as String? ?? '';
+                          final avertissements = p['avertissements'] as int? ?? 0;
+                          final nbReponses = (p['reponses'] as List?)?.length ?? 0;
+
+                          // Calculer la note sur 20
+                          final totalPoints = participants.isNotEmpty && i == 0
+                              ? (p['reponses'] as List?)?.fold<int>(0, (sum, r) => sum + ((r as Map)['pointsObtenus'] as int? ?? 0)) ?? 0
+                              : 0;
+
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: pStatut == 'invalide'
+                                  ? AppColors.red.withValues(alpha: 0.12)
+                                  : AppColors.cyan.withValues(alpha: 0.12),
+                              child: Text(
+                                nom.isNotEmpty ? nom[0].toUpperCase() : '?',
+                                style: TextStyle(
+                                  color: pStatut == 'invalide' ? AppColors.red : AppColors.cyan,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            title: Text(nom, style: const TextStyle(fontWeight: FontWeight.w600)),
+                            subtitle: Text(email,
+                                style: TextStyle(color: context.textMuted, fontSize: 11)),
+                            trailing: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                if (score != null)
+                                  Text(
+                                    '${score.toInt()} pts',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                      color: pStatut == 'invalide' ? AppColors.red : AppColors.cyan,
+                                    ),
+                                  ),
+                                if (pStatut == 'invalide')
+                                  Text('Invalide',
+                                      style: TextStyle(color: AppColors.red, fontSize: 10)),
+                                if (avertissements > 0)
+                                  Text('$avertissements avt.',
+                                      style: TextStyle(color: AppColors.orange, fontSize: 10)),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // dismiss loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _lancerExamen(String id) async {
