@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:dio/dio.dart';
 
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
@@ -45,21 +46,27 @@ class DocumentItem {
       typeFichier: j['typeFichier'] ?? '',
       tailleOctets: j['tailleOctets'] ?? 0,
       nbTelechargements: j['nbTelechargements'] ?? 0,
-      uploadeParNom: uploadeur != null ? '${uploadeur['prenom'] ?? ''} ${uploadeur['nom'] ?? ''}'.trim() : null,
-      createdAt: j['createdAt'] != null ? DateTime.tryParse(j['createdAt']) : null,
+      uploadeParNom: uploadeur != null
+          ? '${uploadeur['prenom'] ?? ''} ${uploadeur['nom'] ?? ''}'.trim()
+          : null,
+      createdAt:
+          j['createdAt'] != null ? DateTime.tryParse(j['createdAt']) : null,
     );
   }
 
   String get tailleFormatee {
     if (tailleOctets < 1024) return '$tailleOctets o';
-    if (tailleOctets < 1048576) return '${(tailleOctets / 1024).toStringAsFixed(1)} Ko';
+    if (tailleOctets < 1048576)
+      return '${(tailleOctets / 1024).toStringAsFixed(1)} Ko';
     return '${(tailleOctets / 1048576).toStringAsFixed(1)} Mo';
   }
 
   IconData get icone {
     if (typeFichier.contains('pdf')) return Icons.picture_as_pdf_rounded;
-    if (typeFichier.contains('word') || typeFichier.contains('document')) return Icons.description_rounded;
-    if (typeFichier.contains('powerpoint') || typeFichier.contains('presentation')) return Icons.slideshow_rounded;
+    if (typeFichier.contains('word') || typeFichier.contains('document'))
+      return Icons.description_rounded;
+    if (typeFichier.contains('powerpoint') ||
+        typeFichier.contains('presentation')) return Icons.slideshow_rounded;
     if (typeFichier.contains('image')) return Icons.image_rounded;
     return Icons.insert_drive_file_rounded;
   }
@@ -155,7 +162,17 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   Future<void> _uploaderDocument() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'txt'],
+      allowedExtensions: [
+        'pdf',
+        'doc',
+        'docx',
+        'ppt',
+        'pptx',
+        'jpg',
+        'jpeg',
+        'png',
+        'txt'
+      ],
       withData: false,
     );
 
@@ -193,20 +210,16 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     try {
       final user = ref.read(currentUserProvider);
-      final dio = ApiClient.dioBilling;
-      final formData = FormData.fromMap({
-        'fichier': await MultipartFile.fromFile(file.path!, filename: file.name),
-        'categorie': categorie,
-      });
+      final fileBytes = await File(file.path!).readAsBytes();
 
-      await dio.post(
+      await ApiClient.uploadDocument(
         '/library/documents',
-        data: formData,
-        options: Options(headers: {
-          'x-user-id': user?.id ?? '',
-          'x-user-role': user?.role ?? '',
-          'x-etab-id': user?.etablissementId ?? '',
-        }),
+        fileBytes: fileBytes,
+        filename: file.name,
+        fields: {'categorie': categorie},
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
       );
 
       if (mounted) {
@@ -228,14 +241,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   void _telecharger(DocumentItem doc) async {
     try {
       final user = ref.read(currentUserProvider);
-      final dio = ApiClient.dioBilling;
-      final resp = await dio.get(
+      final resp = await ApiClient.getLibrary(
         '/library/documents/${doc.id}/telecharger',
-        options: Options(headers: {
-          'x-user-id': user?.id ?? '',
-          'x-user-role': user?.role ?? '',
-          'x-etab-id': user?.etablissementId ?? '',
-        }),
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -342,12 +352,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                             const SizedBox(height: 12),
                             Text(
                               'Aucun document',
-                              style: TextStyle(color: context.textMuted, fontSize: 15),
+                              style: TextStyle(
+                                  color: context.textMuted, fontSize: 15),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               'Appuyez sur + pour importer un manuel',
-                              style: TextStyle(color: context.textMuted, fontSize: 12),
+                              style: TextStyle(
+                                  color: context.textMuted, fontSize: 12),
                             ),
                           ],
                         ),
@@ -355,7 +367,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     : RefreshIndicator(
                         onRefresh: _chargerDocuments,
                         child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
                           itemCount: _documents.length,
                           itemBuilder: (ctx, i) => _DocumentCard(
                             doc: _documents[i],
@@ -426,14 +439,16 @@ class _DocumentCard extends StatelessWidget {
                       children: [
                         Text(
                           doc.tailleFormatee,
-                          style: TextStyle(color: context.textMuted, fontSize: 12),
+                          style:
+                              TextStyle(color: context.textMuted, fontSize: 12),
                         ),
                         const SizedBox(width: 8),
                         Text('•', style: TextStyle(color: context.textMuted)),
                         const SizedBox(width: 8),
                         Text(
                           '${doc.nbTelechargements} téléchargement(s)',
-                          style: TextStyle(color: context.textMuted, fontSize: 12),
+                          style:
+                              TextStyle(color: context.textMuted, fontSize: 12),
                         ),
                       ],
                     ),
@@ -441,7 +456,8 @@ class _DocumentCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         'Par ${doc.uploadeParNom}',
-                        style: TextStyle(color: context.textMuted, fontSize: 11),
+                        style:
+                            TextStyle(color: context.textMuted, fontSize: 11),
                       ),
                     ],
                   ],

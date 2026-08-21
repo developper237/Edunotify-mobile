@@ -27,14 +27,15 @@ class GroupeChat {
   });
 
   factory GroupeChat.fromJson(Map<String, dynamic> j) => GroupeChat(
-    id: j['id'] ?? '',
-    nom: j['nom'] ?? '',
-    nbMembres: (j['_count']?['membres'] as int?) ?? (j['nbMembres'] as int?) ?? 0,
-    dernierMessage: j['dernierMessage'] as String?,
-    dernierMessageLe: j['dernierMessageLe'] != null
-        ? DateTime.tryParse(j['dernierMessageLe'])
-        : null,
-  );
+        id: j['id'] ?? '',
+        nom: j['nom'] ?? '',
+        nbMembres:
+            (j['_count']?['membres'] as int?) ?? (j['nbMembres'] as int?) ?? 0,
+        dernierMessage: j['dernierMessage'] as String?,
+        dernierMessageLe: j['dernierMessageLe'] != null
+            ? DateTime.tryParse(j['dernierMessageLe'])
+            : null,
+      );
 }
 
 class MessageChat {
@@ -64,12 +65,15 @@ class MessageChat {
       userId: j['userId'] ?? '',
       userNom: user?['nom'],
       userPrenom: user?['prenom'],
-      createdAt: j['createdAt'] != null ? DateTime.tryParse(j['createdAt']) ?? DateTime.now() : DateTime.now(),
+      createdAt: j['createdAt'] != null
+          ? DateTime.tryParse(j['createdAt']) ?? DateTime.now()
+          : DateTime.now(),
       estMien: j['userId'] == currentUserId,
     );
   }
 
-  String get initialise => '${(userPrenom ?? '')[0]}${(userNom ?? '')[0]}'.toUpperCase();
+  String get initialise =>
+      '${(userPrenom ?? '')[0]}${(userNom ?? '')[0]}'.toUpperCase();
   String get displayNom => '${userPrenom ?? ''} ${userNom ?? ''}'.trim();
 }
 
@@ -100,7 +104,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final resp = await ApiClient.getBilling(
+      final resp = await ApiClient.getChat(
         '/chat/groups',
         userId: user.id,
         role: user.role,
@@ -132,7 +136,9 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Annuler')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, nomController.text.trim()),
             child: const Text('Créer'),
@@ -145,7 +151,8 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
 
     try {
       final user = ref.read(currentUserProvider);
-      await ApiClient.post('/chat/groups',
+      await ApiClient.postChat(
+        '/chat/groups',
         data: {'nom': confirmed},
         userId: user?.id ?? '',
         role: user?.role ?? '',
@@ -186,12 +193,14 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
                       const SizedBox(height: 12),
                       Text(
                         'Aucun groupe',
-                        style: TextStyle(color: context.textMuted, fontSize: 15),
+                        style:
+                            TextStyle(color: context.textMuted, fontSize: 15),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Créez un groupe ou attendez une invitation',
-                        style: TextStyle(color: context.textMuted, fontSize: 12),
+                        style:
+                            TextStyle(color: context.textMuted, fontSize: 12),
                       ),
                     ],
                   ),
@@ -205,28 +214,39 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
                       final g = _groupes[i];
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: AppColors.cyan.withValues(alpha: 0.15),
+                          backgroundColor:
+                              AppColors.cyan.withValues(alpha: 0.15),
                           child: Text(
-                            g.nom.substring(0, g.nom.length.clamp(0, 2)).toUpperCase(),
-                            style: const TextStyle(color: AppColors.cyan, fontWeight: FontWeight.w700),
+                            g.nom
+                                .substring(0, g.nom.length.clamp(0, 2))
+                                .toUpperCase(),
+                            style: const TextStyle(
+                                color: AppColors.cyan,
+                                fontWeight: FontWeight.w700),
                           ),
                         ),
-                        title: Text(g.nom, style: TextStyle(fontWeight: FontWeight.w600)),
+                        title: Text(g.nom,
+                            style: TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text(
                           g.dernierMessage ?? '${g.nbMembres} membre(s)',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: context.textMuted, fontSize: 12),
+                          style:
+                              TextStyle(color: context.textMuted, fontSize: 12),
                         ),
                         trailing: g.dernierMessageLe != null
                             ? Text(
                                 DateFormat('HH:mm').format(g.dernierMessageLe!),
-                                style: TextStyle(color: context.textMuted, fontSize: 11),
+                                style: TextStyle(
+                                    color: context.textMuted, fontSize: 11),
                               )
                             : null,
-                        onTap: () => Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => _ChatRoomScreen(groupeId: g.id, nom: g.nom),
-                        )),
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  _ChatRoomScreen(groupeId: g.id, nom: g.nom),
+                            )),
                       );
                     },
                   ),
@@ -260,7 +280,8 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
     super.initState();
     _chargerMessages();
     // Polling toutes les 5 secondes
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _chargerMessages(silent: true));
+    _pollTimer = Timer.periodic(
+        const Duration(seconds: 5), (_) => _chargerMessages(silent: true));
   }
 
   @override
@@ -277,7 +298,7 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
 
     if (!silent) setState(() => _isLoading = true);
     try {
-      final resp = await ApiClient.getBilling(
+      final resp = await ApiClient.getChat(
         '/chat/groups/${widget.groupeId}/messages',
         userId: user.id,
         role: user.role,
@@ -310,7 +331,7 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
     _msgController.clear();
     try {
       final user = ref.read(currentUserProvider);
-      await ApiClient.post(
+      await ApiClient.postChat(
         '/chat/groups/${widget.groupeId}/messages',
         data: {'texte': text},
         userId: user?.id ?? '',
@@ -356,27 +377,37 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                       )
                     : ListView.builder(
                         controller: _scrollCtrl,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                         itemCount: _messages.length,
                         itemBuilder: (ctx, i) {
                           final msg = _messages[i];
                           final isMe = msg.estMien;
 
                           return Align(
-                            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                            alignment: isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
                             child: Container(
                               margin: const EdgeInsets.only(bottom: 8),
                               constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width * 0.75,
+                                maxWidth:
+                                    MediaQuery.of(context).size.width * 0.75,
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
                               decoration: BoxDecoration(
                                 color: isMe
                                     ? AppColors.cyan
-                                    : isDark ? AppColors.darkCard : AppColors.lightCard,
-                                borderRadius: BorderRadius.circular(16).copyWith(
-                                  bottomRight: isMe ? const Radius.circular(4) : null,
-                                  bottomLeft: !isMe ? const Radius.circular(4) : null,
+                                    : isDark
+                                        ? AppColors.darkCard
+                                        : AppColors.lightCard,
+                                borderRadius:
+                                    BorderRadius.circular(16).copyWith(
+                                  bottomRight:
+                                      isMe ? const Radius.circular(4) : null,
+                                  bottomLeft:
+                                      !isMe ? const Radius.circular(4) : null,
                                 ),
                               ),
                               child: Column(
@@ -396,7 +427,9 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                                   Text(
                                     msg.texte,
                                     style: TextStyle(
-                                      color: isMe ? Colors.white : context.textPrimary,
+                                      color: isMe
+                                          ? Colors.white
+                                          : context.textPrimary,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -404,7 +437,9 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
                                   Text(
                                     DateFormat('HH:mm').format(msg.createdAt),
                                     style: TextStyle(
-                                      color: isMe ? Colors.white70 : context.textMuted,
+                                      color: isMe
+                                          ? Colors.white70
+                                          : context.textMuted,
                                       fontSize: 10,
                                     ),
                                     textAlign: TextAlign.end,
@@ -420,7 +455,9 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
           // Champ de saisie
           Container(
             padding: EdgeInsets.only(
-              left: 12, right: 8, top: 8,
+              left: 12,
+              right: 8,
+              top: 8,
               bottom: MediaQuery.of(context).viewInsets.bottom + 8,
             ),
             decoration: BoxDecoration(

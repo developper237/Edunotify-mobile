@@ -33,7 +33,9 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
     setState(() => _isLoading = true);
     try {
       final user = ref.read(currentUserProvider);
-      final resp = await ApiClient.post('/exam/sessions/$code/join',
+      final resp = await ApiClient.postExam(
+        '/exam/sessions/$code/join',
+        data: {},
         userId: user?.id ?? '',
         role: user?.role ?? '',
         etablissementId: user?.etablissementId ?? '',
@@ -43,9 +45,11 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
       if (session == null) throw Exception('Session invalide');
 
       if (!mounted) return;
-      Navigator.push(context, MaterialPageRoute(
-        builder: (_) => _ExamSessionScreen(sessionId: session['id']),
-      ));
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => _ExamSessionScreen(sessionId: session['id']),
+          ));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -101,7 +105,11 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                   ),
                 ),
                 maxLength: 8,
-                buildCounter: (_, {required currentLength, required isFocused, required maxLength}) => null,
+                buildCounter: (_,
+                        {required currentLength,
+                        required isFocused,
+                        required maxLength}) =>
+                    null,
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -110,7 +118,8 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                   onPressed: _isLoading ? null : _rejoindre,
                   child: _isLoading
                       ? const SizedBox(
-                          width: 22, height: 22,
+                          width: 22,
+                          height: 22,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text('Rejoindre'),
@@ -173,7 +182,7 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
   Future<void> _chargerSession() async {
     try {
       final user = ref.read(currentUserProvider);
-      final resp = await ApiClient.get(
+      final resp = await ApiClient.getExam(
         '/exam/sessions/${widget.sessionId}',
         userId: user?.id ?? '',
         role: user?.role ?? '',
@@ -228,7 +237,7 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
     if (_isFinished) return;
     try {
       final user = ref.read(currentUserProvider);
-      final resp = await ApiClient.post(
+      final resp = await ApiClient.postExam(
         '/exam/sessions/${widget.sessionId}/warning',
         data: {'type': type},
         userId: user?.id ?? '',
@@ -276,7 +285,7 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
   Future<void> _soumettreReponse(String sujetId, String reponse) async {
     try {
       final user = ref.read(currentUserProvider);
-      await ApiClient.post(
+      await ApiClient.postExam(
         '/exam/sessions/${widget.sessionId}/answer',
         data: {'sujetId': sujetId, 'reponse': reponse},
         userId: user?.id ?? '',
@@ -338,7 +347,10 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
               const SizedBox(height: 16),
               Text(
                 _sujets.isEmpty ? 'Aucun sujet disponible' : 'Examen terminé !',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: context.textPrimary),
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: context.textPrimary),
               ),
             ],
           ),
@@ -365,17 +377,20 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: _secondesRestantes < 300 ? AppColors.red : AppColors.cyan,
+                color:
+                    _secondesRestantes < 300 ? AppColors.red : AppColors.cyan,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.timer_rounded, color: Colors.white, size: 16),
+                  const Icon(Icons.timer_rounded,
+                      color: Colors.white, size: 16),
                   const SizedBox(width: 4),
                   Text(
                     _formatTemps(_secondesRestantes),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
@@ -397,7 +412,8 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.cyan.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
@@ -414,7 +430,8 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
                   const Spacer(),
                   if (_avertissements > 0)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.orange.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
@@ -422,11 +439,15 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.warning_amber_rounded, color: AppColors.orange, size: 14),
+                          const Icon(Icons.warning_amber_rounded,
+                              color: AppColors.orange, size: 14),
                           const SizedBox(width: 4),
                           Text(
                             '$_avertissements avertissement(s)',
-                            style: const TextStyle(color: AppColors.orange, fontSize: 11, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                                color: AppColors.orange,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -481,10 +502,14 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
                                 decoration: BoxDecoration(
                                   color: selected
                                       ? AppColors.cyan.withValues(alpha: 0.1)
-                                      : isDark ? AppColors.darkCard : AppColors.lightCard,
+                                      : isDark
+                                          ? AppColors.darkCard
+                                          : AppColors.lightCard,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: selected ? AppColors.cyan : context.borderColor,
+                                    color: selected
+                                        ? AppColors.cyan
+                                        : context.borderColor,
                                     width: selected ? 2 : 1,
                                   ),
                                 ),
@@ -494,7 +519,9 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
                                       width: 28,
                                       height: 28,
                                       decoration: BoxDecoration(
-                                        color: selected ? AppColors.cyan : context.borderColor,
+                                        color: selected
+                                            ? AppColors.cyan
+                                            : context.borderColor,
                                         shape: BoxShape.circle,
                                       ),
                                       child: Center(
@@ -549,7 +576,9 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
                           ? () => setState(() => _currentIndex++)
                           : _terminerExamen,
                       child: Text(
-                        _currentIndex < _sujets.length - 1 ? 'Suivant' : 'Terminer',
+                        _currentIndex < _sujets.length - 1
+                            ? 'Suivant'
+                            : 'Terminer',
                       ),
                     ),
                   ),

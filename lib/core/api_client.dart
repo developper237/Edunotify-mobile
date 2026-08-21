@@ -391,6 +391,29 @@ class ApiClient {
     } on DioException catch (e) { throw _handle(e); }
   }
 
+  // ── CHAT SERVICE ────────────────────────────────────────────
+  static Future<Map<String, dynamic>> getChat(String path, {required String userId, required String role, String? etablissementId, Map<String, dynamic>? params}) async {
+    try {
+      final resp = await _dioBilling.get(path, queryParameters: params, options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
+      }));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
+  static Future<Map<String, dynamic>> postChat(String path, {Map<String, dynamic>? data, required String userId, required String role, String? etablissementId}) async {
+    try {
+      final resp = await _dioBilling.post(path, data: data, options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
+      }));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
   // ── HELPERS ──────────────────────────────────────────────────
   static Future<String?> _refreshToken() async {
     try {
