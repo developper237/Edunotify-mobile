@@ -128,10 +128,34 @@ final List<_DepartementFilieres> _departements = [
 final List<String> _toutesLesFilieres =
     _departements.expand((d) => d.filieres).toSet().toList();
 
+// Provider pour les filières depuis le backend
+final filieresBackendProvider = FutureProvider<List<String>>((ref) async {
+  try {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return _toutesLesFilieres;
+    final resp = await ApiClient.get('/auth/filieres');
+    final filieres = (resp['filieres'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ?? [];
+    if (filieres.isEmpty) return _toutesLesFilieres;
+    return filieres;
+  } catch (e) {
+    return _toutesLesFilieres;
+  }
+});
+
 final filieresProvider = Provider<List<String>>((ref) {
   final user = ref.watch(currentUserProvider);
   final deptNom = _normalize(user?.departementNom ?? '');
 
+  // Essayer de récupérer depuis le backend d'abord
+  final backendAsync = ref.watch(filieresBackendProvider);
+  final backendFilieres = backendAsync.valueOrNull;
+  if (backendFilieres != null && backendFilieres.isNotEmpty) {
+    return backendFilieres;
+  }
+
+  // Fallback sur les filières hardcodées
   if (deptNom.isEmpty) return _toutesLesFilieres;
 
   for (final dept in _departements) {
