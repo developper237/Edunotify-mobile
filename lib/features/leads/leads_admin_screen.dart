@@ -34,38 +34,42 @@ class Lead {
   });
 
   factory Lead.fromJson(Map<String, dynamic> j) => Lead(
-    id:                 j['id'] ?? '',
-    etablissementNom:   j['etablissementNom'] ?? '',
-    ville:              j['ville'] ?? '',
-    prenomAdmin:        j['prenomAdmin'] ?? '',
-    nomAdmin:           j['nomAdmin'] ?? '',
-    emailAdmin:         j['emailAdmin'] ?? '',
-    plan:               j['plan'] ?? 'pro',
-    statut:             j['statut'] ?? 'nouveau',
-    createdAt:          DateTime.tryParse(j['createdAt'] ?? '')?.toLocal() ?? DateTime.now(),
-  );
+        id: j['id'] ?? '',
+        etablissementNom: j['etablissementNom'] ?? '',
+        ville: j['ville'] ?? '',
+        prenomAdmin: j['prenomAdmin'] ?? '',
+        nomAdmin: j['nomAdmin'] ?? '',
+        emailAdmin: j['emailAdmin'] ?? '',
+        plan: j['plan'] ?? 'pro',
+        statut: j['statut'] ?? 'nouveau',
+        createdAt: DateTime.tryParse(j['createdAt'] ?? '')?.toLocal() ??
+            DateTime.now(),
+      );
 
   String get adminComplet => '${prenomAdmin.trim()} ${nomAdmin.trim()}'.trim();
 
   String get planLabel {
     switch (plan) {
-      case 'free':        return 'Gratuit';
-      case 'institution': return 'Institution';
-      default:            return 'Pro';
+      case 'free':
+        return 'Gratuit';
+      case 'institution':
+        return 'Institution';
+      default:
+        return 'Pro';
     }
   }
 
   Lead copyWith({String? statut}) => Lead(
-    id:                 id,
-    etablissementNom:   etablissementNom,
-    ville:              ville,
-    prenomAdmin:        prenomAdmin,
-    nomAdmin:           nomAdmin,
-    emailAdmin:         emailAdmin,
-    plan:               plan,
-    statut:             statut ?? this.statut,
-    createdAt:          createdAt,
-  );
+        id: id,
+        etablissementNom: etablissementNom,
+        ville: ville,
+        prenomAdmin: prenomAdmin,
+        nomAdmin: nomAdmin,
+        emailAdmin: emailAdmin,
+        plan: plan,
+        statut: statut ?? this.statut,
+        createdAt: createdAt,
+      );
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -80,14 +84,15 @@ const List<(String, String)> leadStatuts = [
 ];
 
 const Map<String, Color> leadStatutColors = {
-  'nouveau':  Color(0xFFF97316),
+  'nouveau': Color(0xFFF97316),
   'contacte': Color(0xFF2563EB),
   'converti': Color(0xFF16A34A),
-  'ignore':   Color(0xFF94A3B8),
+  'ignore': Color(0xFF94A3B8),
 };
 
-String leadStatutLabel(String statut) =>
-    leadStatuts.firstWhere((s) => s.$1 == statut, orElse: () => ('nouveau', 'Nouveau')).$2;
+String leadStatutLabel(String statut) => leadStatuts
+    .firstWhere((s) => s.$1 == statut, orElse: () => ('nouveau', 'Nouveau'))
+    .$2;
 
 // ══════════════════════════════════════════════════════════════════
 // PROVIDER — connecté au backend
@@ -95,7 +100,7 @@ String leadStatutLabel(String statut) =>
 
 final leadsProvider =
     StateNotifierProvider<LeadsNotifier, AsyncValue<List<Lead>>>(
-      (ref) => LeadsNotifier(ref),
+  (ref) => LeadsNotifier(ref),
 );
 
 class LeadsNotifier extends StateNotifier<AsyncValue<List<Lead>>> {
@@ -152,7 +157,7 @@ class _LeadsAdminScreenState extends ConsumerState<LeadsAdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final s     = ref.watch(stringsProvider);
+    final s = ref.watch(stringsProvider);
     final async = ref.watch(leadsProvider);
     final leads = async.value ?? [];
 
@@ -172,7 +177,8 @@ class _LeadsAdminScreenState extends ConsumerState<LeadsAdminScreen> {
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [AppColors.dark, Color(0xFF454545)],
-                begin: Alignment.topLeft, end: Alignment.bottomRight,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
             child: SafeArea(
@@ -183,10 +189,16 @@ class _LeadsAdminScreenState extends ConsumerState<LeadsAdminScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.arrow_back_ios_rounded,
+                              color: Colors.white70, size: 20),
+                        ),
                         const Text('Plateforme SaaS',
-                            style: TextStyle(color: Colors.white70, fontSize: 14)),
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 14)),
+                        const Spacer(),
                         IconButton(
                           onPressed: () =>
                               ref.read(leadsProvider.notifier).charger(),
@@ -245,11 +257,12 @@ class _LeadsAdminScreenState extends ConsumerState<LeadsAdminScreen> {
                     onTap: () => setState(() => _filtre = 'tous'),
                   ),
                   ...leadStatuts.map((s) => _ChipStatut(
-                    label: '${s.$2} (${leads.where((l) => l.statut == s.$1).length})',
-                    selected: _filtre == s.$1,
-                    color: leadStatutColors[s.$1]!,
-                    onTap: () => setState(() => _filtre = s.$1),
-                  )),
+                        label:
+                            '${s.$2} (${leads.where((l) => l.statut == s.$1).length})',
+                        selected: _filtre == s.$1,
+                        color: leadStatutColors[s.$1]!,
+                        onTap: () => setState(() => _filtre = s.$1),
+                      )),
                 ],
               ),
             ),
@@ -261,7 +274,8 @@ class _LeadsAdminScreenState extends ConsumerState<LeadsAdminScreen> {
               transform: Matrix4.translationValues(0, -8, 0),
               decoration: BoxDecoration(
                 color: context.bgColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(30)),
               ),
               child: async.when(
                 loading: () => const ListSkeleton(rows: 4),
@@ -269,7 +283,8 @@ class _LeadsAdminScreenState extends ConsumerState<LeadsAdminScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.error_outline, size: 48, color: context.textMuted),
+                      Icon(Icons.error_outline,
+                          size: 48, color: context.textMuted),
                       const SizedBox(height: 12),
                       Text('Erreur de chargement',
                           style: TextStyle(color: context.textMuted)),
@@ -299,8 +314,7 @@ class _LeadsAdminScreenState extends ConsumerState<LeadsAdminScreen> {
                         padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
                         itemCount: filtree.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (_, i) =>
-                            _LeadTile(lead: filtree[i]),
+                        itemBuilder: (_, i) => _LeadTile(lead: filtree[i]),
                       ),
               ),
             ),
@@ -392,7 +406,8 @@ class _LeadTile extends ConsumerWidget {
           Row(
             children: [
               Container(
-                width: 48, height: 48,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: couleur.withValues(alpha: .12),
                   borderRadius: BorderRadius.circular(14),
@@ -419,8 +434,8 @@ class _LeadTile extends ConsumerWidget {
                             fontWeight: FontWeight.bold)),
                     const SizedBox(height: 2),
                     Text(lead.adminComplet,
-                        style: TextStyle(
-                            color: context.textMuted, fontSize: 12)),
+                        style:
+                            TextStyle(color: context.textMuted, fontSize: 12)),
                   ],
                 ),
               ),
@@ -432,11 +447,11 @@ class _LeadTile extends ConsumerWidget {
             children: [
               _infoMini(Icons.location_on_rounded, lead.ville, context),
               const SizedBox(width: 16),
-              _infoMini(Icons.workspace_premium_rounded,
-                  lead.planLabel, context),
+              _infoMini(
+                  Icons.workspace_premium_rounded, lead.planLabel, context),
               const Spacer(),
-              _infoMini(Icons.schedule_rounded,
-                  _formatDate(lead.createdAt), context),
+              _infoMini(
+                  Icons.schedule_rounded, _formatDate(lead.createdAt), context),
             ],
           ),
           const SizedBox(height: 12),
@@ -459,8 +474,9 @@ class _LeadTile extends ConsumerWidget {
                     label: 'Contacté',
                     icon: Icons.phone_in_talk_rounded,
                     color: const Color(0xFF2563EB),
-                    onTap: () =>
-                        ref.read(leadsProvider.notifier).majStatut(lead.id, 'contacte'),
+                    onTap: () => ref
+                        .read(leadsProvider.notifier)
+                        .majStatut(lead.id, 'contacte'),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -471,8 +487,9 @@ class _LeadTile extends ConsumerWidget {
                     label: 'Converti',
                     icon: Icons.check_circle_rounded,
                     color: AppColors.green,
-                    onTap: () =>
-                        ref.read(leadsProvider.notifier).majStatut(lead.id, 'converti'),
+                    onTap: () => ref
+                        .read(leadsProvider.notifier)
+                        .majStatut(lead.id, 'converti'),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -481,8 +498,9 @@ class _LeadTile extends ConsumerWidget {
                     label: 'Ignorer',
                     icon: Icons.block_rounded,
                     color: AppColors.red,
-                    onTap: () =>
-                        ref.read(leadsProvider.notifier).majStatut(lead.id, 'ignore'),
+                    onTap: () => ref
+                        .read(leadsProvider.notifier)
+                        .majStatut(lead.id, 'ignore'),
                   ),
                 ),
               ],
@@ -492,8 +510,9 @@ class _LeadTile extends ConsumerWidget {
                     label: 'Rouvrir',
                     icon: Icons.replay_rounded,
                     color: context.textSecondary,
-                    onTap: () =>
-                        ref.read(leadsProvider.notifier).majStatut(lead.id, 'nouveau'),
+                    onTap: () => ref
+                        .read(leadsProvider.notifier)
+                        .majStatut(lead.id, 'nouveau'),
                   ),
                 ),
             ],
@@ -574,8 +593,8 @@ class _DetailsModal extends ConsumerWidget {
     final notifier = ref.read(leadsProvider.notifier);
 
     return Container(
-      constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85),
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
       decoration: BoxDecoration(
         color: context.cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -587,7 +606,9 @@ class _DetailsModal extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 40, height: 4,
+            Container(
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                     color: context.borderColor,
                     borderRadius: BorderRadius.circular(2))),
@@ -595,7 +616,8 @@ class _DetailsModal extends ConsumerWidget {
             Row(
               children: [
                 Container(
-                  width: 60, height: 60,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
                     color: couleur.withValues(alpha: .12),
                     borderRadius: BorderRadius.circular(16),
@@ -633,7 +655,8 @@ class _DetailsModal extends ConsumerWidget {
                 children: [
                   _statDashboard('Plan', lead.planLabel, couleur),
                   _statDashboard('Ville', lead.ville, AppColors.cyan),
-                  _statDashboard('Statut', leadStatutLabel(lead.statut), couleur),
+                  _statDashboard(
+                      'Statut', leadStatutLabel(lead.statut), couleur),
                 ],
               ),
             ),
@@ -678,7 +701,8 @@ class _DetailsModal extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(14))),
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Fermer',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -695,13 +719,15 @@ class _DetailsModal extends ConsumerWidget {
               style: TextStyle(
                   color: color, fontSize: 16, fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+          Text(label,
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
         ],
       ),
     );
   }
 
-  Widget _infoRow(BuildContext context, IconData icon, String label, String value) {
+  Widget _infoRow(
+      BuildContext context, IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -733,8 +759,20 @@ class _DetailsModal extends ConsumerWidget {
 // ══════════════════════════════════════════════════════════════════
 
 String _formatDate(DateTime dt) {
-  const mois = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
-    'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+  const mois = [
+    'janv.',
+    'févr.',
+    'mars',
+    'avr.',
+    'mai',
+    'juin',
+    'juil.',
+    'août',
+    'sept.',
+    'oct.',
+    'nov.',
+    'déc.'
+  ];
   final h = dt.hour.toString().padLeft(2, '0');
   final m = dt.minute.toString().padLeft(2, '0');
   return '${dt.day} ${mois[dt.month - 1]} · $h:$m';
@@ -773,7 +811,9 @@ class _ActionBtn extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+                        color: color,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold)),
               ),
             ],
           ),

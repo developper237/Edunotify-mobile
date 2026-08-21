@@ -27,6 +27,9 @@ import '../rapports/rapport_chef_screen.dart';
 import '../chatbot/chatbot_screen.dart';
 import '../billing/subscription_screen.dart';
 import '../leads/leads_admin_screen.dart';
+import '../library/library_screen.dart';
+import '../exam/exam_screen.dart';
+import '../chat_group/chat_group_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // PROVIDERS
@@ -35,15 +38,15 @@ import '../leads/leads_admin_screen.dart';
 final navIndexProvider = StateProvider<int>((_) => 0);
 
 final nonLuesCountProvider =
-StateNotifierProvider<NonLuesNotifier, int>((_) => NonLuesNotifier());
+    StateNotifierProvider<NonLuesNotifier, int>((_) => NonLuesNotifier());
 
 class NonLuesNotifier extends StateNotifier<int> {
   NonLuesNotifier() : super(0);
 
   Future<void> charger(String userId, String role,
       {String? etablissementId,
-        String? departementId,
-        String? classeId}) async {
+      String? departementId,
+      String? classeId}) async {
     try {
       final resp = await ApiClient.getNotif('/notifications/non-lues',
           userId: userId,
@@ -59,14 +62,13 @@ class NonLuesNotifier extends StateNotifier<int> {
 }
 
 final sessionActiveProvider =
-StateNotifierProvider<SessionActiveNotifier, bool>(
+    StateNotifierProvider<SessionActiveNotifier, bool>(
         (_) => SessionActiveNotifier());
 
 class SessionActiveNotifier extends StateNotifier<bool> {
   SessionActiveNotifier() : super(false);
 
-  Future<void> verifier(
-      String userId, String role, String? classeId) async {
+  Future<void> verifier(String userId, String role, String? classeId) async {
     if (classeId == null || classeId.isEmpty) return;
     try {
       final path = (role == 'etudiant')
@@ -102,8 +104,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _chargerBadges());
-    _timer = Timer.periodic(
-        const Duration(seconds: 20), (_) {
+    _timer = Timer.periodic(const Duration(seconds: 20), (_) {
       if (mounted) _chargerBadges();
     });
   }
@@ -138,9 +139,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (label == 'Présence' || label == 'Appel') {
       ref.invalidate(sessionActiveProvider);
       if (user != null) {
-        ref.read(historiqueEtudiantProvider.notifier).charger(
-            user.id, user.role, classeId: user.classeId
-        );
+        ref
+            .read(historiqueEtudiantProvider.notifier)
+            .charger(user.id, user.role, classeId: user.classeId);
       }
       _chargerBadges();
     }
@@ -166,10 +167,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       case 'etudiant':
         return [
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
-          _NavItem(Icons.how_to_reg_rounded, 'Présence',
-              const PresenceScreen(),
-              badge: hasSession ? 1 : 0,
-              badgeColor: const Color(0xFF22C55E)),
+          _NavItem(Icons.how_to_reg_rounded, 'Présence', const PresenceScreen(),
+              badge: hasSession ? 1 : 0, badgeColor: const Color(0xFF22C55E)),
           _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
@@ -177,8 +176,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return [
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
           _NavItem(Icons.play_circle_filled, 'Appel', const PresenceScreen(),
-              badge: hasSession ? 1 : 0,
-              badgeColor: const Color(0xFF22C55E)),
+              badge: hasSession ? 1 : 0, badgeColor: const Color(0xFF22C55E)),
           _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
@@ -193,10 +191,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       case 'admin':
         return [
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
-          _NavItem(Icons.people_rounded, 'Utilisateurs',
-              const UtilisateursScreen()),
-          _NavItem(Icons.bar_chart_rounded, 'Rapports',
-              const RapportsAdminScreen()),
+          _NavItem(
+              Icons.people_rounded, 'Utilisateurs', const UtilisateursScreen()),
+          _NavItem(
+              Icons.bar_chart_rounded, 'Rapports', const RapportsAdminScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
       case 'super_admin':
@@ -204,8 +202,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
           _NavItem(Icons.school_rounded, 'Établissements',
               const EtablissementsScreen()),
-          _NavItem(Icons.insights_rounded, 'Stats',
-              const StatistiquesScreen()),
+          _NavItem(Icons.insights_rounded, 'Stats', const StatistiquesScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
       default:
@@ -231,7 +228,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness:
-        context.isDark ? Brightness.light : Brightness.dark,
+            context.isDark ? Brightness.light : Brightness.dark,
       ),
       child: Scaffold(
         backgroundColor: context.bgColor,
@@ -254,10 +251,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         bottomNavigationBar: desktopMode
             ? null
             : _BottomNav(
-          config: config,
-          index: safeIndex,
-          onTap: (i) => _onNavTap(i, config),
-        ),
+                config: config,
+                index: safeIndex,
+                onTap: (i) => _onNavTap(i, config),
+              ),
       ),
     );
   }
@@ -340,10 +337,11 @@ class _DashboardTab extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: AppColors.red,
                         shape: BoxShape.circle,
-                        border: Border.all(color: context.cardColor, width: 1.5),
+                        border:
+                            Border.all(color: context.cardColor, width: 1.5),
                       ),
-                      constraints: const BoxConstraints(
-                          minWidth: 17, minHeight: 17),
+                      constraints:
+                          const BoxConstraints(minWidth: 17, minHeight: 17),
                       child: Text(
                         nonLues > 99 ? '99+' : '$nonLues',
                         style: const TextStyle(
@@ -369,9 +367,8 @@ class _DashboardTab extends ConsumerWidget {
         icon: const Icon(Icons.smart_toy_outlined, size: 19),
         label: const Text('Assistant'),
         elevation: 0,
-        backgroundColor: context.isDark
-            ? const Color(0xFF1E2235)
-            : Colors.white,
+        backgroundColor:
+            context.isDark ? const Color(0xFF1E2235) : Colors.white,
         foregroundColor: accent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30),
@@ -395,9 +392,7 @@ class _DashboardTab extends ConsumerWidget {
             Positioned.fill(
               child: AmbientBackground(
                 primary: accent,
-                secondary: context.isDark
-                    ? AppColors.violet
-                    : AppColors.cyan,
+                secondary: context.isDark ? AppColors.violet : AppColors.cyan,
               ),
             ),
             Center(
@@ -424,61 +419,61 @@ class _DashboardTab extends ConsumerWidget {
                       ),
                     ),
 
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                      horizontalPad, 28, horizontalPad, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const _SectionLabel('Accès rapide'),
-                        const SizedBox(height: 14),
-                        _QuickActions(role: role, goTo: goTo),
-                      ],
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                          horizontalPad, 28, horizontalPad, 0),
+                      sliver: SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SectionLabel('Accès rapide'),
+                            const SizedBox(height: 14),
+                            _QuickActions(role: role, goTo: goTo),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
 
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                      horizontalPad, 32, horizontalPad, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: _TipCard(role: role),
-                  ),
-                ),
-
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(
-                      horizontalPad, 32, horizontalPad, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const _SectionLabel('Activité'),
-                        const SizedBox(height: 14),
-                        _ActivityFeed(role: role),
-                      ],
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                          horizontalPad, 32, horizontalPad, 0),
+                      sliver: SliverToBoxAdapter(
+                        child: _TipCard(role: role),
+                      ),
                     ),
-                  ),
-                ),
 
-                if (role == 'delegue' ||
-                    role == 'chef_departement' ||
-                    role == 'admin' ||
-                    role == 'super_admin')
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(
-                        horizontalPad, 24, horizontalPad, 0),
-                    sliver: const SliverToBoxAdapter(
-                      child: _NotifyButton(),
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                          horizontalPad, 32, horizontalPad, 0),
+                      sliver: SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SectionLabel('Activité'),
+                            const SizedBox(height: 14),
+                            _ActivityFeed(role: role),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
 
-                const SliverToBoxAdapter(child: SizedBox(height: 100)),
-              ],
+                    if (role == 'delegue' ||
+                        role == 'chef_departement' ||
+                        role == 'admin' ||
+                        role == 'super_admin')
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(
+                            horizontalPad, 24, horizontalPad, 0),
+                        sliver: const SliverToBoxAdapter(
+                          child: _NotifyButton(),
+                        ),
+                      ),
+
+                    const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                  ],
+                ),
               ),
             ),
-          ),
           ],
         ),
       ),
@@ -492,12 +487,18 @@ class _DashboardTab extends ConsumerWidget {
 
 Color _roleAccent(String role) {
   switch (role) {
-    case 'etudiant':         return AppColors.blue;
-    case 'delegue':          return AppColors.orange;
-    case 'chef_departement': return AppColors.green;
-    case 'admin':            return AppColors.violet;
-    case 'super_admin':      return const Color(0xFFEC4899);
-    default:                 return AppColors.cyan;
+    case 'etudiant':
+      return AppColors.blue;
+    case 'delegue':
+      return AppColors.orange;
+    case 'chef_departement':
+      return AppColors.green;
+    case 'admin':
+      return AppColors.violet;
+    case 'super_admin':
+      return const Color(0xFFEC4899);
+    default:
+      return AppColors.cyan;
   }
 }
 
@@ -515,48 +516,87 @@ class _StatsStrip extends ConsumerWidget {
     final valueColor = isDark ? Colors.white : const Color(0xFF1A1A2E);
     final labelColor = isDark ? AppColors.textMuted : AppColors.lightTextMuted;
 
-    List<_StatData> make(List<({IconData icon, int value, String label})> src) =>
-        src.map((s) => _StatData(
-          icon: s.icon,
-          value: s.value,
-          label: s.label,
-          cardBg: cardBg,
-          iconBg: iconBg,
-          accent: accent,
-          valueColor: valueColor,
-          labelColor: labelColor,
-        )).toList();
+    List<_StatData> make(
+            List<({IconData icon, int value, String label})> src) =>
+        src
+            .map((s) => _StatData(
+                  icon: s.icon,
+                  value: s.value,
+                  label: s.label,
+                  cardBg: cardBg,
+                  iconBg: iconBg,
+                  accent: accent,
+                  valueColor: valueColor,
+                  labelColor: labelColor,
+                ))
+            .toList();
 
     switch (role) {
       case 'etudiant':
         return make([
-          (icon: Icons.notifications_none_rounded, value: nonLues, label: 'Non lues'),
-          (icon: Icons.how_to_reg_rounded, value: hasSession ? 1 : 0, label: 'Session active'),
+          (
+            icon: Icons.notifications_none_rounded,
+            value: nonLues,
+            label: 'Non lues'
+          ),
+          (
+            icon: Icons.how_to_reg_rounded,
+            value: hasSession ? 1 : 0,
+            label: 'Session active'
+          ),
           (icon: Icons.grade_outlined, value: 3, label: 'Nouveautés'),
         ]);
       case 'delegue':
         return make([
-          (icon: Icons.how_to_reg_rounded, value: hasSession ? 1 : 0, label: 'Appel en cours'),
-          (icon: Icons.notifications_none_rounded, value: nonLues, label: 'Non lues'),
+          (
+            icon: Icons.how_to_reg_rounded,
+            value: hasSession ? 1 : 0,
+            label: 'Appel en cours'
+          ),
+          (
+            icon: Icons.notifications_none_rounded,
+            value: nonLues,
+            label: 'Non lues'
+          ),
           (icon: Icons.people_outline, value: 2, label: 'Validations'),
         ]);
       case 'chef_departement':
         return make([
           (icon: Icons.description_outlined, value: nonLues, label: 'Rapports'),
           (icon: Icons.grade_outlined, value: 2, label: 'Notes à traiter'),
-          (icon: Icons.notifications_none_rounded, value: nonLues, label: 'Non lues'),
+          (
+            icon: Icons.notifications_none_rounded,
+            value: nonLues,
+            label: 'Non lues'
+          ),
         ]);
       case 'admin':
         return make([
           (icon: Icons.people_outline, value: nonLues, label: 'Utilisateurs'),
-          (icon: Icons.workspace_premium_outlined, value: 1, label: 'Plan actif'),
-          (icon: Icons.notifications_none_rounded, value: nonLues, label: 'Non lues'),
+          (
+            icon: Icons.workspace_premium_outlined,
+            value: 1,
+            label: 'Plan actif'
+          ),
+          (
+            icon: Icons.notifications_none_rounded,
+            value: nonLues,
+            label: 'Non lues'
+          ),
         ]);
       default:
         return make([
           (icon: Icons.school_outlined, value: 1, label: 'Établissements'),
-          (icon: Icons.workspace_premium_outlined, value: 1, label: 'Plan actif'),
-          (icon: Icons.notifications_none_rounded, value: nonLues, label: 'Non lues'),
+          (
+            icon: Icons.workspace_premium_outlined,
+            value: 1,
+            label: 'Plan actif'
+          ),
+          (
+            icon: Icons.notifications_none_rounded,
+            value: nonLues,
+            label: 'Non lues'
+          ),
         ]);
     }
   }
@@ -575,8 +615,8 @@ class _StatsStrip extends ConsumerWidget {
         return Row(
           children: items
               .map((s) => Padding(
-                    padding: EdgeInsets.only(
-                        right: s == items.last ? 0 : spacing),
+                    padding:
+                        EdgeInsets.only(right: s == items.last ? 0 : spacing),
                     child: SizedBox(
                       width: tileWidth,
                       child: _StatTile(data: s),
@@ -688,10 +728,8 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
     _ctrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 700));
     _fadeIn = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-    _slideUp = Tween<Offset>(
-        begin: const Offset(0, 0.12), end: Offset.zero)
-        .animate(CurvedAnimation(
-        parent: _ctrl, curve: Curves.easeOutCubic));
+    _slideUp = Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
     _ctrl.forward();
   }
 
@@ -739,12 +777,18 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
 
   Color get _accentColor {
     switch (widget.role) {
-      case 'etudiant':         return const Color(0xFF3B82F6);
-      case 'delegue':          return const Color(0xFFF97316);
-      case 'chef_departement': return const Color(0xFF10B981);
-      case 'admin':            return const Color(0xFF8B5CF6);
-      case 'super_admin':      return const Color(0xFFEC4899);
-      default:                 return const Color(0xFF3B82F6);
+      case 'etudiant':
+        return const Color(0xFF3B82F6);
+      case 'delegue':
+        return const Color(0xFFF97316);
+      case 'chef_departement':
+        return const Color(0xFF10B981);
+      case 'admin':
+        return const Color(0xFF8B5CF6);
+      case 'super_admin':
+        return const Color(0xFFEC4899);
+      default:
+        return const Color(0xFF3B82F6);
     }
   }
 
@@ -762,7 +806,7 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
     switch (widget.role) {
       case 'etudiant':
       case 'delegue':
-      // Filière + niveau ex: "Génie Logiciel · L3"
+        // Filière + niveau ex: "Génie Logiciel · L3"
         if (user.filiere != null) {
           final label = user.niveau != null
               ? '${user.filiere!} · ${user.niveau!}'
@@ -775,7 +819,7 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
         break;
 
       case 'chef_departement':
-      // Nom du département
+        // Nom du département
         if (user.departementNom != null)
           chips.add(_ChipData(Icons.domain_outlined, user.departementNom!));
         break;
@@ -800,14 +844,14 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
       child: SlideTransition(
         position: _slideUp,
         child: Container(
-          margin: EdgeInsets.fromLTRB(
-              desktop ? 32 : 16, 16, desktop ? 32 : 16, 8),
+          margin:
+              EdgeInsets.fromLTRB(desktop ? 32 : 16, 16, desktop ? 32 : 16, 8),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.4:0.08),
+                color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
                 blurRadius: 25,
                 offset: const Offset(0, 10),
               ),
@@ -816,104 +860,108 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
           child: Stack(
             children: [
               Positioned(
-                right: 16, top: 16,
+                right: 16,
+                top: 16,
                 child: _GeomDecor(color: _accentColor),
               ),
               if (widget.user?.etablissementLogo != null &&
                   widget.user!.etablissementLogo!.isNotEmpty)
                 Positioned(
-                  right: 20, top: 20,
-                  child: _EtablissementLogo(url: widget.user!.etablissementLogo!),
+                  right: 20,
+                  top: 20,
+                  child:
+                      _EtablissementLogo(url: widget.user!.etablissementLogo!),
                 ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                      // ── Ligne avatar + nom ──────────────────
-                      Row(
-                        children: [
-                          Container(
-                            width: 46, height: 46,
-                            decoration: BoxDecoration(
-                              color: _accentColor.withValues(alpha: 0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(initiale,
+                    // ── Ligne avatar + nom ──────────────────
+                    Row(
+                      children: [
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: _accentColor.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(initiale,
+                                style: TextStyle(
+                                  color: _accentColor,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                )),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '$_salutation, $prenom',
+                                style: TextStyle(
+                                  color: context.textPrimary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              // Badge rôle
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: _accentColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  _roleLabel,
                                   style: TextStyle(
                                     color: _accentColor,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700,
-                                  )),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '$_salutation, $prenom',
-                                  style: TextStyle(
-                                    color: context.textPrimary,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.3,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                // Badge rôle
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: _accentColor.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    _roleLabel,
-                                    style: TextStyle(
-                                      color: _accentColor,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // ── Message contextuel ──────────────────
-                      Text(
-                        _contextMessage,
-                        style: TextStyle(
-                          color: context.textSecondary,
-                          fontSize: 13,
-                          height: 1.5,
-                        ),
-                      ),
-
-                      // ── Chips académiques ───────────────────
-                      if (chips.isNotEmpty) ...[
-                        const SizedBox(height: 14),
-                        Wrap(
-                          spacing: 16,
-                          runSpacing: 6,
-                          children: chips.map((c) => _InfoChip(c)).toList(),
                         ),
                       ],
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // ── Message contextuel ──────────────────
+                    Text(
+                      _contextMessage,
+                      style: TextStyle(
+                        color: context.textSecondary,
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
+                    ),
+
+                    // ── Chips académiques ───────────────────
+                    if (chips.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 6,
+                        children: chips.map((c) => _InfoChip(c)).toList(),
+                      ),
                     ],
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
+      ),
     );
   }
 }
@@ -959,7 +1007,8 @@ class _GeomDecor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-      width: 80, height: 80,
+      width: 80,
+      height: 80,
       child: CustomPaint(painter: _CirclesPainter(color: color)));
 }
 
@@ -990,7 +1039,8 @@ class _EtablissementLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 70, height: 70,
+      width: 70,
+      height: 70,
       decoration: BoxDecoration(
         color: context.cardColor,
         borderRadius: BorderRadius.circular(12),
@@ -1010,7 +1060,8 @@ class _EtablissementLogo extends StatelessWidget {
           if (progress == null) return child;
           return const Center(
             child: SizedBox(
-              width: 16, height: 16,
+              width: 16,
+              height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
           );
@@ -1037,17 +1088,23 @@ class _QuickActions extends StatelessWidget {
   List<_QAction> _actions(BuildContext context) {
     // Écrans secondaires (plus dans la navbar) → ouverts en push
     void ouvrir(Widget screen) => Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => screen),
-    );
+          context,
+          MaterialPageRoute(builder: (_) => screen),
+        );
 
     switch (role) {
       case 'etudiant':
         return [
           _QAction(Icons.how_to_reg_rounded, 'Présence', () => goTo(1)),
           _QAction(Icons.grade_rounded, 'Notes', () => goTo(2)),
+          _QAction(Icons.menu_book_rounded, 'Bibliothèque',
+              () => ouvrir(const LibraryScreen())),
+          _QAction(Icons.quiz_rounded, 'Salle d\'examen',
+              () => ouvrir(const ExamScreen())),
+          _QAction(Icons.chat_bubble_rounded, 'Messages',
+              () => ouvrir(const ChatGroupScreen())),
           _QAction(Icons.notifications_rounded, 'Notifications',
-                  () => ouvrir(const NotificationsScreen())),
+              () => ouvrir(const NotificationsScreen())),
           _QAction(Icons.person_rounded, 'Profil', () => goTo(3)),
         ];
       case 'delegue':
@@ -1058,6 +1115,12 @@ class _QuickActions extends StatelessWidget {
           _QAction(Icons.people_rounded, 'Ma classe',
               () => ouvrir(const ClasseDelegueScreen())),
           _QAction(Icons.grade_rounded, 'Notes', () => goTo(2)),
+          _QAction(Icons.menu_book_rounded, 'Bibliothèque',
+              () => ouvrir(const LibraryScreen())),
+          _QAction(Icons.quiz_rounded, 'Salle d\'examen',
+              () => ouvrir(const ExamScreen())),
+          _QAction(Icons.chat_bubble_rounded, 'Messages',
+              () => ouvrir(const ChatGroupScreen())),
         ];
       case 'chef_departement':
         return [
@@ -1065,6 +1128,10 @@ class _QuickActions extends StatelessWidget {
           _QAction(Icons.grade_rounded, 'Notes', () => goTo(2)),
           _QAction(Icons.class_rounded, 'Classes',
               () => ouvrir(const ClassesChefScreen())),
+          _QAction(Icons.menu_book_rounded, 'Bibliothèque',
+              () => ouvrir(const LibraryScreen())),
+          _QAction(Icons.chat_bubble_rounded, 'Messages',
+              () => ouvrir(const ChatGroupScreen())),
           _QAction(Icons.notifications_rounded, 'Notifications',
               () => ouvrir(const NotificationsScreen())),
         ];
@@ -1074,6 +1141,10 @@ class _QuickActions extends StatelessWidget {
           _QAction(Icons.bar_chart_rounded, 'Rapports', () => goTo(2)),
           _QAction(Icons.category_rounded, 'Départements',
               () => ouvrir(const DepartementsScreen())),
+          _QAction(Icons.menu_book_rounded, 'Bibliothèque',
+              () => ouvrir(const LibraryScreen())),
+          _QAction(Icons.chat_bubble_rounded, 'Messages',
+              () => ouvrir(const ChatGroupScreen())),
           _QAction(Icons.notifications_rounded, 'Notifications',
               () => ouvrir(const NotificationsScreen())),
           _QAction(Icons.workspace_premium_rounded, 'Abonnement',
@@ -1087,6 +1158,8 @@ class _QuickActions extends StatelessWidget {
               () => ouvrir(const LeadsAdminScreen())),
           _QAction(Icons.notifications_rounded, 'Notifications',
               () => ouvrir(const NotificationsScreen())),
+          _QAction(Icons.chat_bubble_rounded, 'Messages',
+              () => ouvrir(const ChatGroupScreen())),
           _QAction(Icons.person_rounded, 'Profil', () => goTo(3)),
           _QAction(Icons.workspace_premium_rounded, 'Abonnement',
               () => ouvrir(const SubscriptionScreen())),
@@ -1112,9 +1185,9 @@ class _QuickActions extends StatelessWidget {
           runSpacing: spacing,
           children: actions
               .map((a) => SizedBox(
-            width: tileWidth,
-            child: _QActionTile(action: a),
-          ))
+                    width: tileWidth,
+                    child: _QActionTile(action: a),
+                  ))
               .toList(),
         );
       },
@@ -1177,17 +1250,16 @@ class _QActionTileState extends State<_QActionTile>
             boxShadow: isDark
                 ? []
                 : [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
           child: Column(
             children: [
-              Icon(widget.action.icon,
-                  size: 22, color: context.textSecondary),
+              Icon(widget.action.icon, size: 22, color: context.textSecondary),
               const SizedBox(height: 8),
               Text(
                 widget.action.label,
@@ -1230,56 +1302,56 @@ class _TipCardState extends State<_TipCard>
     'etudiant': [
       {
         'text':
-        'Consultez toujours vos notes dès qu\'elles sont publiées pour détecter toute erreur à temps. Les requêtes sont généralement attendues sous 48 heures maximum.',
+            'Consultez toujours vos notes dès qu\'elles sont publiées pour détecter toute erreur à temps. Les requêtes sont généralement attendues sous 48 heures maximum.',
         'image': 'lib/assets/tips/notes_consult.webp',
       },
       {
         'text':
-        'Confirmez votre présence dès l\'ouverture de la session par votre délégué car le code de validation peut expirer rapidement.',
+            'Confirmez votre présence dès l\'ouverture de la session par votre délégué car le code de validation peut expirer rapidement.',
         'image': 'lib/assets/tips/appel.jpg',
       },
       {
         'text':
-        'Soumettez une requête si une note vous semble incorrecte. Décrivez clairement l\'objet de votre requête afin de faciliter son traitement.',
+            'Soumettez une requête si une note vous semble incorrecte. Décrivez clairement l\'objet de votre requête afin de faciliter son traitement.',
         'image': 'lib/assets/tips/requete.webp',
       },
       {
         'text':
-        'Ne répondez jamais à l\'appel pour votre camarade absent ! Toute tentative de fraude est monitorée et bloquée. Si votre camarade n\'a pas de téléphone, orientez-le vers le délégué.',
+            'Ne répondez jamais à l\'appel pour votre camarade absent ! Toute tentative de fraude est monitorée et bloquée. Si votre camarade n\'a pas de téléphone, orientez-le vers le délégué.',
         'image': 'lib/assets/tips/fraud.webp',
       },
     ],
     'delegue': [
       {
         'text':
-        'Activez la géolocalisation en salle pour éviter les fraudes à distance. Un étudiant hors de la zone définie ne pourra pas répondre à l\'appel.',
+            'Activez la géolocalisation en salle pour éviter les fraudes à distance. Un étudiant hors de la zone définie ne pourra pas répondre à l\'appel.',
         'image': 'lib/assets/tips/geo.webp',
       },
       {
         'text':
-        'Envoyez toujours le rapport au chef juste après avoir fermé la session pour lui donner une vue d\'ensemble sur les présents et absents.',
+            'Envoyez toujours le rapport au chef juste après avoir fermé la session pour lui donner une vue d\'ensemble sur les présents et absents.',
         'image': 'lib/assets/tips/report.webp',
       },
       {
         'text':
-        'La validation manuelle est réservée aux étudiants sans smartphone. Assurez-vous d\'avoir l\'approbation du professeur avant de valider.',
+            'La validation manuelle est réservée aux étudiants sans smartphone. Assurez-vous d\'avoir l\'approbation du professeur avant de valider.',
         'image': 'lib/assets/tips/delotp.webp',
       },
     ],
     'chef_departement': [
       {
         'text':
-        'Publiez les notes par session (CC, examen) pour une meilleure lisibilité pour les étudiants.',
+            'Publiez les notes par session (CC, examen) pour une meilleure lisibilité pour les étudiants.',
         'image': 'lib/assets/tips/1.webp',
       },
       {
         'text':
-        'Répondez aux requêtes dans les 48h pour éviter les recours auprès de l\'administration.',
+            'Répondez aux requêtes dans les 48h pour éviter les recours auprès de l\'administration.',
         'image': 'lib/assets/tips/req.jpeg',
       },
       {
         'text':
-        'Consultez les rapports d\'appel quotidiennement pour détecter l\'absentéisme dans votre département.',
+            'Consultez les rapports d\'appel quotidiennement pour détecter l\'absentéisme dans votre département.',
         'image': 'lib/assets/tips/monitoring.jpg',
       },
     ],
@@ -1297,10 +1369,9 @@ class _TipCardState extends State<_TipCard>
     _ctrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 400));
     _ctrl.forward();
-    _autoTimer =
-        Timer.periodic(const Duration(seconds: 8), (_) {
-          if (mounted) _next();
-        });
+    _autoTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted) _next();
+    });
   }
 
   @override
@@ -1336,64 +1407,62 @@ class _TipCardState extends State<_TipCard>
         boxShadow: isDark
             ? []
             : [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: desktop
           ? Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 5,
-            child: _TipTextBlock(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: _TipTextBlock(
+                    currentTip: currentTip,
+                    ctrl: _ctrl,
+                    tipIndex: _tipIndex,
+                    total: _roleTips.length,
+                    onNext: _next,
+                    showImage: false,
+                  ),
+                ),
+                const SizedBox(width: 18),
+                Expanded(
+                  flex: 4,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: FadeTransition(
+                      opacity: _ctrl,
+                      child: Image.asset(
+                        currentTip['image']!,
+                        height: imageHeight,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.topCenter,
+                        errorBuilder: (_, __, ___) => Container(
+                          height: imageHeight,
+                          color: Colors.grey.withValues(alpha: 0.1),
+                          child: const Icon(Icons.image_not_supported_outlined,
+                              color: Colors.grey),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : _TipTextBlock(
               currentTip: currentTip,
               ctrl: _ctrl,
               tipIndex: _tipIndex,
               total: _roleTips.length,
               onNext: _next,
-              showImage: false,
+              showImage: true,
+              imageHeight: imageHeight,
             ),
-          ),
-          const SizedBox(width: 18),
-          Expanded(
-            flex: 4,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: FadeTransition(
-                opacity: _ctrl,
-                child: Image.asset(
-                  currentTip['image']!,
-                  height: imageHeight,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: imageHeight,
-                    color:
-                    Colors.grey.withValues(alpha: 0.1),
-                    child: const Icon(
-                        Icons.image_not_supported_outlined,
-                        color: Colors.grey),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      )
-          : _TipTextBlock(
-        currentTip: currentTip,
-        ctrl: _ctrl,
-        tipIndex: _tipIndex,
-        total: _roleTips.length,
-        onNext: _next,
-        showImage: true,
-        imageHeight: imageHeight,
-      ),
     );
   }
 }
@@ -1499,8 +1568,7 @@ class _TipTextBlock extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: active
                               ? const Color(0xFFD97706)
-                              : const Color(0xFFD97706)
-                              .withValues(alpha: 0.25),
+                              : const Color(0xFFD97706).withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(3),
                         ),
                       );
@@ -1565,11 +1633,16 @@ class _ActivityFeedState extends ConsumerState<_ActivityFeed>
   IconData _iconFor(String categorie, {required bool estSondage}) {
     if (estSondage) return Icons.poll_outlined;
     switch (categorie) {
-      case 'examen':        return Icons.assignment_outlined;
-      case 'resultat':      return Icons.grade_outlined;
-      case 'cours':         return Icons.school_outlined;
-      case 'urgent':        return Icons.flag_outlined;
-      default:              return Icons.notifications_outlined;
+      case 'examen':
+        return Icons.assignment_outlined;
+      case 'resultat':
+        return Icons.grade_outlined;
+      case 'cours':
+        return Icons.school_outlined;
+      case 'urgent':
+        return Icons.flag_outlined;
+      default:
+        return Icons.notifications_outlined;
     }
   }
 
@@ -1592,17 +1665,27 @@ class _ActivityFeedState extends ConsumerState<_ActivityFeed>
       loading: () => const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SkeletonBox(width: double.infinity, height: 58, radius: 14, margin: EdgeInsets.only(bottom: 10)),
-          SkeletonBox(width: double.infinity, height: 58, radius: 14, margin: EdgeInsets.only(bottom: 10)),
+          SkeletonBox(
+              width: double.infinity,
+              height: 58,
+              radius: 14,
+              margin: EdgeInsets.only(bottom: 10)),
+          SkeletonBox(
+              width: double.infinity,
+              height: 58,
+              radius: 14,
+              margin: EdgeInsets.only(bottom: 10)),
           SkeletonBox(width: double.infinity, height: 58, radius: 14),
         ],
       ),
-      error: (_, __) => _ActivityVide(message: 'Impossible de charger l\'activité'),
+      error: (_, __) =>
+          _ActivityVide(message: 'Impossible de charger l\'activité'),
       data: (notifs) {
         // Les 5 dernières notifications = activité récente
         final recentes = notifs.take(5).toList();
         if (recentes.isEmpty) {
-          return _ActivityVide(message: 'Aucune activité récente pour le moment');
+          return _ActivityVide(
+              message: 'Aucune activité récente pour le moment');
         }
 
         return Column(
@@ -1611,9 +1694,7 @@ class _ActivityFeedState extends ConsumerState<_ActivityFeed>
             final item = _ActivityItem(
               _iconFor(n.categorie, estSondage: n.estSondage),
               n.titre,
-              n.contenu.startsWith('PDF:')
-                  ? "Rapport d'appel reçu"
-                  : n.contenu,
+              n.contenu.startsWith('PDF:') ? "Rapport d'appel reçu" : n.contenu,
               _tempsRelatif(n.envoyeLe),
               n.lue,
             );
@@ -1626,18 +1707,18 @@ class _ActivityFeedState extends ConsumerState<_ActivityFeed>
                   parent: _ctrl,
                   curve: Interval(begin, end, curve: Curves.easeOut)),
             );
-            final slide = Tween<Offset>(
-                begin: const Offset(0.04, 0), end: Offset.zero)
-                .animate(CurvedAnimation(
-                parent: _ctrl,
-                curve: Interval(begin, end, curve: Curves.easeOut)));
+            final slide =
+                Tween<Offset>(begin: const Offset(0.04, 0), end: Offset.zero)
+                    .animate(CurvedAnimation(
+                        parent: _ctrl,
+                        curve: Interval(begin, end, curve: Curves.easeOut)));
 
             return FadeTransition(
               opacity: fade,
               child: SlideTransition(
                 position: slide,
-                child: _ActivityTile(
-                    item: item, isLast: i == recentes.length - 1),
+                child:
+                    _ActivityTile(item: item, isLast: i == recentes.length - 1),
               ),
             );
           }),
@@ -1701,19 +1782,20 @@ class _ActivityTile extends StatelessWidget {
           Column(
             children: [
               Container(
-                width: 34, height: 34,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
                   color: isDark
                       ? const Color(0xFF2A2A2E)
                       : const Color(0xFFF4F4F6),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(item.icon,
-                    size: 16, color: context.textSecondary),
+                child: Icon(item.icon, size: 16, color: context.textSecondary),
               ),
               if (!isLast)
                 Container(
-                  width: 1, height: 28,
+                  width: 1,
+                  height: 28,
                   color: isDark
                       ? const Color(0xFF2A2A2E)
                       : const Color(0xFFEAEAEA),
@@ -1748,7 +1830,8 @@ class _ActivityTile extends StatelessWidget {
                             if (!item.lue) ...[
                               const SizedBox(width: 6),
                               Container(
-                                width: 6, height: 6,
+                                width: 6,
+                                height: 6,
                                 decoration: const BoxDecoration(
                                   color: Color(0xFF3B82F6),
                                   shape: BoxShape.circle,
@@ -1770,8 +1853,7 @@ class _ActivityTile extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(item.temps,
-                      style: TextStyle(
-                          color: context.textMuted, fontSize: 11)),
+                      style: TextStyle(color: context.textMuted, fontSize: 11)),
                 ],
               ),
             ),
@@ -1796,15 +1878,14 @@ class _NotifyButton extends StatelessWidget {
       child: ElevatedButton.icon(
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(
-              builder: (_) => const NouvelleNotificationScreen()),
+          MaterialPageRoute(builder: (_) => const NouvelleNotificationScreen()),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF1A1A2E),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
           elevation: 0,
         ),
         icon: const Icon(Icons.send_rounded, size: 18),
@@ -1827,14 +1908,14 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-    text,
-    style: TextStyle(
-      color: context.textPrimary,
-      fontSize: 15,
-      fontWeight: FontWeight.w700,
-      letterSpacing: -0.2,
-    ),
-  );
+        text,
+        style: TextStyle(
+          color: context.textPrimary,
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.2,
+        ),
+      );
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1848,8 +1929,7 @@ class _NavItem {
   final int badge;
   final Color badgeColor;
   const _NavItem(this.icon, this.label, this.screen,
-      {this.badge = 0,
-        this.badgeColor = const Color(0xFFEF4444)});
+      {this.badge = 0, this.badgeColor = const Color(0xFFEF4444)});
 }
 
 class _BadgeIcon extends StatelessWidget {
@@ -1870,14 +1950,15 @@ class _BadgeIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final iconWidget =
-    Icon(icon, size: 22, color: selected ? color : context.textMuted);
+        Icon(icon, size: 22, color: selected ? color : context.textMuted);
     if (badge == 0) return iconWidget;
     return Stack(
       clipBehavior: Clip.none,
       children: [
         iconWidget,
         Positioned(
-          right: -4, top: -4,
+          right: -4,
+          top: -4,
           child: Container(
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
@@ -1885,8 +1966,7 @@ class _BadgeIcon extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: context.cardColor, width: 1.5),
             ),
-            constraints:
-            const BoxConstraints(minWidth: 16, minHeight: 16),
+            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
             child: Text(
               badge > 99 ? '99+' : '$badge',
               style: const TextStyle(
@@ -1908,21 +1988,17 @@ class _BottomNav extends StatelessWidget {
   final void Function(int) onTap;
 
   const _BottomNav(
-      {required this.config,
-        required this.index,
-        required this.onTap});
+      {required this.config, required this.index, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final activeColor =
-    context.isDark ? Colors.white : const Color(0xFF1A1A2E);
+    final activeColor = context.isDark ? Colors.white : const Color(0xFF1A1A2E);
 
     return Container(
       decoration: BoxDecoration(
         color: context.cardColor,
         border: Border(
-            top: BorderSide(
-                color: Theme.of(context).dividerColor, width: 0.5)),
+            top: BorderSide(color: Theme.of(context).dividerColor, width: 0.5)),
       ),
       child: SafeArea(
         child: SizedBox(
@@ -1950,12 +2026,9 @@ class _BottomNav extends StatelessWidget {
                         item.label,
                         style: TextStyle(
                           fontSize: 9.5,
-                          color: selected
-                              ? activeColor
-                              : context.textMuted,
-                          fontWeight: selected
-                              ? FontWeight.w600
-                              : FontWeight.normal,
+                          color: selected ? activeColor : context.textMuted,
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.normal,
                         ),
                       ),
                     ],
@@ -1987,7 +2060,8 @@ class _SideNav extends StatelessWidget {
     final bool isExtended = MediaQuery.of(context).size.width >= 1200;
 
     // Couleur principale (Indigo) adaptée au mode sombre
-    final activeColor = isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5);
+    final activeColor =
+        isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5);
 
     return NavigationRail(
       backgroundColor: context.cardColor,
@@ -2005,14 +2079,9 @@ class _SideNav extends StatelessWidget {
 
       // 3. Thème du texte
       selectedLabelTextStyle: TextStyle(
-          color: activeColor,
-          fontWeight: FontWeight.bold,
-          fontSize: 14
-      ),
-      unselectedLabelTextStyle: TextStyle(
-          color: context.textMuted,
-          fontSize: 13
-      ),
+          color: activeColor, fontWeight: FontWeight.bold, fontSize: 14),
+      unselectedLabelTextStyle:
+          TextStyle(color: context.textMuted, fontSize: 13),
 
       // 4. LE LOGO (LEADING)
       leading: Column(
@@ -2030,12 +2099,14 @@ class _SideNav extends StatelessWidget {
                 height: isExtended ? 100 : 42,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) => Container(
-                  width: 42, height: 42,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
                     color: activeColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.school_rounded, color: activeColor, size: 24),
+                  child:
+                      Icon(Icons.school_rounded, color: activeColor, size: 24),
                 ),
               ),
             ),

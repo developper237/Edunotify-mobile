@@ -28,15 +28,16 @@ class Departement {
 
   factory Departement.fromJson(Map<String, dynamic> j) {
     final chefs = j['chefs'] as List<dynamic>? ?? [];
-    final chef  = chefs.isNotEmpty ? chefs.first as Map<String, dynamic> : null;
+    final chef = chefs.isNotEmpty ? chefs.first as Map<String, dynamic> : null;
 
     return Departement(
-      id:          j['id'] as String,
-      nom:         j['nom'] as String,
+      id: j['id'] as String,
+      nom: j['nom'] as String,
       description: j['description'] as String? ?? '',
-      nomChef:     chef != null ? '${chef['prenom']} ${chef['nom']}' : '',
-      emailChef:   chef?['email'] as String? ?? '',
-      nbClasses:   (j['_count'] as Map<String, dynamic>?)?['classes'] as int? ?? 0,
+      nomChef: chef != null ? '${chef['prenom']} ${chef['nom']}' : '',
+      emailChef: chef?['email'] as String? ?? '',
+      nbClasses:
+          (j['_count'] as Map<String, dynamic>?)?['classes'] as int? ?? 0,
     );
   }
 }
@@ -45,12 +46,13 @@ class Departement {
 // PROVIDER
 // ══════════════════════════════════════════════════════════════════
 
-final departementsProvider =
-StateNotifierProvider.autoDispose<DepartementsNotifier, AsyncValue<List<Departement>>>(
-      (ref) => DepartementsNotifier(ref),
+final departementsProvider = StateNotifierProvider.autoDispose<
+    DepartementsNotifier, AsyncValue<List<Departement>>>(
+  (ref) => DepartementsNotifier(ref),
 );
 
-class DepartementsNotifier extends StateNotifier<AsyncValue<List<Departement>>> {
+class DepartementsNotifier
+    extends StateNotifier<AsyncValue<List<Departement>>> {
   final AutoDisposeRef _ref;
   DepartementsNotifier(this._ref) : super(const AsyncLoading()) {
     charger();
@@ -66,7 +68,9 @@ class DepartementsNotifier extends StateNotifier<AsyncValue<List<Departement>>> 
 
       final list = resp['departements'] as List? ?? [];
       state = AsyncData(
-        list.map((d) => Departement.fromJson(d as Map<String, dynamic>)).toList(),
+        list
+            .map((d) => Departement.fromJson(d as Map<String, dynamic>))
+            .toList(),
       );
     } catch (e) {
       state = AsyncError(e, StackTrace.current);
@@ -81,22 +85,25 @@ class DepartementsNotifier extends StateNotifier<AsyncValue<List<Departement>>> 
   void modifierLocal(String id, String nom, String description) {
     state.whenData((current) {
       state = AsyncData(
-        current.map((d) => d.id == id
-            ? Departement(
-          id: d.id,
-          nom: nom,
-          description: description,
-          emailChef: d.emailChef,
-          nomChef: d.nomChef,
-          nbClasses: d.nbClasses,
-        )
-            : d).toList(),
+        current
+            .map((d) => d.id == id
+                ? Departement(
+                    id: d.id,
+                    nom: nom,
+                    description: description,
+                    emailChef: d.emailChef,
+                    nomChef: d.nomChef,
+                    nbClasses: d.nbClasses,
+                  )
+                : d)
+            .toList(),
       );
     });
   }
 
   void supprimerLocal(String id) {
-    state.whenData((current) => state = AsyncData(current.where((d) => d.id != id).toList()));
+    state.whenData((current) =>
+        state = AsyncData(current.where((d) => d.id != id).toList()));
   }
 }
 
@@ -131,18 +138,31 @@ class DepartementsScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Gestion", style: TextStyle(color: Colors.white70, fontSize: 14)),
-                        SizedBox(height: 4),
-                        Text("Départements",
-                            style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
-                      ],
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_ios_rounded,
+                          color: Colors.white70, size: 20),
                     ),
-                    _HeaderAddButton(onTap: () => _showAjouterModal(context, ref)),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("Gestion",
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 14)),
+                          const SizedBox(height: 4),
+                          const Text("Départements",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5)),
+                        ],
+                      ),
+                    ),
+                    _HeaderAddButton(
+                        onTap: () => _showAjouterModal(context, ref)),
                   ],
                 ),
               ),
@@ -153,21 +173,26 @@ class DepartementsScreen extends ConsumerWidget {
               transform: Matrix4.translationValues(0, -20, 0),
               decoration: BoxDecoration(
                 color: context.bgColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(30)),
               ),
               child: deptsAsync.when(
-                loading: () => const ListSkeleton(rows: 4                ),
-                error: (err, _) => _ErrorState(onRetry: () => ref.read(departementsProvider.notifier).charger()),
+                loading: () => const ListSkeleton(rows: 4),
+                error: (err, _) => _ErrorState(
+                    onRetry: () =>
+                        ref.read(departementsProvider.notifier).charger()),
                 data: (depts) => depts.isEmpty
-                    ? _EmptyState(onAction: () => _showAjouterModal(context, ref))
+                    ? _EmptyState(
+                        onAction: () => _showAjouterModal(context, ref))
                     : RefreshIndicator(
-                  onRefresh: () => ref.read(departementsProvider.notifier).charger(),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-                    itemCount: depts.length,
-                    itemBuilder: (_, i) => _DeptCard(dept: depts[i]),
-                  ),
-                ),
+                        onRefresh: () =>
+                            ref.read(departementsProvider.notifier).charger(),
+                        child: ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+                          itemCount: depts.length,
+                          itemBuilder: (_, i) => _DeptCard(dept: depts[i]),
+                        ),
+                      ),
               ),
             ),
           ),
@@ -182,7 +207,8 @@ class DepartementsScreen extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _DeptFormModal(
-        onCreer: (dept) => ref.read(departementsProvider.notifier).ajouterLocal(dept),
+        onCreer: (dept) =>
+            ref.read(departementsProvider.notifier).ajouterLocal(dept),
       ),
     );
   }
@@ -210,7 +236,9 @@ class _HeaderAddButton extends StatelessWidget {
           children: [
             Icon(Icons.add_rounded, color: Colors.white, size: 20),
             SizedBox(width: 6),
-            Text("Ajouter", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+            Text("Ajouter",
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w700)),
           ],
         ),
       ),
@@ -232,7 +260,10 @@ class _DeptCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: context.borderColor.withValues(alpha: 0.5)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 6)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 6)),
         ],
       ),
       child: Column(
@@ -248,11 +279,18 @@ class _DeptCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(dept.nom,
-                        style: TextStyle(color: context.textPrimary, fontSize: 17, fontWeight: FontWeight.w800)),
+                        style: TextStyle(
+                            color: context.textPrimary,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800)),
                     const SizedBox(height: 4),
                     Text(dept.description,
-                        style: TextStyle(color: context.textMuted, fontSize: 13, height: 1.3),
-                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                        style: TextStyle(
+                            color: context.textMuted,
+                            fontSize: 13,
+                            height: 1.3),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
@@ -311,10 +349,15 @@ class _DeptCard extends ConsumerWidget {
       builder: (_) => AlertDialog(
         backgroundColor: context.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Supprimer ?', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: Text('Le département "${dept.nom}" sera supprimé définitivement.'),
+        title: const Text('Supprimer ?',
+            style: TextStyle(fontWeight: FontWeight.w800)),
+        content:
+            Text('Le département "${dept.nom}" sera supprimé définitivement.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler', style: TextStyle(color: context.textMuted))),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child:
+                  Text('Annuler', style: TextStyle(color: context.textMuted))),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
@@ -322,10 +365,13 @@ class _DeptCard extends ConsumerWidget {
                 await ApiClient.delete('/auth/cascade/departement/${dept.id}');
                 ref.read(departementsProvider.notifier).supprimerLocal(dept.id);
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(e.toString())));
               }
             },
-            child: const Text('Supprimer', style: TextStyle(color: AppColors.red, fontWeight: FontWeight.bold)),
+            child: const Text('Supprimer',
+                style: TextStyle(
+                    color: AppColors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -338,8 +384,11 @@ class _DeptIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppColors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14)),
-      child: const Icon(Icons.account_tree_rounded, color: AppColors.blue, size: 24),
+      decoration: BoxDecoration(
+          color: AppColors.blue.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(14)),
+      child: const Icon(Icons.account_tree_rounded,
+          color: AppColors.blue, size: 24),
     );
   }
 }
@@ -351,11 +400,21 @@ class _ClasseBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: AppColors.violet.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+          color: AppColors.violet.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10)),
       child: Column(
         children: [
-          Text("$count", style: const TextStyle(color: AppColors.violet, fontWeight: FontWeight.w800, fontSize: 14)),
-          const Text("cls", style: TextStyle(color: AppColors.violet, fontSize: 10, fontWeight: FontWeight.bold)),
+          Text("$count",
+              style: const TextStyle(
+                  color: AppColors.violet,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14)),
+          const Text("cls",
+              style: TextStyle(
+                  color: AppColors.violet,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -371,7 +430,8 @@ class _ChefInfo extends StatelessWidget {
       children: [
         Container(
           padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(color: context.borderColor, shape: BoxShape.circle),
+          decoration:
+              BoxDecoration(color: context.borderColor, shape: BoxShape.circle),
           child: Icon(Icons.person, size: 14, color: context.textSecondary),
         ),
         const SizedBox(width: 10),
@@ -380,8 +440,12 @@ class _ChefInfo extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(nomChef.isNotEmpty ? nomChef : "Chef non défini",
-                  style: TextStyle(color: context.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-              Text(email, style: TextStyle(color: context.textMuted, fontSize: 11)),
+                  style: TextStyle(
+                      color: context.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
+              Text(email,
+                  style: TextStyle(color: context.textMuted, fontSize: 11)),
             ],
           ),
         ),
@@ -395,7 +459,11 @@ class _ActionBtn extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
-  const _ActionBtn({required this.label, required this.icon, required this.color, required this.onTap});
+  const _ActionBtn(
+      {required this.label,
+      required this.icon,
+      required this.color,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -413,7 +481,11 @@ class _ActionBtn extends StatelessWidget {
             children: [
               Icon(icon, color: Colors.white, size: 18),
               const SizedBox(width: 8),
-              Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+              Text(label,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -462,24 +534,27 @@ class _DeptFormModalState extends State<_DeptFormModal> {
       if (widget.dept != null) {
         // Modification — envoie aussi les champs chef si remplis
         final data = <String, dynamic>{
-          'nom':         _nom.text.trim(),
+          'nom': _nom.text.trim(),
           'description': _description.text.trim(),
         };
         // Si l'admin veut changer le chef, les trois champs doivent être remplis
-        final emailChef  = _emailChef.text.trim();
+        final emailChef = _emailChef.text.trim();
         final prenomChef = _prenomChef.text.trim();
-        final nomChef    = _nomChef.text.trim();
-        if (emailChef.isNotEmpty || prenomChef.isNotEmpty || nomChef.isNotEmpty) {
+        final nomChef = _nomChef.text.trim();
+        if (emailChef.isNotEmpty ||
+            prenomChef.isNotEmpty ||
+            nomChef.isNotEmpty) {
           if (emailChef.isEmpty || prenomChef.isEmpty || nomChef.isEmpty) {
             setState(() {
               _loading = false;
-              _error   = 'Remplissez tous les champs du nouveau chef (prénom, nom, email)';
+              _error =
+                  'Remplissez tous les champs du nouveau chef (prénom, nom, email)';
             });
             return;
           }
-          data['emailChef']  = emailChef;
+          data['emailChef'] = emailChef;
           data['prenomChef'] = prenomChef;
-          data['nomChef']    = nomChef;
+          data['nomChef'] = nomChef;
         }
         await ApiClient.patch(
           '/auth/cascade/departement/${widget.dept!.id}',
@@ -489,17 +564,23 @@ class _DeptFormModalState extends State<_DeptFormModal> {
       } else {
         // Création
         final resp = await ApiClient.post('/auth/cascade/departement', data: {
-          'nom':         _nom.text.trim(),
+          'nom': _nom.text.trim(),
           'description': _description.text.trim(),
-          'emailChef':   _emailChef.text.trim(),
-          'prenomChef':  _prenomChef.text.trim(),
-          'nomChef':     _nomChef.text.trim(),
+          'emailChef': _emailChef.text.trim(),
+          'prenomChef': _prenomChef.text.trim(),
+          'nomChef': _nomChef.text.trim(),
         });
         widget.onCreer?.call(Departement.fromJson(resp['departement']));
       }
-      setState(() { _loading = false; _done = true; });
+      setState(() {
+        _loading = false;
+        _done = true;
+      });
     } catch (e) {
-      setState(() { _loading = false; _error = e.toString(); });
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
     }
   }
 
@@ -513,162 +594,169 @@ class _DeptFormModalState extends State<_DeptFormModal> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       ),
       padding: EdgeInsets.only(
-        left: 24, right: 24, top: 24,
+        left: 24,
+        right: 24,
+        top: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: _done
           ? _SuccessView(
-        titre:   isEdit ? 'Mis à jour !' : 'Créé !',
-        message: 'Le département a été enregistré avec succès.',
-        color:   AppColors.blue,
-        onClose: () => Navigator.pop(context),
-      )
+              titre: isEdit ? 'Mis à jour !' : 'Créé !',
+              message: 'Le département a été enregistré avec succès.',
+              color: AppColors.blue,
+              onClose: () => Navigator.pop(context),
+            )
           : SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                  color: context.borderColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              isEdit ? 'Modifier le Département' : 'Nouveau Département',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 24),
-
-            // ── Infos département ─────────────────────────────
-            _buildField(Icons.edit,        'Nom',         _nom),
-            const SizedBox(height: 16),
-            _buildField(Icons.description, 'Description', _description, maxLines: 2),
-
-            const Divider(height: 40),
-
-            // ── Chef de département ───────────────────────────
-            Row(
-              children: [
-                const Text('Chef de Département',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
-                if (isEdit)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.orange.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
-                      'optionnel',
-                      style: TextStyle(
-                        color:    AppColors.orange,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: context.borderColor,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
-              ],
-            ),
+                  const SizedBox(height: 20),
+                  Text(
+                    isEdit ? 'Modifier le Département' : 'Nouveau Département',
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 24),
 
-            if (isEdit) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color:        AppColors.orange.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border:       Border.all(
-                      color: AppColors.orange.withValues(alpha: 0.25)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline,
-                        color: AppColors.orange, size: 15),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Laissez vide pour conserver le chef actuel. '
-                            'Remplissez les 3 champs pour assigner un nouveau chef '
-                            '(un nouveau compte sera créé et les identifiants envoyés par email).',
-                        style: TextStyle(
-                          color:    context.textSecondary,
-                          fontSize: 11,
-                          height:   1.4,
+                  // ── Infos département ─────────────────────────────
+                  _buildField(Icons.edit, 'Nom', _nom),
+                  const SizedBox(height: 16),
+                  _buildField(Icons.description, 'Description', _description,
+                      maxLines: 2),
+
+                  const Divider(height: 40),
+
+                  // ── Chef de département ───────────────────────────
+                  Row(
+                    children: [
+                      const Text('Chef de Département',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 8),
+                      if (isEdit)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.orange.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'optionnel',
+                            style: TextStyle(
+                              color: AppColors.orange,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
+                    ],
+                  ),
+
+                  if (isEdit) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.orange.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: AppColors.orange.withValues(alpha: 0.25)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline,
+                              color: AppColors.orange, size: 15),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Laissez vide pour conserver le chef actuel. '
+                              'Remplissez les 3 champs pour assigner un nouveau chef '
+                              '(un nouveau compte sera créé et les identifiants envoyés par email).',
+                              style: TextStyle(
+                                color: context.textSecondary,
+                                fontSize: 11,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
-              ),
-            ],
 
-            const SizedBox(height: 16),
-            _buildField(Icons.person, 'Prénom', _prenomChef),
-            const SizedBox(height: 16),
-            _buildField(Icons.badge,  'Nom',    _nomChef),
-            const SizedBox(height: 16),
-            _buildField(Icons.email,  'Email',  _emailChef),
+                  const SizedBox(height: 16),
+                  _buildField(Icons.person, 'Prénom', _prenomChef),
+                  const SizedBox(height: 16),
+                  _buildField(Icons.badge, 'Nom', _nomChef),
+                  const SizedBox(height: 16),
+                  _buildField(Icons.email, 'Email', _emailChef),
 
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color:        AppColors.red.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
-                    border:       Border.all(
-                        color: AppColors.red.withValues(alpha: 0.25)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline,
-                          color: AppColors.red, size: 15),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(_error!,
-                            style: const TextStyle(
-                                color: AppColors.red, fontSize: 13)),
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.red.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: AppColors.red.withValues(alpha: 0.25)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                color: AppColors.red, size: 15),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(_error!,
+                                  style: const TextStyle(
+                                      color: AppColors.red, fontSize: 13)),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
+                    ),
 
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                onPressed: _loading ? null : _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.blue,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                ),
-                child: _loading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(
-                  isEdit ? 'Mettre à jour' : 'Créer le département',
-                  style: const TextStyle(
-                      color:      Colors.white,
-                      fontWeight: FontWeight.bold),
-                ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: ElevatedButton(
+                      onPressed: _loading ? null : _save,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.blue,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: _loading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                              isEdit ? 'Mettre à jour' : 'Créer le département',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildField(IconData icon, String label, TextEditingController ctrl, {int maxLines = 1}) {
+  Widget _buildField(IconData icon, String label, TextEditingController ctrl,
+      {int maxLines = 1}) {
     return TextField(
       controller: ctrl,
       maxLines: maxLines,
@@ -677,7 +765,9 @@ class _DeptFormModalState extends State<_DeptFormModal> {
         prefixIcon: Icon(icon, size: 20),
         filled: true,
         fillColor: Theme.of(context).scaffoldBackgroundColor,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
       ),
     );
   }
@@ -687,7 +777,11 @@ class _SuccessView extends StatelessWidget {
   final String titre, message;
   final Color color;
   final VoidCallback onClose;
-  const _SuccessView({required this.titre, required this.message, required this.color, required this.onClose});
+  const _SuccessView(
+      {required this.titre,
+      required this.message,
+      required this.color,
+      required this.onClose});
 
   @override
   Widget build(BuildContext context) {
@@ -698,18 +792,27 @@ class _SuccessView extends StatelessWidget {
             child: Container(
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(color: context.borderColor, borderRadius: BorderRadius.circular(2)))),
+                decoration: BoxDecoration(
+                    color: context.borderColor,
+                    borderRadius: BorderRadius.circular(2)))),
         const SizedBox(height: 32),
         Container(
           width: 80,
           height: 80,
-          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+          decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
           child: Icon(Icons.check_circle_rounded, color: color, size: 50),
         ),
         const SizedBox(height: 24),
-        Text(titre, style: TextStyle(color: context.textPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
+        Text(titre,
+            style: TextStyle(
+                color: context.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w800)),
         const SizedBox(height: 12),
-        Text(message, textAlign: TextAlign.center, style: TextStyle(color: context.textMuted, fontSize: 14)),
+        Text(message,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: context.textMuted, fontSize: 14)),
         const SizedBox(height: 32),
         SizedBox(
           width: double.infinity,
@@ -717,8 +820,12 @@ class _SuccessView extends StatelessWidget {
           child: ElevatedButton(
             onPressed: onClose,
             style: ElevatedButton.styleFrom(
-                backgroundColor: color, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-            child: const Text("Terminer", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                backgroundColor: color,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16))),
+            child: const Text("Terminer",
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ),
       ],
@@ -737,7 +844,8 @@ class _ErrorState extends StatelessWidget {
         children: [
           const Icon(Icons.cloud_off_rounded, size: 64, color: AppColors.red),
           const SizedBox(height: 16),
-          const Text("Erreur de chargement", style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text("Erreur de chargement",
+              style: TextStyle(fontWeight: FontWeight.bold)),
           TextButton(onPressed: onRetry, child: const Text("Réessayer"))
         ],
       ),
@@ -756,9 +864,11 @@ class _EmptyState extends StatelessWidget {
         children: [
           Icon(Icons.category_outlined, size: 80, color: context.borderColor),
           const SizedBox(height: 16),
-          Text("Aucun département", style: TextStyle(color: context.textMuted, fontSize: 16)),
+          Text("Aucun département",
+              style: TextStyle(color: context.textMuted, fontSize: 16)),
           const SizedBox(height: 20),
-          ElevatedButton(onPressed: onAction, child: const Text("Créer le premier")),
+          ElevatedButton(
+              onPressed: onAction, child: const Text("Créer le premier")),
         ],
       ),
     );
