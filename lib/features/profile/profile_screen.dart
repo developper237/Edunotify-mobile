@@ -46,28 +46,70 @@ class ProfileScreen extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
                   child: Column(
                     children: [
-                      Container(
-                        width: 90, height: 90,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.2),
-                          border: Border.all(color: Colors.white, width: 3),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 20, offset: const Offset(0, 10),
-                            )
-                          ],
-                        ),
-                        child: Center(
-                          child: Text(
-                            user.initiales,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.w800,
+                      GestureDetector(
+                        onTap: () => _choisirEtUploaderPhoto(context, ref),
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 90, height: 90,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withValues(alpha: 0.2),
+                                border: Border.all(color: Colors.white, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 20, offset: const Offset(0, 10),
+                                  )
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: user.photoUrl != null && user.photoUrl!.isNotEmpty
+                                    ? Image.network(
+                                        user.photoUrl!,
+                                        width: 90, height: 90,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Center(
+                                          child: Text(
+                                            user.initiales,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 32,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : Center(
+                                        child: Text(
+                                          user.initiales,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                              ),
                             ),
-                          ),
+                            // Badge caméra (petit cercle en bas à droite)
+                            Positioned(
+                              right: 0, bottom: 0,
+                              child: Container(
+                                width: 28, height: 28,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.cyan,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt_rounded,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -221,6 +263,44 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  // ── Sélection + upload de la photo de profil ────────────────────
+  Future<void> _choisirEtUploaderPhoto(BuildContext context, WidgetRef ref) async {
+    final picker = ImagePicker();
+    final XFile? fichier = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      imageQuality: 85,
+    );
+    if (fichier == null) return;
+
+    final bytes = await fichier.readAsBytes();
+
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      await ref.read(authProvider.notifier).uploaderPhotoProfil(
+        fileBytes: bytes,
+        filename:  fichier.name,
+      );
+      if (!context.mounted) return;
+      Navigator.pop(context); // ferme le loader
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Photo de profil mise à jour !')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // ferme le loader
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : ${e.toString()}')),
+      );
+    }
   }
 
   // ── Sélection + upload du logo établissement ────────────────────

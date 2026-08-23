@@ -14,6 +14,7 @@ class User {
   final String? salleCode;
   final String? etablissementNom;
   final String? etablissementLogo;
+  final String? photoUrl;
   final String? classeNom;
   final String? filiere;
   final String? niveau;
@@ -34,6 +35,7 @@ class User {
     this.salleCode,
     this.etablissementNom,
     this.etablissementLogo,
+    this.photoUrl,
     this.classeNom,
     this.filiere,
     this.niveau,
@@ -63,6 +65,7 @@ class User {
     salleCode:         j['salleCode'],
     etablissementNom:  j['etablissementNom'],
     etablissementLogo: j['etablissementLogo'],
+    photoUrl:          j['photoUrl'] as String?,
     classeNom: j['classeNom'] as String?,
     filiere:   j['filiere']   as String?,
     niveau:    j['niveau']    as String?,
@@ -84,6 +87,7 @@ class User {
     'salleCode':         salleCode,
     'etablissementNom':  etablissementNom,
     'etablissementLogo': etablissementLogo,
+    'photoUrl':          photoUrl,
     'classeNom': classeNom,
     'filiere':   filiere,
     'niveau':    niveau,
@@ -97,6 +101,7 @@ class User {
     String? salleCode,
     String? etablissementNom,
     String? etablissementLogo,
+    String? photoUrl,
     String? etablissementId,
     String? departementId,
   }) =>
@@ -116,6 +121,7 @@ class User {
         salleCode:         salleCode         ?? this.salleCode,
         etablissementNom:  etablissementNom  ?? this.etablissementNom,
         etablissementLogo: etablissementLogo ?? this.etablissementLogo,
+        photoUrl:          photoUrl          ?? this.photoUrl,
       );
 }
 

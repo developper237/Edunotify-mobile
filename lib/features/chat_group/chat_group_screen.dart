@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -14,6 +15,7 @@ import '../auth/auth_provider.dart';
 class GroupeChat {
   final String id;
   final String nom;
+  final String? codeInvitation;
   final int nbMembres;
   final String? dernierMessage;
   final DateTime? dernierMessageLe;
@@ -21,6 +23,7 @@ class GroupeChat {
   const GroupeChat({
     required this.id,
     required this.nom,
+    this.codeInvitation,
     this.nbMembres = 0,
     this.dernierMessage,
     this.dernierMessageLe,
@@ -29,6 +32,7 @@ class GroupeChat {
   factory GroupeChat.fromJson(Map<String, dynamic> j) => GroupeChat(
         id: j['id'] ?? '',
         nom: j['nom'] ?? '',
+        codeInvitation: j['codeInvitation'] as String?,
         nbMembres:
             (j['_count']?['membres'] as int?) ?? (j['nbMembres'] as int?) ?? 0,
         dernierMessage: j['dernierMessage'] as String?,
@@ -151,7 +155,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
 
     try {
       final user = ref.read(currentUserProvider);
-      await ApiClient.postChat(
+      final resp = await ApiClient.postChat(
         '/chat/groups',
         data: {'nom': confirmed},
         userId: user?.id ?? '',
@@ -159,6 +163,137 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
         etablissementId: user?.etablissementId ?? '',
       );
       _chargerGroupes();
+      // Afficher le code d'invitation après création
+      final code = resp['codeInvitation'] as String?;
+      if (code != null && mounted) {
+        _afficherCodeInvitation(code, confirmed);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    }
+  }
+
+  // Affiche le code d'invitation avec bouton copier
+  Future<void> _afficherCodeInvitation(String code, String nom) async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Groupe créé ! 🎉'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Partagez ce code d\'invitation avec les membres de « $nom » :',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: context.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.cyan.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.cyan.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    code,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5,
+                      color: AppColors.cyan,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  IconButton(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: code));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Code copié !')),
+                      );
+                    },
+                    icon: const Icon(Icons.copy_rounded, color: AppColors.cyan),
+                    tooltip: 'Copier',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Les membres rejoignent en tapant sur l\'icône ➕ puis « Rejoindre avec un code »',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: context.textMuted),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Rejoindre un groupe avec un code d'invitation
+  Future<void> _rejoindreParCode() async {
+    final codeController = TextEditingController();
+    final code = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rejoindre avec un code'),
+        content: TextField(
+          controller: codeController,
+          decoration: const InputDecoration(
+            hintText: 'Ex: SC-ABC123',
+            prefixIcon: Icon(Icons.key_rounded),
+          ),
+          autofocus: true,
+          textCapitalization: TextCapitalization.characters,
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, codeController.text.trim()),
+            child: const Text('Rejoindre'),
+          ),
+        ],
+      ),
+    );
+
+    if (code == null || code.isEmpty) return;
+
+    try {
+      final user = ref.read(currentUserProvider);
+      await ApiClient.postChat(
+        '/chat/groups/join',
+        data: {'codeInvitation': code},
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vous avez rejoint le groupe !')),
+      );
+      _chargerGroupes();
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -174,6 +309,11 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
       appBar: AppBar(
         title: const Text('Chat'),
         actions: [
+          IconButton(
+            onPressed: _rejoindreParCode,
+            icon: const Icon(Icons.key_rounded),
+            tooltip: 'Rejoindre avec un code',
+          ),
           IconButton(
             onPressed: _creerGroupe,
             icon: const Icon(Icons.add_circle_outline_rounded),

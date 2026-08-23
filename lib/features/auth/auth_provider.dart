@@ -150,6 +150,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(user: userMisAJour);
   }
 
+  /// Upload de la photo de profil (tout utilisateur).
+  Future<void> uploaderPhotoProfil({
+    required List<int> fileBytes,
+    required String filename,
+  }) async {
+    final resp = await ApiClient.uploadPhotoProfil(
+      fileBytes: fileBytes,
+      filename:  filename,
+    );
+    final payload = resp.containsKey('data')
+        ? resp['data'] as Map<String, dynamic>
+        : resp;
+    final nouvelleUrl = payload['photoUrl'] as String?;
+    if (nouvelleUrl == null || state.user == null) return;
+    final userMisAJour = state.user!.copyWith(photoUrl: nouvelleUrl);
+    await Storage.saveUserJson(jsonEncode(userMisAJour.toJson()));
+    state = state.copyWith(user: userMisAJour);
+  }
+
   Future<void> logout() async {
     try { await ApiClient.post('/auth/logout'); } catch (_) {}
     await Storage.clear();

@@ -110,6 +110,20 @@ class ApiClient {
     } on DioException catch (e) { throw _handle(e); }
   }
 
+  // ── Upload de la photo de profil (tout utilisateur authentifié) ──
+  static Future<Map<String, dynamic>> uploadPhotoProfil({
+    required List<int> fileBytes,
+    required String filename,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'photo': MultipartFile.fromBytes(fileBytes, filename: filename),
+      });
+      final resp = await _dio.patch('/auth/photo-profil', data: formData);
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
   // ── ROUTES PUBLIQUES (pas d'authentification) ──────────────────
   static Future<Map<String, dynamic>?> getPublic(String path) async {
     try {
