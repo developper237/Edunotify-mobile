@@ -163,13 +163,12 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
         // 3. Afficher le dialogue de polling
         _afficherPollingPaiement(transId);
       } else {
-        // Le Direct Pay n'a pas retourné de transId
+        // Sans transaction Fapshi, aucun paiement ni accès payant n'est confirmé.
         await notifier.charger();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content:
-                  Text('Essai gratuit activé ! Validez le paiement plus tard.')),
+              content: Text('Le paiement n\'a pas pu être lancé. Aucun accès payant n\'a été activé.')),
         );
       }
     } on ApiException catch (e) {
@@ -457,8 +456,8 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Essai gratuit de 14 jours sur les plans payants. Paiement 100% sécurisé par CinetPay. '
-                    'Annulable à tout moment.',
+                    'Le plan payant est activé uniquement après confirmation du paiement Mobile Money. '
+                    'Aucun accès payant n\'est accordé en cas de refus.',
                     style: TextStyle(
                         fontSize: 12,
                         color: context.textSecondary,
