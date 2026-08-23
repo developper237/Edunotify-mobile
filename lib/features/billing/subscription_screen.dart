@@ -95,9 +95,7 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
       default:
         return statut;
     }
-  }
-
-  Future<void> _souscrire() async {
+  }  Future<void> _souscrire() async {
     final notifier = ref.read(billingProvider.notifier);
 
     // Validation téléphone pour plans payants
@@ -116,6 +114,71 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
             content: Text('Numéro invalide. Format attendu : 6XXXXXXXX (9 chiffres)')),
       );
       return;
+    }
+
+    // Confirmation avant paiement pour plans payants
+    if (_planSelectionne != 'free') {
+      final plan = ref.read(billingProvider).plans
+          .where((p) => p.code == _planSelectionne).firstOrNull;
+      final montant = _cycle == 'annuel'
+          ? (plan?.prixAnnuelXAF ?? 0)
+          : (plan?.prixMensuelXAF ?? 0);
+      final methodeLabel = _methode == 'orange_money' ? 'Orange Money' : 'MTN MoMo';
+
+      final confirme = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.payment_rounded, color: AppColors.cyan),
+              const SizedBox(width: 8),
+              const Text('Confirmer le paiement'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildInfoRow('Plan', plan?.nom ?? _planSelectionne),
+              _buildInfoRow('Montant', '${_formatFCFA(montant)} / ${_cycle == 'annuel' ? 'an' : 'mois'}'),
+              _buildInfoRow('Numéro', tel),
+              _buildInfoRow('Méthode', methodeLabel),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: AppColors.orange, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Assurez-vous d\'avoir au moins ${_formatFCFA(montant)} de solde sur votre compte $methodeLabel.',
+                        style: const TextStyle(fontSize: 12, color: AppColors.orange),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Confirmer et payer'),
+            ),
+          ],
+        ),
+      );
+      if (confirme != true) return;
     }
 
     try {
@@ -224,10 +287,33 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => _PollingDialog(transId: transId),
-    ).then((_) async {
+    ).then((result) async {
       // Recharger les données après fermeture du dialogue
       await ref.read(billingProvider.notifier).charger();
+      // Afficher une notification push en cas d'échec
+      if (result == 'failed' && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Paiement échoué. Vérifiez votre solde et réessayez.'),
+            backgroundColor: AppColors.red,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
     });
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontSize: 13, color: context.textMuted)),
+          Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.textPrimary)),
+        ],
+      ),
+    );
   }
 
   Future<void> _annuler() async {
@@ -830,10 +916,12 @@ class _PollingDialogState extends ConsumerState<_PollingDialog>
   bool _polling = true;
   int _nbTentatives = 0;
   static const int _maxTentatives = 36; // 36 × 10s = 6 minutes max
+  late DateTime _startTime;
 
   @override
   void initState() {
     super.initState();
+    _startTime = DateTime.now();
     _animCtrl = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -940,7 +1028,7 @@ class _PollingDialogState extends ConsumerState<_PollingDialog>
             const Icon(Icons.cancel, color: AppColors.red, size: 56),
             const SizedBox(height: 8),
             Text(
-              'Le paiement a été refusé. Vérifiez votre numéro et le solde de votre compte, puis réessayez.',
+              _getRefusedMessage(),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: context.textSecondary),
             ),
@@ -966,6 +1054,20 @@ class _PollingDialogState extends ConsumerState<_PollingDialog>
         ],
       ),
     );
+  }
+
+  String _getRefusedMessage() {
+    final elapsed = DateTime.now().difference(_startTime).inSeconds;
+    if (elapsed <= 15) {
+      // Échec rapide = probablement solde insuffisant ou numéro invalide
+      return 'Le paiement a été refusé. Causes possibles :\n\n'
+          '• Solde insuffisant sur votre compte Mobile Money\n'
+          '• Numéro non associé à un compte MoMo/OM actif\n'
+          '• Vous avez refusé le popup USSD\n\n'
+          'Vérifiez votre solde et réessayez.';
+    }
+    return 'Le paiement a été refusé. Vérifiez votre solde '
+        'et le numéro de téléphone, puis réessayez.';
   }
 }
 
