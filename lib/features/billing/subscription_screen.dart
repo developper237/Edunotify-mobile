@@ -101,10 +101,19 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
     final notifier = ref.read(billingProvider.notifier);
 
     // Validation téléphone pour plans payants
-    if (_planSelectionne != 'free' && _telController.text.trim().isEmpty) {
+    final tel = _telController.text.trim();
+    if (_planSelectionne != 'free' && tel.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Veuillez saisir votre numéro Mobile Money')),
+      );
+      return;
+    }
+    // Vérifier le format du numéro camerounais (6XXXXXXXX — 9 chiffres)
+    if (_planSelectionne != 'free' && !RegExp(r'^6[0-9]{8}$').hasMatch(tel)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Numéro invalide. Format attendu : 6XXXXXXXX (9 chiffres)')),
       );
       return;
     }
@@ -154,12 +163,14 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
         // 3. Afficher le dialogue de polling
         _afficherPollingPaiement(transId);
       } else {
+        // Le Direct Pay n'a pas retourné de transId
+        await notifier.charger();
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content:
-                  Text('Paiement enregistré. Activez votre essai gratuit.')),
+                  Text('Essai gratuit activé ! Validez le paiement plus tard.')),
         );
-        await notifier.charger();
       }
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -313,14 +324,17 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
               TextField(
                 controller: _telController,
                 keyboardType: TextInputType.phone,
+                maxLength: 9,
                 decoration: const InputDecoration(
-                  labelText: 'Numéro Mobile Money (6XXXXXXXX)',
+                  labelText: 'Numéro Mobile Money',
                   prefixIcon: Icon(Icons.phone_android_rounded),
+                  hintText: '6XXXXXXXX',
+                  counterText: '',
                 ),
               ),
               const SizedBox(height: 6),
               Text(
-                'Le paiement est sécurisé via CinetPay (MTN MoMo / Orange Money).',
+                'Paiement sécurisé via Fapshi (MTN MoMo / Orange Money). Format : 6XXXXXXXX.',
                 style: TextStyle(fontSize: 11, color: context.textMuted),
               ),
             ],
@@ -791,6 +805,8 @@ class _PollingDialogState extends ConsumerState<_PollingDialog>
   late AnimationController _animCtrl;
   String _statut = 'PENDING';
   bool _polling = true;
+  int _nbTentatives = 0;
+  static const int _maxTentatives = 24; // 24 × 5s = 2 minutes max
 
   @override
   void initState() {
@@ -810,9 +826,10 @@ class _PollingDialogState extends ConsumerState<_PollingDialog>
   }
 
   Future<void> _demarrerPolling() async {
-    while (_polling && mounted) {
+    while (_polling && mounted && _nbTentatives < _maxTentatives) {
       await Future.delayed(const Duration(seconds: 5));
       if (!_polling || !mounted) break;
+      _nbTentatives++;
 
       final statut = await ref
           .read(billingProvider.notifier)
@@ -835,6 +852,11 @@ class _PollingDialogState extends ConsumerState<_PollingDialog>
         return;
       }
     }
+    // Timeout
+    if (_polling && mounted) {
+      setState(() => _statut = 'TIMEOUT');
+      _polling = false;
+    }
   }
 
   @override
@@ -855,14 +877,16 @@ class _PollingDialogState extends ConsumerState<_PollingDialog>
                 ? 'Paiement confirmé !'
                 : _statut == 'REFUSED'
                     ? 'Paiement refusé'
-                    : 'Confirmez le paiement sur votre téléphone',
+                    : _statut == 'TIMEOUT'
+                        ? 'Délai d\'attente dépassé'
+                        : 'Confirmez le paiement sur votre téléphone',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: _statut == 'ACCEPTED'
                   ? AppColors.green
-                  : _statut == 'REFUSED'
+                  : (_statut == 'REFUSED' || _statut == 'TIMEOUT')
                       ? AppColors.red
                       : null,
             ),
@@ -890,7 +914,16 @@ class _PollingDialogState extends ConsumerState<_PollingDialog>
             const Icon(Icons.cancel, color: AppColors.red, size: 56),
             const SizedBox(height: 8),
             Text(
-              'Le paiement a été refusé. Veuillez réessayer.',
+              'Le paiement a été refusé. Vérifiez votre numéro et le solde de votre compte, puis réessayez.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: context.textSecondary),
+            ),
+          ],
+          if (_statut == 'TIMEOUT') ...[
+            const Icon(Icons.schedule, color: AppColors.orange, size: 56),
+            const SizedBox(height: 8),
+            Text(
+              'Aucune réponse reçue. Si vous avez confirmé le paiement sur votre téléphone, patientez quelques instants.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: context.textSecondary),
             ),
