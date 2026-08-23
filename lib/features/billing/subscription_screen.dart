@@ -331,10 +331,34 @@ class _SubscriptionBodyState extends ConsumerState<SubscriptionBody> {
                   hintText: '6XXXXXXXX',
                   counterText: '',
                 ),
+                onChanged: (v) {
+                  // Auto-détecter l'opérateur depuis le préfixe
+                  final prefix = v.length >= 3 ? int.tryParse(v.substring(0, 3)) : null;
+                  if (prefix != null) {
+                    String detected;
+                    if ((prefix >= 650 && prefix <= 654) ||
+                        (prefix >= 670 && prefix <= 679) ||
+                        (prefix >= 680 && prefix <= 684) ||
+                        (prefix >= 690 && prefix <= 691)) {
+                      detected = 'mtn_momo';
+                    } else if ((prefix >= 655 && prefix <= 659) ||
+                               (prefix >= 698 && prefix <= 699) ||
+                               (prefix >= 685 && prefix <= 689)) {
+                      detected = 'orange_money';
+                    } else {
+                      detected = _methode ?? 'mtn_momo';
+                    }
+                    if (detected != _methode) {
+                      setState(() => _methode = detected);
+                    }
+                  }
+                },
               ),
               const SizedBox(height: 6),
               Text(
-                'Paiement sécurisé via Fapshi (MTN MoMo / Orange Money). Format : 6XXXXXXXX.',
+                _methode == 'orange_money'
+                    ? 'Orange Money détecté. Paiement sécurisé via Fapshi.'
+                    : 'MTN MoMo détecté. Paiement sécurisé via Fapshi.',
                 style: TextStyle(fontSize: 11, color: context.textMuted),
               ),
             ],
@@ -806,7 +830,7 @@ class _PollingDialogState extends ConsumerState<_PollingDialog>
   String _statut = 'PENDING';
   bool _polling = true;
   int _nbTentatives = 0;
-  static const int _maxTentatives = 24; // 24 × 5s = 2 minutes max
+  static const int _maxTentatives = 36; // 36 × 10s = 6 minutes max
 
   @override
   void initState() {
@@ -826,8 +850,12 @@ class _PollingDialogState extends ConsumerState<_PollingDialog>
   }
 
   Future<void> _demarrerPolling() async {
+    // Attendre 10s avant le premier polling pour laisser le temps au push USSD d'arriver
+    await Future.delayed(const Duration(seconds: 10));
+    if (!_polling || !mounted) return;
+
     while (_polling && mounted && _nbTentatives < _maxTentatives) {
-      await Future.delayed(const Duration(seconds: 5));
+      await Future.delayed(const Duration(seconds: 10));
       if (!_polling || !mounted) break;
       _nbTentatives++;
 
@@ -894,12 +922,11 @@ class _PollingDialogState extends ConsumerState<_PollingDialog>
           const SizedBox(height: 12),
           if (_statut == 'PENDING') ...[
             const LinearProgressIndicator(),
-            const SizedBox(height: 12),
-            Text(
-              'Validez la notification MoMo/Orange Money\\nsur votre téléphone.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: context.textSecondary),
-            ),
+            const SizedBox(height: 12),              Text(
+                'Un popup de confirmation va arriver sur votre\ntéléphone. Validez-le puis patientez.\n\nNote : si le popup n\'arrive pas, vérifiez que votre\nnuméro a bien une ligne Mobile Money active.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: context.textSecondary, height: 1.5),
+              ),
           ],
           if (_statut == 'ACCEPTED') ...[
             const Icon(Icons.check_circle, color: AppColors.green, size: 56),
