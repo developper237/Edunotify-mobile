@@ -24,12 +24,6 @@ dependencies:
   # Navigation
   go_router: ^14.6.2
 
-# record 5.2.x pinne record_linux ^0.7.0 (obsolète) qui n'implémente pas
-# l'interface record_platform_interface 1.6.0 → override vers la 1.x
-# (voir https://github.com/llfbandit/record/issues/597)
-dependency_overrides:
-  record_linux: ^1.3.1
-
   # State management
   flutter_riverpod: ^2.6.1
 
@@ -90,4 +84,10 @@ flutter_native_splash:
   android_gravity: center
   ios_content_mode: center
   fullscreen: true
+
+# record 5.2.x pinne record_linux ^0.7.0 (obsolète) qui n'implémente pas
+# l'interface record_platform_interface 1.6.0 → override vers la 1.x
+# (voir https://github.com/llfbandit/record/issues/597)
+dependency_overrides:
+  record_linux: ^1.3.1
 
