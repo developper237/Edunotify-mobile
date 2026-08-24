@@ -647,8 +647,10 @@ class _StatsStrip extends ConsumerWidget {
         final desktop = isDesktop(context);
         final columns = desktop ? 3 : 3;
         const spacing = 10.0;
-        final tileWidth =
-            (constraints.maxWidth - spacing * (columns - 1)) / columns;
+        // Clamp : pendant le premier layout la largeur peut être ~0
+        // et produire une largeur négative → crash (BoxConstraints)
+        final tileWidth = math.max(
+            0.0, (constraints.maxWidth - spacing * (columns - 1)) / columns);
 
         return Row(
           children: items
@@ -1235,8 +1237,8 @@ class _QuickActions extends StatelessWidget {
         final desktop = isDesktop(context);
         final columns = desktop ? actions.length.clamp(1, 4) : 2;
         const spacing = 10.0;
-        final tileWidth =
-            (constraints.maxWidth - spacing * (columns - 1)) / columns;
+        final tileWidth = math.max(
+            0.0, (constraints.maxWidth - spacing * (columns - 1)) / columns);
 
         return Wrap(
           spacing: spacing,
