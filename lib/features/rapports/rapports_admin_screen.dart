@@ -94,16 +94,14 @@ class _RapportsAdminScreenState extends ConsumerState<RapportsAdminScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+                    padding: const EdgeInsets.fromLTRB(20, 6, 20, 4),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-
-                        const SizedBox(height: 4),
                         const Text('Tableau de bord',
                             style: TextStyle(
                                 color:      Colors.white,
-                                fontSize:   26,
+                                fontSize:   20,
                                 fontWeight: FontWeight.w800)),
                       ],
                     ),

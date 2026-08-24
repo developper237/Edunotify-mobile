@@ -153,14 +153,22 @@ class MessagesScreen extends ConsumerStatefulWidget {
   ConsumerState<MessagesScreen> createState() => _MessagesScreenState();
 }
 
-class _MessagesScreenState extends ConsumerState<MessagesScreen> {
+class _MessagesScreenState extends ConsumerState<MessagesScreen>
+    with SingleTickerProviderStateMixin {
   List<ConversationPrivee> _conversations = [];
   bool _isLoading = true;
   Timer? _pollTimer;
+  late TabController _tabController;
+
+  // ── Mode desktop (deux panneaux) : conversation sélectionnée ──
+  ConversationPrivee? _selPrivee;
+  GroupeChat? _selGroupe;
+  final ValueNotifier<int> _groupRefreshTick = ValueNotifier(0);
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _charger();
     _pollTimer = Timer.periodic(
         const Duration(seconds: 8), (_) => _charger(silent: true));
@@ -169,6 +177,8 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _tabController.dispose();
+    _groupRefreshTick.dispose();
     super.dispose();
   }
 
@@ -191,6 +201,8 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
           _conversations = conversations;
           _isLoading = false;
         });
+        // Rafraîchir aussi les badges des groupes
+        _groupRefreshTick.value++;
       }
     } catch (_) {
       if (mounted && !silent) setState(() => _isLoading = false);
@@ -274,6 +286,16 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   Future<void> _ouvrirConversation(ConversationPrivee c) async {
     final user = ref.read(currentUserProvider);
     if (!mounted || user == null) return;
+
+    // Mode desktop : on affiche la conversation dans le panneau droit
+    if (MediaQuery.of(context).size.width >= 760) {
+      setState(() {
+        _selPrivee = c;
+        _selGroupe = null;
+      });
+      return;
+    }
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -291,143 +313,232 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     }
   }
 
+  void _ouvrirGroupeDesktop(GroupeChat g) {
+    if (!mounted) return;
+    setState(() {
+      _selGroupe = g;
+      _selPrivee = null;
+    });
+  }
+
+  // Liste des conversations privées (utilisée dans le panneau gauche)
+  Widget _listePrivees() {
+    return _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _conversations.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.forum_outlined,
+                        size: 56, color: context.textMuted),
+                    const SizedBox(height: 12),
+                    Text('Aucune conversation',
+                        style: TextStyle(
+                            color: context.textMuted, fontSize: 15)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Touchez + pour discuter avec quelqu\'un',
+                      style:
+                          TextStyle(color: context.textMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: () => _charger(),
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: _conversations.length,
+                  separatorBuilder: (_, __) =>
+                      Divider(height: 1, color: context.borderColor),
+                  itemBuilder: (ctx, i) {
+                    final c = _conversations[i];
+                    final selected = _selPrivee?.id == c.id;
+                    return ListTile(
+                      selected: selected,
+                      selectedTileColor: AppColors.cyan.withValues(alpha: 0.08),
+                      leading: CircleAvatar(
+                        backgroundColor:
+                            AppColors.cyan.withValues(alpha: 0.15),
+                        backgroundImage:
+                            c.autrePhotoUrl != null &&
+                                    c.autrePhotoUrl!.isNotEmpty
+                                ? NetworkImage(c.autrePhotoUrl!)
+                                : null,
+                        child: c.autrePhotoUrl == null ||
+                                c.autrePhotoUrl!.isEmpty
+                            ? Text(c.initiales,
+                                style: const TextStyle(
+                                    color: AppColors.cyan,
+                                    fontWeight: FontWeight.w700))
+                            : null,
+                      ),
+                      title: Text(c.displayNom,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                        c.dernierMessage == null
+                            ? 'Dites bonjour !'
+                            : '${c.dernierMessageDeMoi ? 'Vous : ' : ''}${c.dernierMessage}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: c.nonLus > 0
+                                ? context.textPrimary
+                                : context.textMuted,
+                            fontWeight: c.nonLus > 0
+                                ? FontWeight.w700
+                                : FontWeight.normal,
+                            fontSize: 12),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (c.dernierMessageLe != null)
+                            Text(
+                              DateFormat('HH:mm').format(c.dernierMessageLe!),
+                              style: TextStyle(
+                                  color: context.textMuted, fontSize: 11),
+                            ),
+                          if (c.nonLus > 0) ...[const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF4F46E5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '${c.nonLus}',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      onTap: () => _ouvrirConversation(c),
+                    );
+                  },
+                ),
+              );
+  }
+
+  // Panneau droit (desktop) : conversation ouverte ou placeholder
+  Widget _panneauDroit() {
+    if (_selPrivee != null) {
+      return _PrivateChatScreen(
+        conversationId: _selPrivee!.id,
+        titre: _selPrivee!.displayNom,
+        embarque: true,
+      );
+    }
+    if (_selGroupe != null) {
+      return ChatRoomScreen(
+        groupeId: _selGroupe!.id,
+        nom: _selGroupe!.nom,
+        embarque: true,
+      );
+    }
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.forum_outlined,
+              size: 64, color: context.textMuted.withValues(alpha: 0.5)),
+          const SizedBox(height: 16),
+          Text('Sélectionnez une conversation',
+              style: TextStyle(
+                  color: context.textMuted,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          Text('Choisissez une discussion dans la liste',
+              style:
+                  TextStyle(color: context.textMuted, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Messages'),
-          actions: [
-            IconButton(
-              onPressed: _nouvelleConversation,
-              icon: const Icon(Icons.chat_bubble_outline_rounded),
-              tooltip: 'Nouvelle conversation',
-            ),
-          ],
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Privés'),
-              Tab(text: 'Groupes'),
+    final isWide = MediaQuery.of(context).size.width >= 760;
+
+    final onglets = TabBar(
+      controller: _tabController,
+      indicatorColor: AppColors.cyan,
+      indicatorWeight: 3,
+      labelColor: AppColors.cyan,
+      unselectedLabelColor: context.textMuted,
+      labelStyle:
+          const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+      tabs: const [
+        Tab(text: 'Privés'),
+        Tab(text: 'Groupes'),
+      ],
+    );
+
+    final panneauGauche = Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: context.borderColor)),
+          ),
+          child: onglets,
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // ── Conversations privées ──
+              _listePrivees(),
+              // ── Groupes (seulement ceux rejoints) ──
+              ChatGroupScreen(
+                embarque: true,
+                refreshSignal: _groupRefreshTick,
+                onOuvrirGroupe: isWide ? _ouvrirGroupeDesktop : null,
+              ),
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _nouvelleConversation,
-          mini: true,
-          backgroundColor: AppColors.cyan,
-          child: const Icon(Icons.add_rounded, color: Colors.white),
-          tooltip: 'Nouvelle conversation',
-        ),
-        body: TabBarView(
-          children: [
-            // ── Conversations privées ──
-            _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _conversations.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.forum_outlined,
-                                size: 56, color: context.textMuted),
-                            const SizedBox(height: 12),
-                            Text('Aucune conversation',
-                                style: TextStyle(
-                                    color: context.textMuted, fontSize: 15)),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Touchez + pour discuter avec quelqu\'un',
-                              style: TextStyle(
-                                  color: context.textMuted, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: () => _charger(),
-                        child: ListView.separated(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          itemCount: _conversations.length,
-                          separatorBuilder: (_, __) =>
-                              Divider(height: 1, color: context.borderColor),
-                          itemBuilder: (ctx, i) {
-                            final c = _conversations[i];
-                            return ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor:
-                                    AppColors.cyan.withValues(alpha: 0.15),
-                                backgroundImage:
-                                    c.autrePhotoUrl != null &&
-                                            c.autrePhotoUrl!.isNotEmpty
-                                        ? NetworkImage(c.autrePhotoUrl!)
-                                        : null,
-                                child: c.autrePhotoUrl == null ||
-                                        c.autrePhotoUrl!.isEmpty
-                                    ? Text(c.initiales,
-                                        style: const TextStyle(
-                                            color: AppColors.cyan,
-                                            fontWeight: FontWeight.w700))
-                                    : null,
-                              ),
-                              title: Text(c.displayNom,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600)),
-                              subtitle: Text(
-                                c.dernierMessage == null
-                                    ? 'Dites bonjour !'
-                                    : '${c.dernierMessageDeMoi ? 'Vous : ' : ''}${c.dernierMessage}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    color: c.nonLus > 0
-                                        ? context.textPrimary
-                                        : context.textMuted,
-                                    fontWeight: c.nonLus > 0
-                                        ? FontWeight.w700
-                                        : FontWeight.normal,
-                                    fontSize: 12),
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (c.dernierMessageLe != null)
-                                    Text(
-                                      DateFormat('HH:mm')
-                                          .format(c.dernierMessageLe!),
-                                      style: TextStyle(
-                                          color: context.textMuted,
-                                          fontSize: 11),
-                                    ),
-                                  if (c.nonLus > 0) ...[
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.all(5),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFF4F46E5),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Text(
-                                        '${c.nonLus}',
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              onTap: () => _ouvrirConversation(c),
-                            );
-                          },
-                        ),
-                      ),
-            // ── Groupes (seulement ceux rejoints) ──
-            const ChatGroupScreen(embarque: true),
-          ],
-        ),
+      ],
+    );
+
+    return Scaffold(
+      backgroundColor: context.bgColor,
+      appBar: AppBar(
+        title: const Text('Messages'),
+        actions: [
+          IconButton(
+            onPressed: _nouvelleConversation,
+            icon: const Icon(Icons.chat_bubble_outline_rounded),
+            tooltip: 'Nouvelle conversation',
+          ),
+        ],
       ),
+      floatingActionButton: isWide
+          ? null
+          : FloatingActionButton(
+              onPressed: _nouvelleConversation,
+              mini: true,
+              backgroundColor: AppColors.cyan,
+              tooltip: 'Nouvelle conversation',
+              child: const Icon(Icons.add_rounded, color: Colors.white),
+            ),
+      body: isWide
+          ? Row(
+              children: [
+                // ── Liste des conversations (gauche) ──
+                SizedBox(width: 360, child: panneauGauche),
+                VerticalDivider(width: 1, color: context.borderColor),
+                // ── Conversation ouverte (droite) ──
+                Expanded(child: _panneauDroit()),
+              ],
+            )
+          : panneauGauche,
     );
   }
 }
@@ -546,10 +657,13 @@ class _RechercheUtilisateursSheetState
 class _PrivateChatScreen extends ConsumerStatefulWidget {
   final String conversationId;
   final String titre;
+  // quand true : pas de Scaffold/AppBar propre (panneau droit desktop)
+  final bool embarque;
 
   const _PrivateChatScreen({
     required this.conversationId,
     required this.titre,
+    this.embarque = false,
   });
 
   @override
@@ -634,17 +748,8 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
   Widget build(BuildContext context) {
     final isDark = context.isDark;
 
-    return Scaffold(
-      // IMPORTANT : le Scaffold redimensionne déjà le body quand le clavier
-      // s'ouvre (resizeToAvoidBottomInset). On ne doit PAS ajouter
-      // viewInsets.bottom en padding, sinon la zone de saisie est poussée
-      // deux fois et un grand vide apparaît entre elle et le clavier.
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        title: Text(widget.titre, style: const TextStyle(fontSize: 16)),
-      ),
-      body: Column(
-        children: [
+    final corps = Column(
+      children: [
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -752,7 +857,42 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
             ),
           ),
         ],
+    );
+
+    if (widget.embarque) {
+      // Mode panneau droit (desktop) : en-tête compact + conversation
+      return Column(
+        children: [
+          Container(
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkCard : Colors.white,
+              border: Border(bottom: BorderSide(color: context.borderColor)),
+            ),
+            child: Row(
+              children: [
+                Text(widget.titre,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 16)),
+              ],
+            ),
+          ),
+          Expanded(child: corps),
+        ],
+      );
+    }
+
+    return Scaffold(
+      // IMPORTANT : le Scaffold redimensionne déjà le body quand le clavier
+      // s'ouvre (resizeToAvoidBottomInset). On ne doit PAS ajouter
+      // viewInsets.bottom en padding, sinon la zone de saisie est poussée
+      // deux fois et un grand vide apparaît entre elle et le clavier.
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(
+        title: Text(widget.titre, style: const TextStyle(fontSize: 16)),
       ),
+      body: corps,
     );
   }
 }

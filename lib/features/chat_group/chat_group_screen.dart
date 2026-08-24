@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,7 @@ class GroupeChat {
   final String nom;
   final String? codeInvitation;
   final int nbMembres;
+  final int nonLus;
   final String? dernierMessage;
   final DateTime? dernierMessageLe;
 
@@ -25,6 +27,7 @@ class GroupeChat {
     required this.nom,
     this.codeInvitation,
     this.nbMembres = 0,
+    this.nonLus = 0,
     this.dernierMessage,
     this.dernierMessageLe,
   });
@@ -35,6 +38,7 @@ class GroupeChat {
         codeInvitation: j['codeInvitation'] as String?,
         nbMembres:
             (j['_count']?['membres'] as int?) ?? (j['nbMembres'] as int?) ?? 0,
+        nonLus: (j['nonLus'] as int?) ?? 0,
         dernierMessage: j['dernierMessage'] as String?,
         dernierMessageLe: j['dernierMessageLe'] != null
             ? DateTime.tryParse(j['dernierMessageLe'])
@@ -88,7 +92,16 @@ class MessageChat {
 class ChatGroupScreen extends ConsumerStatefulWidget {
   // quand true : pas de Scaffold/AppBar propre (utilisé dans un TabBarView)
   final bool embarque;
-  const ChatGroupScreen({super.key, this.embarque = false});
+  // En mode desktop (deux panneaux), on remonte la sélection au hub
+  final void Function(GroupeChat groupe)? onOuvrirGroupe;
+  // Signal de rafraîchissement externe (pour rafraîchir les badges)
+  final ValueListenable<int>? refreshSignal;
+  const ChatGroupScreen({
+    super.key,
+    this.embarque = false,
+    this.onOuvrirGroupe,
+    this.refreshSignal,
+  });
 
   @override
   ConsumerState<ChatGroupScreen> createState() => _ChatGroupScreenState();
@@ -97,18 +110,33 @@ class ChatGroupScreen extends ConsumerStatefulWidget {
 class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
   List<GroupeChat> _groupes = [];
   bool _isLoading = true;
+  VoidCallback? _onRefreshSignal;
 
   @override
   void initState() {
     super.initState();
     _chargerGroupes();
+    final signal = widget.refreshSignal;
+    if (signal != null) {
+      _onRefreshSignal = () => _chargerGroupes(silent: true);
+      signal.addListener(_onRefreshSignal!);
+    }
   }
 
-  Future<void> _chargerGroupes() async {
+  @override
+  void dispose() {
+    final signal = widget.refreshSignal;
+    if (signal != null && _onRefreshSignal != null) {
+      signal.removeListener(_onRefreshSignal!);
+    }
+    super.dispose();
+  }
+
+  Future<void> _chargerGroupes({bool silent = false}) async {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
-    setState(() => _isLoading = true);
+    if (!silent) setState(() => _isLoading = true);
     try {
       final resp = await ApiClient.getChat(
         '/chat/groups',
@@ -126,7 +154,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (!silent) setState(() => _isLoading = false);
     }
   }
 
@@ -350,27 +378,64 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
                         ),
                       ),
                       title: Text(g.nom,
-                          style: TextStyle(fontWeight: FontWeight.w600)),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: g.nonLus > 0
+                                  ? context.textPrimary
+                                  : null)),
                       subtitle: Text(
                         g.dernierMessage ?? '${g.nbMembres} membre(s)',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style:
-                            TextStyle(color: context.textMuted, fontSize: 12),
+                        style: TextStyle(
+                            color:
+                                g.nonLus > 0 ? context.textPrimary : context.textMuted,
+                            fontWeight: g.nonLus > 0
+                                ? FontWeight.w700
+                                : FontWeight.normal,
+                            fontSize: 12),
                       ),
-                      trailing: g.dernierMessageLe != null
-                          ? Text(
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (g.dernierMessageLe != null)
+                            Text(
                               DateFormat('HH:mm').format(g.dernierMessageLe!),
                               style: TextStyle(
                                   color: context.textMuted, fontSize: 11),
-                            )
-                          : null,
-                      onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                _ChatRoomScreen(groupeId: g.id, nom: g.nom),
-                          )),
+                            ),
+                          if (g.nonLus > 0) ...[const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF4F46E5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '${g.nonLus}',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      onTap: () {
+                        final cb = widget.onOuvrirGroupe;
+                        if (cb != null) {
+                          cb(g);
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChatRoomScreen(
+                                  groupeId: g.id, nom: g.nom),
+                            ),
+                          );
+                        }
+                      },
                     );
                   },
                 ),
@@ -420,16 +485,23 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
 // ÉCRAN DE CONVERSATION
 // ══════════════════════════════════════════════════════════════════
 
-class _ChatRoomScreen extends ConsumerStatefulWidget {
+class ChatRoomScreen extends ConsumerStatefulWidget {
   final String groupeId;
   final String nom;
-  const _ChatRoomScreen({required this.groupeId, required this.nom});
+  // quand true : pas de Scaffold/AppBar propre (panneau droit desktop)
+  final bool embarque;
+  const ChatRoomScreen({
+    super.key,
+    required this.groupeId,
+    required this.nom,
+    this.embarque = false,
+  });
 
   @override
-  ConsumerState<_ChatRoomScreen> createState() => _ChatRoomScreenState();
+  ConsumerState<ChatRoomScreen> createState() => ChatRoomScreenState();
 }
 
-class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
+class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   final _msgController = TextEditingController();
   final _scrollCtrl = ScrollController();
   List<MessageChat> _messages = [];
@@ -513,22 +585,8 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
   Widget build(BuildContext context) {
     final isDark = context.isDark;
 
-    return Scaffold(
-      // IMPORTANT : le Scaffold redimensionne déjà le body quand le clavier
-      // s'ouvre (resizeToAvoidBottomInset). On ne doit PAS ajouter
-      // viewInsets.bottom en padding, sinon la zone de saisie est poussée
-      // deux fois et un grand vide apparaît entre elle et le clavier.
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.nom, style: const TextStyle(fontSize: 16)),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
+    final corps = Column(
+      children: [
           // Messages
           Expanded(
             child: _isLoading
@@ -650,7 +708,38 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
             ),
           ),
         ],
+    );
+
+    if (widget.embarque) {
+      // Mode panneau droit (desktop) : en-tête compact + conversation
+      return Column(
+        children: [
+          Container(
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkCard : Colors.white,
+              border: Border(bottom: BorderSide(color: context.borderColor)),
+            ),
+            child: Row(
+              children: [
+                Text(widget.nom,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 16)),
+              ],
+            ),
+          ),
+          Expanded(child: corps),
+        ],
+      );
+    }
+
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(
+        title: Text(widget.nom, style: const TextStyle(fontSize: 16)),
       ),
+      body: corps,
     );
   }
 }
