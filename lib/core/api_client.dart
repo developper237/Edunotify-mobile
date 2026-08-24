@@ -359,6 +359,19 @@ class ApiClient {
     } on DioException catch (e) { throw _handle(e); }
   }
 
+  // Téléchargement binaire d'un document de la bibliothèque
+  static Future<List<int>> downloadLibraryBytes(String path, {required String userId, required String role, String? etablissementId}) async {
+    try {
+      final resp = await _dioLibrary.get(path,
+          options: Options(responseType: ResponseType.bytes, headers: {
+            'x-user-id':   userId,
+            'x-user-role': role,
+            'x-etab-id':   etablissementId ?? '',
+          }));
+      return resp.data as List<int>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
   static Future<Map<String, dynamic>> postLibrary(String path, {Map<String, dynamic>? data, required String userId, required String role, String? etablissementId}) async {
     try {
       final resp = await _dioLibrary.post(path, data: data, options: Options(headers: {

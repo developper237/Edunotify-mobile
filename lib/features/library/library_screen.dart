@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
+import 'package:open_filex/open_filex.dart';
 
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
@@ -239,23 +240,32 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   void _telecharger(DocumentItem doc) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Téléchargement en cours...')),
+    );
     try {
       final user = ref.read(currentUserProvider);
-      final resp = await ApiClient.getLibrary(
+      final bytes = await ApiClient.downloadLibraryBytes(
         '/library/documents/${doc.id}/telecharger',
         userId: user?.id ?? '',
         role: user?.role ?? '',
         etablissementId: user?.etablissementId ?? '',
       );
+      final dir = Directory.systemTemp;
+      final fichier =
+          File('${dir.path}${Platform.pathSeparator}${doc.nom}');
+      await fichier.writeAsBytes(bytes);
+      await OpenFilex.open(fichier.path);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${doc.nom} téléchargé')),
+        messenger.showSnackBar(
+          SnackBar(content: Text('Fichier enregistré : ${doc.nom}')),
         );
       }
       _chargerDocuments();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text('Erreur: $e')),
         );
       }
