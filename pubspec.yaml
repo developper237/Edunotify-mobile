@@ -16,6 +16,7 @@ dependencies:
   file: ^7.0.1
   url_launcher: ^6.2.0
   image_picker: ^1.0.7
+  open_filex: ^4.5.0
 
   # Navigation
   go_router: ^14.6.2

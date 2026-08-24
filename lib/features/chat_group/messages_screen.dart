@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
@@ -116,6 +118,9 @@ class MessagePrive {
   final PieceJointe? pieceJointe;
   final DateTime createdAt;
   final bool estMien;
+  final bool lu;
+  // Statut local (hors-ligne) — utilisé uniquement pour nos propres messages
+  final MessageStatut statut;
 
   const MessagePrive({
     required this.id,
@@ -126,6 +131,8 @@ class MessagePrive {
     this.pieceJointe,
     required this.createdAt,
     this.estMien = false,
+    this.lu = false,
+    this.statut = MessageStatut.envoye,
   });
 
   factory MessagePrive.fromJson(Map<String, dynamic> j, String currentUserId) {
@@ -144,8 +151,26 @@ class MessagePrive {
           ? DateTime.tryParse(j['createdAt']) ?? DateTime.now()
           : DateTime.now(),
       estMien: j['userId'] == currentUserId,
+      lu: j['lu'] == true,
     );
   }
+
+  MessagePrive copyWith({
+    MessageStatut? statut,
+    bool? lu,
+  }) =>
+      MessagePrive(
+        id: id,
+        texte: texte,
+        userId: userId,
+        userNom: userNom,
+        userPrenom: userPrenom,
+        pieceJointe: pieceJointe,
+        createdAt: createdAt,
+        estMien: estMien,
+        lu: lu ?? this.lu,
+        statut: statut ?? this.statut,
+      );
 
   String get displayNom => '${userPrenom ?? ''} ${userNom ?? ''}'.trim();
 }
@@ -482,7 +507,10 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
   // Panneau droit (desktop) : conversation ouverte ou placeholder
   Widget _panneauDroit() {
     if (_selPrivee != null) {
+      // key : force la recréation immédiate de l'état quand on change de
+      // conversation (sinon Flutter réutilise l'état de l'ancienne)
       return _PrivateChatScreen(
+        key: ValueKey('prive-${_selPrivee!.id}'),
         conversationId: _selPrivee!.id,
         titre: _selPrivee!.displayNom,
         embarque: true,
@@ -490,6 +518,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
     }
     if (_selGroupe != null) {
       return ChatRoomScreen(
+        key: ValueKey('groupe-${_selGroupe!.id}'),
         groupeId: _selGroupe!.id,
         nom: _selGroupe!.nom,
         photoUrl: _selGroupe!.photoUrl,
@@ -602,6 +631,27 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
             )
           : panneauGauche,
     );
+  }
+}
+
+// Statut d'un message privé envoyé (type WhatsApp)
+class _StatutMessagePrive extends StatelessWidget {
+  final MessageStatut statut;
+  final bool lu;
+
+  const _StatutMessagePrive({required this.statut, required this.lu});
+
+  @override
+  Widget build(BuildContext context) {
+    if (statut == MessageStatut.enAttente) {
+      return const Icon(Icons.schedule_rounded,
+          size: 12, color: Colors.white70);
+    }
+    if (lu) {
+      return const Icon(Icons.done_all_rounded,
+          size: 13, color: Color(0xFF8AB4F8));
+    }
+    return const Icon(Icons.done_rounded, size: 13, color: Colors.white70);
   }
 }
 
@@ -723,6 +773,7 @@ class _PrivateChatScreen extends ConsumerStatefulWidget {
   final bool embarque;
 
   const _PrivateChatScreen({
+    super.key,
     required this.conversationId,
     required this.titre,
     this.embarque = false,
@@ -736,15 +787,22 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
   final _msgController = TextEditingController();
   final _scrollCtrl = ScrollController();
   List<MessagePrive> _messages = [];
+  List<MessagePrive> _pending = []; // messages hors-ligne (en attente)
   bool _isLoading = true;
   Timer? _pollTimer;
+
+  String get _cleFileAttente => 'chat_pending_prive_${widget.conversationId}';
 
   @override
   void initState() {
     super.initState();
     _chargerMessages();
-    _pollTimer = Timer.periodic(
-        const Duration(seconds: 5), (_) => _chargerMessages(silent: true));
+    _chargerFileAttente();
+    // Polling toutes les 5 secondes : messages + renvoi des messages en attente
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _chargerMessages(silent: true);
+      _flusherFileAttente();
+    });
   }
 
   @override
@@ -753,6 +811,77 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
     _msgController.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  // ── File d'attente hors-ligne (persistée en local) ────────────
+  Future<void> _chargerFileAttente() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_cleFileAttente);
+      if (raw == null || !mounted) return;
+      final list = (jsonDecode(raw) as List)
+          .map((e) => e as Map<String, dynamic>)
+          .toList();
+      final user = ref.read(currentUserProvider);
+      setState(() {
+        _pending = list.map((m) => MessagePrive(
+              id: m['id'] ?? '',
+              texte: m['texte'] ?? '',
+              userId: user?.id ?? '',
+              userNom: user?.nom,
+              userPrenom: user?.prenom,
+              pieceJointe: m['pieceJointe'] != null
+                  ? PieceJointe.fromJson(m['pieceJointe'])
+                  : null,
+              createdAt: DateTime.tryParse(m['createdAt'] ?? '') ??
+                  DateTime.now(),
+              estMien: true,
+              statut: MessageStatut.enAttente,
+            )).toList();
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _sauverFileAttente() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+          _cleFileAttente,
+          jsonEncode(_pending
+              .map((m) => {
+                    'id': m.id,
+                    'texte': m.texte,
+                    'pieceJointe': m.pieceJointe?.toJson(),
+                    'createdAt': m.createdAt.toIso8601String(),
+                  })
+              .toList()));
+    } catch (_) {}
+  }
+
+  // Renvoie les messages en attente ; retire ceux qui partent enfin
+  Future<void> _flusherFileAttente() async {
+    if (_pending.isEmpty) return;
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    final restant = <MessagePrive>[];
+    for (final m in _pending) {
+      try {
+        await ApiClient.postChat(
+          '/chat/privates/${widget.conversationId}/messages',
+          data: {'texte': m.texte, 'pieceJointe': m.pieceJointe?.toJson()},
+          userId: user.id,
+          role: user.role,
+          etablissementId: user.etablissementId,
+        );
+      } catch (_) {
+        restant.add(m); // toujours hors-ligne, on réessaiera
+      }
+    }
+    if (restant.length != _pending.length || restant.isEmpty) {
+      if (mounted) setState(() => _pending = restant);
+      _sauverFileAttente();
+      _chargerMessages(silent: true);
+    }
   }
 
   Future<void> _chargerMessages({bool silent = false}) async {
@@ -771,7 +900,8 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
           .toList();
       if (!mounted) return;
       setState(() {
-        _messages = messages;
+        // On garde les messages hors-ligne (en attente) affichés en haut
+        _messages = [...messages, ..._pending];
         _isLoading = false;
       });
       if (_scrollCtrl.hasClients) {
@@ -783,27 +913,37 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
     }
   }
 
+  // Ajoute le message localement (même sans connexion) puis tente l'envoi
   Future<void> _envoyer() async {
     final text = _msgController.text.trim();
     if (text.isEmpty) return;
     _msgController.clear();
+
     final user = ref.read(currentUserProvider);
-    try {
-      await ApiClient.postChat(
-        '/chat/privates/${widget.conversationId}/messages',
-        data: {'texte': text},
-        userId: user?.id ?? '',
-        role: user?.role ?? '',
-        etablissementId: user?.etablissementId ?? '',
-      );
-      _chargerMessages(silent: true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur envoi: $e')),
-        );
+    final localMsg = MessagePrive(
+      id: 'local-${DateTime.now().microsecondsSinceEpoch}',
+      texte: text,
+      userId: user?.id ?? '',
+      userNom: user?.nom,
+      userPrenom: user?.prenom,
+      createdAt: DateTime.now(),
+      estMien: true,
+      statut: MessageStatut.enAttente,
+    );
+
+    // Le message apparaît immédiatement dans le chat (type WhatsApp)
+    setState(() {
+      _pending.add(localMsg);
+      _messages = [..._messages, localMsg];
+    });
+    _sauverFileAttente();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
       }
-    }
+    });
+
+    await _flusherFileAttente();
   }
 
   Future<void> _envoyerPieceJointe() async {
@@ -839,14 +979,25 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
         role: user?.role ?? '',
         etablissementId: user?.etablissementId ?? '',
       );
-      await ApiClient.postChat(
-        '/chat/privates/${widget.conversationId}/messages',
-        data: {'texte': '', 'pieceJointe': PieceJointe.fromJson(resp).toJson()},
+      // Ajout local immédiat puis envoi (file d'attente hors-ligne)
+      final pj = PieceJointe.fromJson(resp);
+      final localMsg = MessagePrive(
+        id: 'local-${DateTime.now().microsecondsSinceEpoch}',
+        texte: '',
         userId: user?.id ?? '',
-        role: user?.role ?? '',
-        etablissementId: user?.etablissementId ?? '',
+        userNom: user?.nom,
+        userPrenom: user?.prenom,
+        pieceJointe: pj,
+        createdAt: DateTime.now(),
+        estMien: true,
+        statut: MessageStatut.enAttente,
       );
-      _chargerMessages(silent: true);
+      setState(() {
+        _pending.add(localMsg);
+        _messages = [..._messages, localMsg];
+      });
+      _sauverFileAttente();
+      await _flusherFileAttente();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -969,16 +1120,26 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
                                         ),
                                       ),
                                     const SizedBox(height: 4),
-                                    Text(
-                                      DateFormat('HH:mm')
-                                          .format(msg.createdAt),
-                                      style: TextStyle(
-                                        color: isMe
-                                            ? Colors.white70
-                                            : context.textMuted,
-                                        fontSize: 10,
-                                      ),
-                                      textAlign: TextAlign.end,
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          DateFormat('HH:mm')
+                                              .format(msg.createdAt),
+                                          style: TextStyle(
+                                            color: isMe
+                                                ? Colors.white70
+                                                : context.textMuted,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                        if (isMe) ...[const SizedBox(width: 4),
+                                          _StatutMessagePrive(
+                                            statut: msg.statut,
+                                            lu: msg.lu,
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                   ],
                                 ),

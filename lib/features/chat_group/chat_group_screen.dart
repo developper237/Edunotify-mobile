@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
@@ -6,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
@@ -94,6 +97,9 @@ class GroupeChat {
       );
 }
 
+// Statut d'un message (mode hors-ligne type WhatsApp)
+enum MessageStatut { enAttente, envoye, lu }
+
 class MessageChat {
   final String id;
   final String texte;
@@ -103,6 +109,9 @@ class MessageChat {
   final PieceJointe? pieceJointe;
   final DateTime createdAt;
   final bool estMien;
+  final List<String> luPar;
+  // Statut local (hors-ligne) — utilisé uniquement pour nos propres messages
+  final MessageStatut statut;
 
   const MessageChat({
     required this.id,
@@ -113,6 +122,8 @@ class MessageChat {
     this.pieceJointe,
     required this.createdAt,
     this.estMien = false,
+    this.luPar = const [],
+    this.statut = MessageStatut.envoye,
   });
 
   factory MessageChat.fromJson(Map<String, dynamic> j, String currentUserId) {
@@ -131,8 +142,30 @@ class MessageChat {
           ? DateTime.tryParse(j['createdAt']) ?? DateTime.now()
           : DateTime.now(),
       estMien: j['userId'] == currentUserId,
+      luPar: (j['luPar'] as List? ?? []).map((e) => e.toString()).toList(),
     );
   }
+
+  // true si au moins une AUTRE personne que moi a lu le message
+  bool luParQuelquUn(String currentUserId) =>
+      luPar.any((id) => id != currentUserId);
+
+  MessageChat copyWith({
+    MessageStatut? statut,
+    List<String>? luPar,
+  }) =>
+      MessageChat(
+        id: id,
+        texte: texte,
+        userId: userId,
+        userNom: userNom,
+        userPrenom: userPrenom,
+        pieceJointe: pieceJointe,
+        createdAt: createdAt,
+        estMien: estMien,
+        luPar: luPar ?? this.luPar,
+        statut: statut ?? this.statut,
+      );
 
   String get initialise =>
       '${(userPrenom ?? '')[0]}${(userNom ?? '')[0]}'.toUpperCase();
@@ -544,7 +577,11 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (_) => ChatRoomScreen(
-                                  groupeId: g.id, nom: g.nom, photoUrl: g.photoUrl),
+                                groupeId: g.id,
+                                nom: g.nom,
+                                photoUrl: g.photoUrl,
+                                creeParId: g.creeParId,
+                              ),
                             ),
                           );
                         }
@@ -628,18 +665,24 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   final _msgController = TextEditingController();
   final _scrollCtrl = ScrollController();
   List<MessageChat> _messages = [];
+  List<MessageChat> _pending = []; // messages hors-ligne (en attente)
   bool _isLoading = true;
   Timer? _pollTimer;
   String? _photoUrl;
+
+  String get _cleFileAttente => 'chat_pending_groupe_${widget.groupeId}';
 
   @override
   void initState() {
     super.initState();
     _photoUrl = widget.photoUrl;
     _chargerMessages();
-    // Polling toutes les 5 secondes
-    _pollTimer = Timer.periodic(
-        const Duration(seconds: 5), (_) => _chargerMessages(silent: true));
+    _chargerFileAttente();
+    // Polling toutes les 5 secondes : messages + renvoi des messages en attente
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _chargerMessages(silent: true);
+      _flusherFileAttente();
+    });
   }
 
   bool get _estCreateur {
@@ -655,6 +698,77 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     _msgController.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  // ── File d'attente hors-ligne (persistée en local) ────────────
+  Future<void> _chargerFileAttente() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_cleFileAttente);
+      if (raw == null || !mounted) return;
+      final list = (jsonDecode(raw) as List)
+          .map((e) => e as Map<String, dynamic>)
+          .toList();
+      final user = ref.read(currentUserProvider);
+      setState(() {
+        _pending = list.map((m) => MessageChat(
+              id: m['id'] ?? '',
+              texte: m['texte'] ?? '',
+              userId: user?.id ?? '',
+              userNom: user?.nom,
+              userPrenom: user?.prenom,
+              pieceJointe: m['pieceJointe'] != null
+                  ? PieceJointe.fromJson(m['pieceJointe'])
+                  : null,
+              createdAt: DateTime.tryParse(m['createdAt'] ?? '') ??
+                  DateTime.now(),
+              estMien: true,
+              statut: MessageStatut.enAttente,
+            )).toList();
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _sauverFileAttente() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+          _cleFileAttente,
+          jsonEncode(_pending
+              .map((m) => {
+                    'id': m.id,
+                    'texte': m.texte,
+                    'pieceJointe': m.pieceJointe?.toJson(),
+                    'createdAt': m.createdAt.toIso8601String(),
+                  })
+              .toList()));
+    } catch (_) {}
+  }
+
+  // Renvoie les messages en attente ; retire ceux qui partent enfin
+  Future<void> _flusherFileAttente() async {
+    if (_pending.isEmpty) return;
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    final restant = <MessageChat>[];
+    for (final m in _pending) {
+      try {
+        await ApiClient.postChat(
+          '/chat/groups/${widget.groupeId}/messages',
+          data: {'texte': m.texte, 'pieceJointe': m.pieceJointe?.toJson()},
+          userId: user.id,
+          role: user.role,
+          etablissementId: user.etablissementId,
+        );
+      } catch (_) {
+        restant.add(m); // toujours hors-ligne, on réessaiera
+      }
+    }
+    if (restant.length != _pending.length || restant.isEmpty) {
+      if (mounted) setState(() => _pending = restant);
+      _sauverFileAttente();
+      _chargerMessages(silent: true);
+    }
   }
 
   Future<void> _chargerMessages({bool silent = false}) async {
@@ -675,7 +789,8 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
           .toList();
 
       setState(() {
-        _messages = messages;
+        // On garde les messages hors-ligne (en attente) affichés en haut
+        _messages = [...messages, ..._pending];
         _isLoading = false;
       });
 
@@ -689,48 +804,38 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     }
   }
 
-  Future<void> _envoyer() async {
-    final text = _msgController.text.trim();
-    if (text.isEmpty) return;
+  // Ajoute le message localement (même sans connexion) puis tente l'envoi
+  Future<void> _envoyer({String? texteForce, PieceJointe? pj}) async {
+    final text = (texteForce ?? _msgController.text).trim();
+    if (text.isEmpty && pj == null) return;
+    if (pj == null) _msgController.clear();
 
-    _msgController.clear();
-    try {
-      final user = ref.read(currentUserProvider);
-      await ApiClient.postChat(
-        '/chat/groups/${widget.groupeId}/messages',
-        data: {'texte': text},
-        userId: user?.id ?? '',
-        role: user?.role ?? '',
-        etablissementId: user?.etablissementId ?? '',
-      );
-      _chargerMessages(silent: true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur envoi: $e')),
-        );
-      }
-    }
-  }
+    final user = ref.read(currentUserProvider);
+    final localMsg = MessageChat(
+      id: 'local-${DateTime.now().microsecondsSinceEpoch}',
+      texte: text,
+      userId: user?.id ?? '',
+      userNom: user?.nom,
+      userPrenom: user?.prenom,
+      pieceJointe: pj,
+      createdAt: DateTime.now(),
+      estMien: true,
+      statut: MessageStatut.enAttente,
+    );
 
-  Future<void> _envoyerAvecPieceJointe(PieceJointe pj) async {
-    try {
-      final user = ref.read(currentUserProvider);
-      await ApiClient.postChat(
-        '/chat/groups/${widget.groupeId}/messages',
-        data: {'texte': '', 'pieceJointe': pj.toJson()},
-        userId: user?.id ?? '',
-        role: user?.role ?? '',
-        etablissementId: user?.etablissementId ?? '',
-      );
-      _chargerMessages(silent: true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur envoi: $e')),
-        );
+    // Le message apparaît immédiatement dans le chat (type WhatsApp)
+    setState(() {
+      _pending.add(localMsg);
+      _messages = [..._messages, localMsg];
+    });
+    _sauverFileAttente();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
       }
-    }
+    });
+
+    await _flusherFileAttente();
   }
 
   Future<void> _envoyerPieceJointe() async {
@@ -766,8 +871,7 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
         role: user?.role ?? '',
         etablissementId: user?.etablissementId ?? '',
       );
-      await _envoyerAvecPieceJointe(
-          PieceJointe.fromJson(resp));
+      await _envoyer(pj: PieceJointe.fromJson(resp));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -992,16 +1096,29 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                                         ),
                                       ),
                                     const SizedBox(height: 4),
-                                    Text(
-                                      DateFormat('HH:mm')
-                                          .format(msg.createdAt),
-                                      style: TextStyle(
-                                        color: isMe
-                                            ? Colors.white70
-                                            : context.textMuted,
-                                        fontSize: 10,
-                                      ),
-                                      textAlign: TextAlign.end,
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          DateFormat('HH:mm')
+                                              .format(msg.createdAt),
+                                          style: TextStyle(
+                                            color: isMe
+                                                ? Colors.white70
+                                                : context.textMuted,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                        if (isMe) ...[const SizedBox(width: 4),
+                                          _StatutMessage(
+                                            statut: msg.statut,
+                                            lu: msg.luParQuelquUn(
+                                                ref.read(currentUserProvider)
+                                                        ?.id ??
+                                                    ''),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -1148,45 +1265,133 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
 // FICHIER JOINT DANS UNE BULLE DE MESSAGE
 // ══════════════════════════════════════════════════════════════════
 
-class FichierJoint extends StatelessWidget {
+// Statut d'un message envoyé (type WhatsApp)
+class _StatutMessage extends StatelessWidget {
+  final MessageStatut statut;
+  final bool lu;
+
+  const _StatutMessage({required this.statut, required this.lu});
+
+  @override
+  Widget build(BuildContext context) {
+    if (statut == MessageStatut.enAttente) {
+      return const Icon(Icons.schedule_rounded,
+          size: 12, color: Colors.white70);
+    }
+    if (lu) {
+      return const Icon(Icons.done_all_rounded,
+          size: 13, color: Color(0xFF8AB4F8));
+    }
+    return const Icon(Icons.done_rounded, size: 13, color: Colors.white70);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FICHIER JOINT DANS UNE BULLE DE MESSAGE
+// ══════════════════════════════════════════════════════════════════
+
+String _urlPieceJointe(PieceJointe pj) => pj.url.startsWith('http')
+    ? pj.url
+    : 'https://billing-service-efm6.onrender.com${pj.url}';
+
+class FichierJoint extends StatefulWidget {
   final PieceJointe pj;
   final bool dark; // true = bulle de l'expéditeur (fond cyan, texte blanc)
 
   const FichierJoint({super.key, required this.pj, this.dark = false});
 
   @override
+  State<FichierJoint> createState() => _FichierJointState();
+}
+
+class _FichierJointState extends State<FichierJoint> {
+  bool _enTelechargement = false;
+
+  PieceJointe get pj => widget.pj;
+
+  @override
   Widget build(BuildContext context) {
-    final url = pj.url.startsWith('http')
-        ? pj.url
-        : 'https://billing-service-efm6.onrender.com${pj.url}';
-    final couleur = dark ? Colors.white : AppColors.cyan;
+    final url = _urlPieceJointe(pj);
+    final couleur = widget.dark ? Colors.white : AppColors.cyan;
 
     if (pj.estImage) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Image.network(
-          url,
-          width: 200,
-          height: 140,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _tileFichier(couleur),
+      return GestureDetector(
+        onTap: () => _ouvrirImage(context, url),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.network(
+            url,
+            width: 200,
+            height: 140,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _tileFichier(couleur),
+          ),
         ),
       );
     }
     return _tileFichier(couleur);
   }
 
+  // Visionneuse plein écran pour les images
+  void _ouvrirImage(BuildContext context, String url) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            title: Text(pj.nom,
+                style: const TextStyle(fontSize: 14),
+                overflow: TextOverflow.ellipsis),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              maxScale: 5,
+              child: Image.network(url, fit: BoxFit.contain),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Télécharge le fichier puis l'ouvre avec l'app par défaut
+  Future<void> _telecharger() async {
+    if (_enTelechargement) return;
+    setState(() => _enTelechargement = true);
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Téléchargement en cours...')),
+    );
+    try {
+      final url = _urlPieceJointe(pj);
+      final dir = Directory.systemTemp;
+      final fichier =
+          File('${dir.path}${Platform.pathSeparator}${pj.nom}');
+      final dio = Dio();
+      await dio.download(url, fichier.path);
+      await OpenFilex.open(fichier.path);
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Fichier enregistré : ${pj.nom}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Téléchargement impossible : $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _enTelechargement = false);
+    }
+  }
+
   Widget _tileFichier(Color couleur) {
     return InkWell(
-      onTap: () {
-        // Ouvrir le fichier dans le navigateur / visionneuse externe
-        launchUrl(
-          Uri.parse(pj.url.startsWith('http')
-              ? pj.url
-              : 'https://billing-service-efm6.onrender.com${pj.url}'),
-          mode: LaunchMode.externalApplication,
-        );
-      },
+      onTap: _telecharger,
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
@@ -1196,8 +1401,14 @@ class FichierJoint extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.insert_drive_file_rounded,
-                color: couleur, size: 28),
+            _enTelechargement
+                ? SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: couleur))
+                : Icon(Icons.insert_drive_file_rounded,
+                    color: couleur, size: 28),
             const SizedBox(width: 8),
             Flexible(
               child: Column(

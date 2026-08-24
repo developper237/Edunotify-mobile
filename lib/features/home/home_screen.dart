@@ -923,21 +923,24 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
                     // ── Ligne avatar + nom ──────────────────
                     Row(
                       children: [
-                        Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            color: _accentColor.withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(initiale,
-                                style: TextStyle(
-                                  color: _accentColor,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                )),
-                          ),
+                        CircleAvatar(
+                          radius: 23,
+                          backgroundColor:
+                              _accentColor.withValues(alpha: 0.12),
+                          backgroundImage:
+                              (widget.user?.photoUrl != null &&
+                                      widget.user!.photoUrl!.isNotEmpty)
+                                  ? NetworkImage(widget.user!.photoUrl!)
+                                  : null,
+                          child: (widget.user?.photoUrl == null ||
+                                  widget.user!.photoUrl!.isEmpty)
+                              ? Text(initiale,
+                                  style: TextStyle(
+                                    color: _accentColor,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                  ))
+                              : null,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
