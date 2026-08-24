@@ -31,6 +31,7 @@ import '../library/library_screen.dart';
 import '../exam/exam_screen.dart';
 import '../exam/prof_exam_screen.dart';
 import '../chat_group/chat_group_screen.dart';
+import '../chat_group/messages_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // PROVIDERS
@@ -123,6 +124,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         etablissementId: user.etablissementId,
         departementId: user.departementId,
         classeId: user.classeId);
+    // Badge des messages chat non lus
+    ref.read(chatNonLusProvider.notifier).charger(
+        user.id, user.role, user.etablissementId);
     if (user.role == 'etudiant' || user.role == 'delegue') {
       ref
           .read(sessionActiveProvider.notifier)
@@ -164,12 +168,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // Les écrans secondaires vivent dans l'accès rapide de l'accueil.
   // Les notifications sont accessibles via la cloche en haut à droite.
   List<_NavItem> _navConfig(String role, int nonLues, bool hasSession) {
+    final chatBadge = ref.watch(chatNonLusProvider);
     switch (role) {
       case 'etudiant':
         return [
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
           _NavItem(Icons.how_to_reg_rounded, 'Présence', const PresenceScreen(),
               badge: hasSession ? 1 : 0, badgeColor: const Color(0xFF22C55E)),
+          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+              badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
           _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
@@ -178,6 +185,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
           _NavItem(Icons.play_circle_filled, 'Appel', const PresenceScreen(),
               badge: hasSession ? 1 : 0, badgeColor: const Color(0xFF22C55E)),
+          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+              badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
           _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
@@ -186,6 +195,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
           _NavItem(Icons.description_rounded, 'Rapports',
               const RapportsChefScreen()),
+          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+              badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
           _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
@@ -193,6 +204,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return [
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
           _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
+          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+              badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
       case 'admin':
@@ -200,6 +213,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
           _NavItem(
               Icons.people_rounded, 'Utilisateurs', const UtilisateursScreen()),
+          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+              badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
           _NavItem(
               Icons.bar_chart_rounded, 'Rapports', const RapportsAdminScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
@@ -209,12 +224,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
           _NavItem(Icons.school_rounded, 'Établissements',
               const EtablissementsScreen()),
+          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+              badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
           _NavItem(Icons.insights_rounded, 'Stats', const StatistiquesScreen()),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
       default:
         return [
           _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
+          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+              badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
           _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
         ];
     }

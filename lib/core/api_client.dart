@@ -452,6 +452,21 @@ class ApiClient {
     } on DioException catch (e) { throw _handle(e); }
   }
 
+  // Nombre total de messages non lus (privés + groupes)
+  static Future<int> getChatNonLus(
+      {required String userId, required String role, String? etablissementId}) async {
+    try {
+      final resp = await _dioBilling.get('/chat/non-lus', options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
+      }));
+      return (resp.data['count'] as int?) ?? 0;
+    } on DioException catch (e) {
+      throw _handle(e);
+    }
+  }
+
   // ── HELPERS ──────────────────────────────────────────────────
   static Future<String?> _refreshToken() async {
     try {

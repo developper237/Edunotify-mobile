@@ -86,7 +86,9 @@ class MessageChat {
 // ══════════════════════════════════════════════════════════════════
 
 class ChatGroupScreen extends ConsumerStatefulWidget {
-  const ChatGroupScreen({super.key});
+  // quand true : pas de Scaffold/AppBar propre (utilisé dans un TabBarView)
+  final bool embarque;
+  const ChatGroupScreen({super.key, this.embarque = false});
 
   @override
   ConsumerState<ChatGroupScreen> createState() => _ChatGroupScreenState();
@@ -301,96 +303,115 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
         );
       }
     }
-  }
-
-  @override
+  }  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chat'),
-        actions: [
-          IconButton(
-            onPressed: _rejoindreParCode,
-            icon: const Icon(Icons.key_rounded),
-            tooltip: 'Rejoindre avec un code',
-          ),
-          IconButton(
-            onPressed: _creerGroupe,
-            icon: const Icon(Icons.add_circle_outline_rounded),
-            tooltip: 'Créer un groupe',
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _groupes.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.chat_bubble_outline_rounded,
-                          size: 56, color: context.textMuted),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Aucun groupe',
-                        style:
-                            TextStyle(color: context.textMuted, fontSize: 15),
+    final body = _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _groupes.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.chat_bubble_outline_rounded,
+                        size: 56, color: context.textMuted),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Aucun groupe',
+                      style:
+                          TextStyle(color: context.textMuted, fontSize: 15),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Créez un groupe ou attendez une invitation',
+                      style:
+                          TextStyle(color: context.textMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: _chargerGroupes,
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: _groupes.length,
+                  itemBuilder: (ctx, i) {
+                    final g = _groupes[i];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor:
+                            AppColors.cyan.withValues(alpha: 0.15),
+                        child: Text(
+                          g.nom
+                              .substring(0, g.nom.length.clamp(0, 2))
+                              .toUpperCase(),
+                          style: const TextStyle(
+                              color: AppColors.cyan,
+                              fontWeight: FontWeight.w700),
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Créez un groupe ou attendez une invitation',
+                      title: Text(g.nom,
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                        g.dernierMessage ?? '${g.nbMembres} membre(s)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style:
                             TextStyle(color: context.textMuted, fontSize: 12),
                       ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _chargerGroupes,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: _groupes.length,
-                    itemBuilder: (ctx, i) {
-                      final g = _groupes[i];
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor:
-                              AppColors.cyan.withValues(alpha: 0.15),
-                          child: Text(
-                            g.nom
-                                .substring(0, g.nom.length.clamp(0, 2))
-                                .toUpperCase(),
-                            style: const TextStyle(
-                                color: AppColors.cyan,
-                                fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        title: Text(g.nom,
-                            style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text(
-                          g.dernierMessage ?? '${g.nbMembres} membre(s)',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              TextStyle(color: context.textMuted, fontSize: 12),
-                        ),
-                        trailing: g.dernierMessageLe != null
-                            ? Text(
-                                DateFormat('HH:mm').format(g.dernierMessageLe!),
-                                style: TextStyle(
-                                    color: context.textMuted, fontSize: 11),
-                              )
-                            : null,
-                        onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  _ChatRoomScreen(groupeId: g.id, nom: g.nom),
-                            )),
-                      );
-                    },
-                  ),
+                      trailing: g.dernierMessageLe != null
+                          ? Text(
+                              DateFormat('HH:mm').format(g.dernierMessageLe!),
+                              style: TextStyle(
+                                  color: context.textMuted, fontSize: 11),
+                            )
+                          : null,
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                _ChatRoomScreen(groupeId: g.id, nom: g.nom),
+                          )),
+                    );
+                  },
                 ),
+              );
+
+    final actions = [
+      IconButton(
+        onPressed: _rejoindreParCode,
+        icon: const Icon(Icons.key_rounded),
+        tooltip: 'Rejoindre avec un code',
+      ),
+      IconButton(
+        onPressed: _creerGroupe,
+        icon: const Icon(Icons.add_circle_outline_rounded),
+        tooltip: 'Créer un groupe',
+      ),
+    ];
+
+    if (widget.embarque) {
+      // Mode intégré (dans l'onglet Groupes du hub Messages) :
+      // pas de Scaffold propre, actions en tête de liste
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: actions,
+            ),
+          ),
+          Expanded(child: body),
+        ],
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Chat'),
+        actions: actions,
+      ),
+      body: body,
     );
   }
 }
@@ -491,9 +512,13 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final userId = ref.read(currentUserProvider)?.id ?? '';
 
     return Scaffold(
+      // IMPORTANT : le Scaffold redimensionne déjà le body quand le clavier
+      // s'ouvre (resizeToAvoidBottomInset). On ne doit PAS ajouter
+      // viewInsets.bottom en padding, sinon la zone de saisie est poussée
+      // deux fois et un grand vide apparaît entre elle et le clavier.
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -594,11 +619,11 @@ class _ChatRoomScreenState extends ConsumerState<_ChatRoomScreen> {
 
           // Champ de saisie
           Container(
-            padding: EdgeInsets.only(
+            padding: const EdgeInsets.only(
               left: 12,
               right: 8,
               top: 8,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 8,
+              bottom: 8,
             ),
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkCard : Colors.white,
