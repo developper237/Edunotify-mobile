@@ -452,6 +452,58 @@ class ApiClient {
     } on DioException catch (e) { throw _handle(e); }
   }
 
+  static Future<Map<String, dynamic>> patchChat(String path, {Map<String, dynamic>? data, required String userId, required String role, String? etablissementId}) async {
+    try {
+      final resp = await _dioBilling.patch(path, data: data, options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
+      }));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
+  static Future<Map<String, dynamic>> deleteChat(String path, {required String userId, required String role, String? etablissementId}) async {
+    try {
+      final resp = await _dioBilling.delete(path, options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
+      }));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
+  // Upload d'une pièce jointe de chat (fichier multipart)
+  static Future<Map<String, dynamic>> uploadChatFichier(String path, {required List<int> fileBytes, required String filename, required String userId, required String role, String? etablissementId}) async {
+    try {
+      final formData = FormData.fromMap({
+        'fichier': MultipartFile.fromBytes(fileBytes, filename: filename),
+      });
+      final resp = await _dioBilling.post(path, data: formData, options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
+      }));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
+  // Upload de la photo de profil d'un groupe
+  static Future<Map<String, dynamic>> uploadChatPhoto(String path, {required List<int> fileBytes, required String filename, required String userId, required String role, String? etablissementId}) async {
+    try {
+      final formData = FormData.fromMap({
+        'photo': MultipartFile.fromBytes(fileBytes, filename: filename),
+      });
+      final resp = await _dioBilling.patch(path, data: formData, options: Options(headers: {
+        'x-user-id':   userId,
+        'x-user-role': role,
+        'x-etab-id':   etablissementId ?? '',
+      }));
+      return resp.data as Map<String, dynamic>;
+    } on DioException catch (e) { throw _handle(e); }
+  }
+
   // Nombre total de messages non lus (privés + groupes)
   static Future<int> getChatNonLus(
       {required String userId, required String role, String? etablissementId}) async {

@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
@@ -13,10 +16,51 @@ import '../auth/auth_provider.dart';
 // MODÈLES
 // ══════════════════════════════════════════════════════════════════
 
+class PieceJointe {
+  final String nom;
+  final String url;
+  final int taille;
+  final String type;
+
+  const PieceJointe({
+    required this.nom,
+    required this.url,
+    this.taille = 0,
+    this.type = '',
+  });
+
+  factory PieceJointe.fromJson(Map<String, dynamic>? j) => PieceJointe(
+        nom: j?['nom'] ?? 'Fichier',
+        url: j?['url'] ?? '',
+        taille: (j?['taille'] as int?) ?? 0,
+        type: j?['type'] ?? '',
+      );
+
+  bool get estImage =>
+      type.startsWith('image/') ||
+      ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+          .any((e) => nom.toLowerCase().endsWith(e));
+
+  String get tailleLisible {
+    if (taille >= 1024 * 1024) return '${(taille / (1024 * 1024)).toStringAsFixed(1)} Mo';
+    if (taille >= 1024) return '${(taille / 1024).toStringAsFixed(0)} Ko';
+    return '$taille o';
+  }
+
+  Map<String, dynamic> toJson() => {
+        'nom': nom,
+        'url': url,
+        'taille': taille,
+        'type': type,
+      };
+}
+
 class GroupeChat {
   final String id;
   final String nom;
   final String? codeInvitation;
+  final String? photoUrl;
+  final String creeParId;
   final int nbMembres;
   final int nonLus;
   final String? dernierMessage;
@@ -26,6 +70,8 @@ class GroupeChat {
     required this.id,
     required this.nom,
     this.codeInvitation,
+    this.photoUrl,
+    this.creeParId = '',
     this.nbMembres = 0,
     this.nonLus = 0,
     this.dernierMessage,
@@ -36,6 +82,8 @@ class GroupeChat {
         id: j['id'] ?? '',
         nom: j['nom'] ?? '',
         codeInvitation: j['codeInvitation'] as String?,
+        photoUrl: j['photoUrl'] as String?,
+        creeParId: j['creeParId'] ?? '',
         nbMembres:
             (j['_count']?['membres'] as int?) ?? (j['nbMembres'] as int?) ?? 0,
         nonLus: (j['nonLus'] as int?) ?? 0,
@@ -52,6 +100,7 @@ class MessageChat {
   final String userId;
   final String? userNom;
   final String? userPrenom;
+  final PieceJointe? pieceJointe;
   final DateTime createdAt;
   final bool estMien;
 
@@ -61,18 +110,23 @@ class MessageChat {
     required this.userId,
     this.userNom,
     this.userPrenom,
+    this.pieceJointe,
     required this.createdAt,
     this.estMien = false,
   });
 
   factory MessageChat.fromJson(Map<String, dynamic> j, String currentUserId) {
     final user = j['user'] as Map<String, dynamic>?;
+    final pj = j['pieceJointe'];
     return MessageChat(
       id: j['id'] ?? '',
       texte: j['texte'] ?? '',
       userId: j['userId'] ?? '',
       userNom: user?['nom'],
       userPrenom: user?['prenom'],
+      pieceJointe: pj is Map<String, dynamic>
+          ? PieceJointe.fromJson(pj)
+          : null,
       createdAt: j['createdAt'] != null
           ? DateTime.tryParse(j['createdAt']) ?? DateTime.now()
           : DateTime.now(),
@@ -331,7 +385,59 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
         );
       }
     }
-  }  @override
+  }
+
+  // Convertit une URL relative /uploads/... en URL complète
+  static String _urlComplet(String url) {
+    if (url.startsWith('http')) return url;
+    return 'https://billing-service-efm6.onrender.com$url';
+  }
+
+  Future<void> _supprimerGroupe(GroupeChat g) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer le groupe'),
+        content: Text(
+            'Voulez-vous vraiment supprimer « ${g.nom} » ? Tous les messages seront perdus.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiClient.deleteChat(
+        '/chat/groups/${g.id}',
+        userId: user.id,
+        role: user.role,
+        etablissementId: user.etablissementId,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Groupe supprimé')),
+        );
+      }
+      await _chargerGroupes();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final body = _isLoading
         ? const Center(child: CircularProgressIndicator())
@@ -364,18 +470,25 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
                   itemCount: _groupes.length,
                   itemBuilder: (ctx, i) {
                     final g = _groupes[i];
+                    final userId = ref.read(currentUserProvider)?.id ?? '';
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundColor:
                             AppColors.cyan.withValues(alpha: 0.15),
-                        child: Text(
-                          g.nom
-                              .substring(0, g.nom.length.clamp(0, 2))
-                              .toUpperCase(),
-                          style: const TextStyle(
-                              color: AppColors.cyan,
-                              fontWeight: FontWeight.w700),
-                        ),
+                        backgroundImage: g.photoUrl != null &&
+                                g.photoUrl!.isNotEmpty
+                            ? NetworkImage(_urlComplet(g.photoUrl!))
+                            : null,
+                        child: g.photoUrl == null || g.photoUrl!.isEmpty
+                            ? Text(
+                                g.nom
+                                    .substring(0, g.nom.length.clamp(0, 2))
+                                    .toUpperCase(),
+                                style: const TextStyle(
+                                    color: AppColors.cyan,
+                                    fontWeight: FontWeight.w700),
+                              )
+                            : null,
                       ),
                       title: Text(g.nom,
                           style: TextStyle(
@@ -431,11 +544,14 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (_) => ChatRoomScreen(
-                                  groupeId: g.id, nom: g.nom),
+                                  groupeId: g.id, nom: g.nom, photoUrl: g.photoUrl),
                             ),
                           );
                         }
                       },
+                      onLongPress: g.creeParId == userId
+                          ? () => _supprimerGroupe(g)
+                          : null,
                     );
                   },
                 ),
@@ -488,13 +604,20 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
 class ChatRoomScreen extends ConsumerStatefulWidget {
   final String groupeId;
   final String nom;
+  final String? photoUrl;
+  final String? creeParId;
   // quand true : pas de Scaffold/AppBar propre (panneau droit desktop)
   final bool embarque;
+  // En mode desktop, on notifie le hub pour rafraîchir la liste
+  final VoidCallback? onGroupChanged;
   const ChatRoomScreen({
     super.key,
     required this.groupeId,
     required this.nom,
+    this.photoUrl,
+    this.creeParId,
     this.embarque = false,
+    this.onGroupChanged,
   });
 
   @override
@@ -507,14 +630,23 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   List<MessageChat> _messages = [];
   bool _isLoading = true;
   Timer? _pollTimer;
+  String? _photoUrl;
 
   @override
   void initState() {
     super.initState();
+    _photoUrl = widget.photoUrl;
     _chargerMessages();
     // Polling toutes les 5 secondes
     _pollTimer = Timer.periodic(
         const Duration(seconds: 5), (_) => _chargerMessages(silent: true));
+  }
+
+  bool get _estCreateur {
+    final userId = ref.read(currentUserProvider)?.id ?? '';
+    return widget.creeParId != null &&
+        widget.creeParId!.isNotEmpty &&
+        widget.creeParId == userId;
   }
 
   @override
@@ -581,6 +713,197 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     }
   }
 
+  Future<void> _envoyerAvecPieceJointe(PieceJointe pj) async {
+    try {
+      final user = ref.read(currentUserProvider);
+      await ApiClient.postChat(
+        '/chat/groups/${widget.groupeId}/messages',
+        data: {'texte': '', 'pieceJointe': pj.toJson()},
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
+      );
+      _chargerMessages(silent: true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur envoi: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _envoyerPieceJointe() async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: [
+        'pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip',
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'txt'
+      ],
+      withData: false,
+    );
+    if (result == null || result.files.isEmpty) return;
+
+    final file = result.files.first;
+    if (file.size > 20 * 1024 * 1024) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Le fichier dépasse 20 Mo')),
+        );
+      }
+      return;
+    }
+    if (file.path == null) return;
+
+    try {
+      final user = ref.read(currentUserProvider);
+      final fileBytes = await File(file.path!).readAsBytes();
+      final resp = await ApiClient.uploadChatFichier(
+        '/chat/groups/${widget.groupeId}/pieces-jointes',
+        fileBytes: fileBytes,
+        filename: file.name,
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
+      );
+      await _envoyerAvecPieceJointe(
+          PieceJointe.fromJson(resp));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur upload: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _changerPhoto() async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.image,
+      withData: false,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.first;
+    if (file.path == null) return;
+    if (file.size > 5 * 1024 * 1024) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo trop lourde (max 5 Mo)')),
+        );
+      }
+      return;
+    }
+    try {
+      final user = ref.read(currentUserProvider);
+      final fileBytes = await File(file.path!).readAsBytes();
+      final resp = await ApiClient.uploadChatPhoto(
+        '/chat/groups/${widget.groupeId}/photo',
+        fileBytes: fileBytes,
+        filename: file.name,
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
+      );
+      setState(() => _photoUrl = resp['photoUrl'] as String?);
+      widget.onGroupChanged?.call();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo du groupe mise à jour')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _supprimerMessage(MessageChat msg) async {
+    if (!msg.estMien) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer le message'),
+        content: const Text('Voulez-vous supprimer ce message ?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final user = ref.read(currentUserProvider);
+      await ApiClient.deleteChat(
+        '/chat/groups/${widget.groupeId}/messages/${msg.id}',
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
+      );
+      _chargerMessages(silent: true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _supprimerGroupe() async {
+    if (!_estCreateur) return;
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer le groupe'),
+        content: Text(
+            'Voulez-vous vraiment supprimer « ${widget.nom} » ? Tous les messages seront perdus.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiClient.deleteChat(
+        '/chat/groups/${widget.groupeId}',
+        userId: user.id,
+        role: user.role,
+        etablissementId: user.etablissementId,
+      );
+      widget.onGroupChanged?.call();
+      if (mounted && !widget.embarque) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Groupe supprimé')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
@@ -607,67 +930,81 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                           final msg = _messages[i];
                           final isMe = msg.estMien;
 
-                          return Align(
-                            alignment: isMe
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              constraints: BoxConstraints(
-                                maxWidth:
-                                    MediaQuery.of(context).size.width * 0.75,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: isMe
-                                    ? AppColors.cyan
-                                    : isDark
-                                        ? AppColors.darkCard
-                                        : AppColors.lightCard,
-                                borderRadius:
-                                    BorderRadius.circular(16).copyWith(
-                                  bottomRight:
-                                      isMe ? const Radius.circular(4) : null,
-                                  bottomLeft:
-                                      !isMe ? const Radius.circular(4) : null,
+                          return GestureDetector(
+                            onLongPress: msg.estMien
+                                ? () => _supprimerMessage(msg)
+                                : null,
+                            child: Align(
+                              alignment: isMe
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                constraints: BoxConstraints(
+                                  maxWidth:
+                                      MediaQuery.of(context).size.width * 0.75,
                                 ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (!isMe) ...[
-                                    Text(
-                                      msg.displayNom,
-                                      style: TextStyle(
-                                        color: AppColors.cyan,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: isMe
+                                      ? AppColors.cyan
+                                      : isDark
+                                          ? AppColors.darkCard
+                                          : AppColors.lightCard,
+                                  borderRadius:
+                                      BorderRadius.circular(16).copyWith(
+                                    bottomRight: isMe
+                                        ? const Radius.circular(4)
+                                        : null,
+                                    bottomLeft: !isMe
+                                        ? const Radius.circular(4)
+                                        : null,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (!isMe) ...[
+                                      Text(
+                                        msg.displayNom,
+                                        style: TextStyle(
+                                          color: AppColors.cyan,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
+                                      const SizedBox(height: 2),
+                                    ],
+                                    if (msg.pieceJointe != null) ...[
+                                      FichierJoint(
+                                          pj: msg.pieceJointe!, dark: isMe),
+                                      const SizedBox(height: 6),
+                                    ],
+                                    if (msg.texte.isNotEmpty)
+                                      Text(
+                                        msg.texte,
+                                        style: TextStyle(
+                                          color: isMe
+                                              ? Colors.white
+                                              : context.textPrimary,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      DateFormat('HH:mm')
+                                          .format(msg.createdAt),
+                                      style: TextStyle(
+                                        color: isMe
+                                            ? Colors.white70
+                                            : context.textMuted,
+                                        fontSize: 10,
+                                      ),
+                                      textAlign: TextAlign.end,
                                     ),
-                                    const SizedBox(height: 2),
                                   ],
-                                  Text(
-                                    msg.texte,
-                                    style: TextStyle(
-                                      color: isMe
-                                          ? Colors.white
-                                          : context.textPrimary,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    DateFormat('HH:mm').format(msg.createdAt),
-                                    style: TextStyle(
-                                      color: isMe
-                                          ? Colors.white70
-                                          : context.textMuted,
-                                      fontSize: 10,
-                                    ),
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           );
@@ -689,6 +1026,12 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
             ),
             child: Row(
               children: [
+                IconButton(
+                  onPressed: _envoyerPieceJointe,
+                  icon: const Icon(Icons.attach_file_rounded),
+                  color: context.textMuted,
+                  tooltip: 'Pièce jointe',
+                ),
                 Expanded(
                   child: TextField(
                     controller: _msgController,
@@ -710,24 +1053,80 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
         ],
     );
 
+    final menu = PopupMenuButton<String>(
+      onSelected: (v) {
+        if (v == 'photo') _changerPhoto();
+        if (v == 'supprimer') _supprimerGroupe();
+      },
+      itemBuilder: (ctx) => [
+        if (_estCreateur) ...[
+          const PopupMenuItem(
+              value: 'photo',
+              child: Row(children: [
+                Icon(Icons.photo_camera_rounded, size: 18),
+                SizedBox(width: 8),
+                Text('Modifier la photo'),
+              ])),
+          const PopupMenuItem(
+              value: 'supprimer',
+              child: Row(children: [
+                Icon(Icons.delete_rounded, size: 18, color: AppColors.red),
+                SizedBox(width: 8),
+                Text('Supprimer le groupe',
+                    style: TextStyle(color: AppColors.red)),
+              ])),
+        ],
+      ],
+    );
+
+    // En-tête : avatar du groupe + nom (+ menu pour le créateur)
+    Widget enTete = Row(
+      children: [
+        GestureDetector(
+          onTap: _estCreateur ? _changerPhoto : null,
+          child: CircleAvatar(
+            radius: 16,
+            backgroundColor: AppColors.cyan.withValues(alpha: 0.15),
+            backgroundImage: _photoUrl != null && _photoUrl!.isNotEmpty
+                ? NetworkImage(_ChatGroupScreenState._urlComplet(_photoUrl!))
+                : null,
+            child: _photoUrl == null || _photoUrl!.isEmpty
+                ? Text(
+                    widget.nom
+                        .substring(0, widget.nom.length.clamp(0, 2))
+                        .toUpperCase(),
+                    style: const TextStyle(
+                        color: AppColors.cyan,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700),
+                  )
+                : null,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(widget.nom,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700, fontSize: 16)),
+        ),
+        if (_estCreateur) menu,
+      ],
+    );
+
     if (widget.embarque) {
       // Mode panneau droit (desktop) : en-tête compact + conversation
       return Column(
         children: [
           Container(
-            height: 52,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            constraints: const BoxConstraints(minHeight: 52),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkCard : Colors.white,
               border: Border(bottom: BorderSide(color: context.borderColor)),
             ),
-            child: Row(
-              children: [
-                Text(widget.nom,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 16)),
-              ],
-            ),
+            child: enTete,
           ),
           Expanded(child: corps),
         ],
@@ -737,9 +1136,91 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: Text(widget.nom, style: const TextStyle(fontSize: 16)),
+        titleSpacing: 0,
+        title: enTete,
       ),
       body: corps,
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FICHIER JOINT DANS UNE BULLE DE MESSAGE
+// ══════════════════════════════════════════════════════════════════
+
+class FichierJoint extends StatelessWidget {
+  final PieceJointe pj;
+  final bool dark; // true = bulle de l'expéditeur (fond cyan, texte blanc)
+
+  const FichierJoint({super.key, required this.pj, this.dark = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final url = pj.url.startsWith('http')
+        ? pj.url
+        : 'https://billing-service-efm6.onrender.com${pj.url}';
+    final couleur = dark ? Colors.white : AppColors.cyan;
+
+    if (pj.estImage) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.network(
+          url,
+          width: 200,
+          height: 140,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _tileFichier(couleur),
+        ),
+      );
+    }
+    return _tileFichier(couleur);
+  }
+
+  Widget _tileFichier(Color couleur) {
+    return InkWell(
+      onTap: () {
+        // Ouvrir le fichier dans le navigateur / visionneuse externe
+        launchUrl(
+          Uri.parse(pj.url.startsWith('http')
+              ? pj.url
+              : 'https://billing-service-efm6.onrender.com${pj.url}'),
+          mode: LaunchMode.externalApplication,
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: couleur.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.insert_drive_file_rounded,
+                color: couleur, size: 28),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(pj.nom,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: couleur,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12)),
+                  Text(pj.tailleLisible,
+                      style: TextStyle(
+                          color: couleur.withValues(alpha: 0.7),
+                          fontSize: 10)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

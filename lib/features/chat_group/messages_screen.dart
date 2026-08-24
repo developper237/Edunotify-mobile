@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -111,6 +113,7 @@ class MessagePrive {
   final String userId;
   final String? userNom;
   final String? userPrenom;
+  final PieceJointe? pieceJointe;
   final DateTime createdAt;
   final bool estMien;
 
@@ -120,18 +123,23 @@ class MessagePrive {
     required this.userId,
     this.userNom,
     this.userPrenom,
+    this.pieceJointe,
     required this.createdAt,
     this.estMien = false,
   });
 
   factory MessagePrive.fromJson(Map<String, dynamic> j, String currentUserId) {
     final user = j['user'] as Map<String, dynamic>?;
+    final pj = j['pieceJointe'];
     return MessagePrive(
       id: j['id'] ?? '',
       texte: j['texte'] ?? '',
       userId: j['userId'] ?? '',
       userNom: user?['nom'],
       userPrenom: user?['prenom'],
+      pieceJointe: pj is Map<String, dynamic>
+          ? PieceJointe.fromJson(pj)
+          : null,
       createdAt: j['createdAt'] != null
           ? DateTime.tryParse(j['createdAt']) ?? DateTime.now()
           : DateTime.now(),
@@ -321,6 +329,50 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
     });
   }
 
+  Future<void> _supprimerConversation(ConversationPrivee c) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer la conversation'),
+        content: Text(
+            'Voulez-vous supprimer la conversation avec ${c.displayNom} ? Les messages seront perdus pour vous et pour l\'autre personne.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiClient.deleteChat(
+        '/chat/privates/${c.id}',
+        userId: user.id,
+        role: user.role,
+        etablissementId: user.etablissementId,
+      );
+      if (mounted && _selPrivee?.id == c.id) {
+        setState(() => _selPrivee = null);
+      }
+      await _charger(silent: true);
+      ref.read(chatNonLusProvider.notifier)
+          .charger(user.id, user.role, user.etablissementId);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    }
+  }
+
   // Liste des conversations privées (utilisée dans le panneau gauche)
   Widget _listePrivees() {
     return _isLoading
@@ -420,6 +472,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
                         ],
                       ),
                       onTap: () => _ouvrirConversation(c),
+                      onLongPress: () => _supprimerConversation(c),
                     );
                   },
                 ),
@@ -439,7 +492,16 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
       return ChatRoomScreen(
         groupeId: _selGroupe!.id,
         nom: _selGroupe!.nom,
+        photoUrl: _selGroupe!.photoUrl,
+        creeParId: _selGroupe!.creeParId,
         embarque: true,
+        onGroupChanged: () {
+          // Rafraîchit la liste des groupes après une modif (photo/suppression)
+          _groupRefreshTick.value++;
+          if (_selGroupe != null && mounted) {
+            setState(() => _selGroupe = null);
+          }
+        },
       );
     }
     return Center(
@@ -744,6 +806,94 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
     }
   }
 
+  Future<void> _envoyerPieceJointe() async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: [
+        'pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip',
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'txt'
+      ],
+      withData: false,
+    );
+    if (result == null || result.files.isEmpty) return;
+
+    final file = result.files.first;
+    if (file.size > 20 * 1024 * 1024) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Le fichier dépasse 20 Mo')),
+        );
+      }
+      return;
+    }
+    if (file.path == null) return;
+
+    try {
+      final user = ref.read(currentUserProvider);
+      final fileBytes = await File(file.path!).readAsBytes();
+      final resp = await ApiClient.uploadChatFichier(
+        '/chat/privates/${widget.conversationId}/pieces-jointes',
+        fileBytes: fileBytes,
+        filename: file.name,
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
+      );
+      await ApiClient.postChat(
+        '/chat/privates/${widget.conversationId}/messages',
+        data: {'texte': '', 'pieceJointe': PieceJointe.fromJson(resp).toJson()},
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
+      );
+      _chargerMessages(silent: true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur upload: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _supprimerMessage(MessagePrive msg) async {
+    if (!msg.estMien) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer le message'),
+        content: const Text('Voulez-vous supprimer ce message ?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final user = ref.read(currentUserProvider);
+      await ApiClient.deleteChat(
+        '/chat/privates/${widget.conversationId}/messages/${msg.id}',
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
+      );
+      _chargerMessages(silent: true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
@@ -768,56 +918,70 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
                         itemBuilder: (ctx, i) {
                           final msg = _messages[i];
                           final isMe = msg.estMien;
-                          return Align(
-                            alignment: isMe
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              constraints: BoxConstraints(
-                                maxWidth:
-                                    MediaQuery.of(context).size.width * 0.75,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: isMe
-                                    ? AppColors.cyan
-                                    : isDark
-                                        ? AppColors.darkCard
-                                        : AppColors.lightCard,
-                                borderRadius:
-                                    BorderRadius.circular(16).copyWith(
-                                  bottomRight:
-                                      isMe ? const Radius.circular(4) : null,
-                                  bottomLeft:
-                                      !isMe ? const Radius.circular(4) : null,
+                          return GestureDetector(
+                            onLongPress: msg.estMien
+                                ? () => _supprimerMessage(msg)
+                                : null,
+                            child: Align(
+                              alignment: isMe
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                constraints: BoxConstraints(
+                                  maxWidth:
+                                      MediaQuery.of(context).size.width * 0.75,
                                 ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    msg.texte,
-                                    style: TextStyle(
-                                      color: isMe
-                                          ? Colors.white
-                                          : context.textPrimary,
-                                      fontSize: 14,
-                                    ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: isMe
+                                      ? AppColors.cyan
+                                      : isDark
+                                          ? AppColors.darkCard
+                                          : AppColors.lightCard,
+                                  borderRadius:
+                                      BorderRadius.circular(16).copyWith(
+                                    bottomRight: isMe
+                                        ? const Radius.circular(4)
+                                        : null,
+                                    bottomLeft: !isMe
+                                        ? const Radius.circular(4)
+                                        : null,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    DateFormat('HH:mm').format(msg.createdAt),
-                                    style: TextStyle(
-                                      color: isMe
-                                          ? Colors.white70
-                                          : context.textMuted,
-                                      fontSize: 10,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (msg.pieceJointe != null) ...[
+                                      FichierJoint(
+                                          pj: msg.pieceJointe!, dark: isMe),
+                                      const SizedBox(height: 6),
+                                    ],
+                                    if (msg.texte.isNotEmpty)
+                                      Text(
+                                        msg.texte,
+                                        style: TextStyle(
+                                          color: isMe
+                                              ? Colors.white
+                                              : context.textPrimary,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      DateFormat('HH:mm')
+                                          .format(msg.createdAt),
+                                      style: TextStyle(
+                                        color: isMe
+                                            ? Colors.white70
+                                            : context.textMuted,
+                                        fontSize: 10,
+                                      ),
+                                      textAlign: TextAlign.end,
                                     ),
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           );
@@ -838,6 +1002,12 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
             ),
             child: Row(
               children: [
+                IconButton(
+                  onPressed: _envoyerPieceJointe,
+                  icon: const Icon(Icons.attach_file_rounded),
+                  color: context.textMuted,
+                  tooltip: 'Pièce jointe',
+                ),
                 Expanded(
                   child: TextField(
                     controller: _msgController,
