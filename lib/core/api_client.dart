@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart' show MediaType;
 import 'storage.dart';
 import 'package:flutter/widgets.dart';
 
@@ -475,10 +476,11 @@ class ApiClient {
   }
 
   // Upload d'une pièce jointe de chat (fichier multipart)
-  static Future<Map<String, dynamic>> uploadChatFichier(String path, {required List<int> fileBytes, required String filename, required String userId, required String role, String? etablissementId}) async {
+  static Future<Map<String, dynamic>> uploadChatFichier(String path, {required List<int> fileBytes, required String filename, required String userId, required String role, String? etablissementId, String? mimeType}) async {
     try {
       final formData = FormData.fromMap({
-        'fichier': MultipartFile.fromBytes(fileBytes, filename: filename),
+        'fichier': MultipartFile.fromBytes(fileBytes, filename: filename,
+            contentType: mimeType != null ? MediaType.parse(mimeType) : null),
       });
       final resp = await _dioBilling.post(path, data: formData, options: Options(headers: {
         'x-user-id':   userId,

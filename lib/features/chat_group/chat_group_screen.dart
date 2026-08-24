@@ -10,6 +10,8 @@ import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
+import 'package:record/record.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
@@ -42,6 +44,11 @@ class PieceJointe {
   bool get estImage =>
       type.startsWith('image/') ||
       ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+          .any((e) => nom.toLowerCase().endsWith(e));
+
+  bool get estAudio =>
+      type.startsWith('audio/') ||
+      ['.m4a', '.wav', '.mp3', '.ogg', '.webm', '.aac', '.opus']
           .any((e) => nom.toLowerCase().endsWith(e));
 
   String get tailleLisible {
@@ -881,6 +888,28 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     }
   }
 
+  Future<void> _envoyerAudio(List<int> bytes, String nom, String mime) async {
+    try {
+      final user = ref.read(currentUserProvider);
+      final resp = await ApiClient.uploadChatFichier(
+        '/chat/groups/${widget.groupeId}/pieces-jointes',
+        fileBytes: bytes,
+        filename: nom,
+        mimeType: mime,
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
+      );
+      await _envoyer(pj: PieceJointe.fromJson(resp));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur envoi vocal : $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _changerPhoto() async {
     final result = await FilePicker.pickFiles(
       type: FileType.image,
@@ -1149,6 +1178,7 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                   color: context.textMuted,
                   tooltip: 'Pièce jointe',
                 ),
+                EnregistreurAudio(onEnvoye: _envoyerAudio, couleur: AppColors.cyan),
                 Expanded(
                   child: TextField(
                     controller: _msgController,
@@ -1314,6 +1344,10 @@ class _FichierJointState extends State<FichierJoint> {
     final url = _urlPieceJointe(pj);
     final couleur = widget.dark ? Colors.white : AppColors.cyan;
 
+    if (pj.estAudio) {
+      return _MessageAudio(url: url, dark: widget.dark);
+    }
+
     if (pj.estImage) {
       return GestureDetector(
         onTap: () => _ouvrirImage(context, url),
@@ -1432,6 +1466,287 @@ class _FichierJointState extends State<FichierJoint> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// LECTEUR AUDIO DANS UNE BULLE (message vocal)
+// ══════════════════════════════════════════════════════════════════
+
+class _MessageAudio extends StatefulWidget {
+  final String url;
+  final bool dark; // bulle de l'expéditeur (fond cyan, texte blanc)
+  const _MessageAudio({required this.url, this.dark = false});
+
+  @override
+  State<_MessageAudio> createState() => _MessageAudioState();
+}
+
+class _MessageAudioState extends State<_MessageAudio> {
+  final AudioPlayer _player = AudioPlayer();
+  bool _jouer = false;
+  bool _chargement = false;
+  Duration _duree = Duration.zero;
+  Duration _position = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _player.onDurationChanged.listen((d) {
+      if (mounted) setState(() => _duree = d);
+    });
+    _player.onPositionChanged.listen((p) {
+      if (mounted) setState(() => _position = p);
+    });
+    _player.onPlayerComplete.listen((_) {
+      if (mounted) setState(() {
+        _jouer = false;
+        _position = Duration.zero;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  String get _temps {
+    final d = _duree > Duration.zero ? _duree : const Duration(seconds: 1);
+    final pos = _position;
+    final restant = d - pos;
+    final s = restant.inSeconds.clamp(0, 599);
+    return '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _toggle() async {
+    if (_jouer) {
+      await _player.pause();
+      if (mounted) setState(() => _jouer = false);
+      return;
+    }
+    setState(() => _chargement = true);
+    try {
+      await _player.play(UrlSource(widget.url));
+      if (mounted) setState(() => _jouer = true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lecture impossible : $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _chargement = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final couleur = widget.dark ? Colors.white : AppColors.cyan;
+    final fraction = _duree > Duration.zero
+        ? (_position.inMilliseconds / _duree.inMilliseconds).clamp(0.0, 1.0)
+        : 0.0;
+
+    return Container(
+      width: 190,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            onPressed: _chargement ? null : _toggle,
+            icon: _chargement
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: couleur))
+                : Icon(
+                    _jouer ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    color: couleur,
+                  ),
+            visualDensity: VisualDensity.compact,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: fraction,
+                    minHeight: 4,
+                    backgroundColor: couleur.withValues(alpha: 0.15),
+                    color: couleur,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _temps,
+                    style: TextStyle(
+                        color: couleur.withValues(alpha: 0.8), fontSize: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// BOUTON ENREGISTREMENT VOCAL (trombone du champ de saisie)
+// ══════════════════════════════════════════════════════════════════
+
+class EnregistreurAudio extends StatefulWidget {
+  // Reçoit les octets du fichier audio enregistré + nom + type MIME
+  final Future<void> Function(List<int> bytes, String nom, String mime) onEnvoye;
+  final Color couleur;
+
+  const EnregistreurAudio({
+    super.key,
+    required this.onEnvoye,
+    this.couleur = AppColors.cyan,
+  });
+
+  @override
+  State<EnregistreurAudio> createState() => _EnregistreurAudioState();
+}
+
+class _EnregistreurAudioState extends State<EnregistreurAudio> {
+  final AudioRecorder _recorder = AudioRecorder();
+  bool _enregistre = false;
+  bool _busy = false;
+  Timer? _timer;
+  Duration _duree = Duration.zero;
+  String? _fichierPath;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _recorder.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggle() async {
+    if (_busy) return;
+    if (_enregistre) {
+      await _stopper();
+    } else {
+      await _demarrer();
+    }
+  }
+
+  Future<void> _demarrer() async {
+    try {
+      final ok = await _recorder.hasPermission();
+      if (!ok) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Permission micro refusée')),
+          );
+        }
+        return;
+      }
+      // WAV sur desktop (record_windows), AAC (m4a) sur mobile
+      final windows = Platform.isWindows;
+      final ext = windows ? 'wav' : 'm4a';
+      _fichierPath =
+          '${Directory.systemTemp.path}${Platform.pathSeparator}msg_${DateTime.now().millisecondsSinceEpoch}.$ext';
+      await _recorder.start(const RecordConfig(encoder: AudioEncoder.wav),
+          path: _fichierPath!);
+      if (mounted) {
+        setState(() {
+          _enregistre = true;
+          _duree = Duration.zero;
+        });
+      }
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() => _duree += const Duration(seconds: 1));
+      });
+    } catch (e) {
+      // Repli : si l'encodeur échoue sur cette plateforme, on essaie AAC
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Enregistrement impossible : $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _stopper() async {
+    _timer?.cancel();
+    final path = _fichierPath;
+    if (mounted) setState(() => _enregistre = false);
+    if (path == null) return;
+    setState(() => _busy = true);
+    try {
+      final chemin = await _recorder.stop();
+      if (chemin == null) return;
+      final bytes = await File(chemin).readAsBytes();
+      final windows = Platform.isWindows;
+      await widget.onEnvoye(
+          bytes, 'message-vocal.${windows ? 'wav' : 'm4a'}',
+          windows ? 'audio/wav' : 'audio/mp4');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur enregistrement : $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  String get _temps {
+    final s = _duree.inSeconds.clamp(0, 599);
+    return '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_enregistre) {
+      // Pendant l'enregistrement : pastille rouge + durée + stop
+      return GestureDetector(
+        onTap: _toggle,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.red.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.stop_rounded, color: AppColors.red, size: 18),
+              const SizedBox(width: 6),
+              Text(_temps,
+                  style: const TextStyle(color: AppColors.red, fontSize: 12)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // État normal : bouton micro
+    return IconButton(
+      onPressed: _busy ? null : _toggle,
+      icon: _busy
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(Icons.mic_rounded, color: widget.couleur),
+      tooltip: 'Message vocal',
     );
   }
 }

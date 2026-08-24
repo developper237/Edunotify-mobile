@@ -1007,6 +1007,45 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
     }
   }
 
+  Future<void> _envoyerAudio(List<int> bytes, String nom, String mime) async {
+    try {
+      final user = ref.read(currentUserProvider);
+      final resp = await ApiClient.uploadChatFichier(
+        '/chat/privates/${widget.conversationId}/pieces-jointes',
+        fileBytes: bytes,
+        filename: nom,
+        mimeType: mime,
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
+      );
+      final pj = PieceJointe.fromJson(resp);
+      final localMsg = MessagePrive(
+        id: 'local-${DateTime.now().microsecondsSinceEpoch}',
+        texte: '',
+        userId: user?.id ?? '',
+        userNom: user?.nom,
+        userPrenom: user?.prenom,
+        pieceJointe: pj,
+        createdAt: DateTime.now(),
+        estMien: true,
+        statut: MessageStatut.enAttente,
+      );
+      setState(() {
+        _pending.add(localMsg);
+        _messages = [..._messages, localMsg];
+      });
+      _sauverFileAttente();
+      await _flusherFileAttente();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur envoi vocal : $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _supprimerMessage(MessagePrive msg) async {
     if (!msg.estMien) return;
     final ok = await showDialog<bool>(
@@ -1169,6 +1208,8 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
                   color: context.textMuted,
                   tooltip: 'Pièce jointe',
                 ),
+                EnregistreurAudio(
+                    onEnvoye: _envoyerAudio, couleur: AppColors.cyan),
                 Expanded(
                   child: TextField(
                     controller: _msgController,
