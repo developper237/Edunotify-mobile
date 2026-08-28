@@ -788,6 +788,7 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
   final _scrollCtrl = ScrollController();
   List<MessagePrive> _messages = [];
   List<MessagePrive> _pending = []; // messages hors-ligne (en attente)
+  DateTime? _dernierMsgLe; // curseur incrémental (dernier message serveur chargé)
   bool _isLoading = true;
   Timer? _pollTimer;
 
@@ -889,21 +890,46 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
     if (user == null) return;
     if (!silent) setState(() => _isLoading = true);
     try {
+      final params = <String, dynamic>{};
+      // Récupération incrémentale : on ne recharge que les messages plus
+      // récents que le dernier déjà chargé (allége le polling toutes les 5 s).
+      if (_dernierMsgLe != null) {
+        params['apres'] = _dernierMsgLe!.toIso8601String();
+      }
       final resp = await ApiClient.getChat(
         '/chat/privates/${widget.conversationId}/messages',
         userId: user.id,
         role: user.role,
         etablissementId: user.etablissementId,
+        params: params,
       );
-      final messages = (resp['messages'] as List? ?? [])
+      final nouveaux = (resp['messages'] as List? ?? [])
           .map((e) => MessagePrive.fromJson(e as Map<String, dynamic>, user.id))
           .toList();
       if (!mounted) return;
       setState(() {
-        // On garde les messages hors-ligne (en attente) affichés en haut
-        _messages = [...messages, ..._pending];
+        if (params['apres'] != null) {
+          // Mode incrémental : fusionner sans créer de doublon (par id)
+          if (nouveaux.isNotEmpty) {
+            final ids = _messages.map((m) => m.id).toSet();
+            _messages = [
+              ..._messages,
+              ...nouveaux.where((m) => !ids.contains(m.id)),
+            ];
+          }
+        } else {
+          // Chargement initial : messages en attente puis historique serveur
+          _messages = [...nouveaux, ..._pending];
+        }
         _isLoading = false;
       });
+      // Le curseur ne suit que les messages réellement persistés (pas les
+      // messages en attente aux ids locaux).
+      if (nouveaux.isNotEmpty) {
+        _dernierMsgLe = nouveaux.last.createdAt;
+      } else if (params['apres'] == null && _messages.isNotEmpty) {
+        _dernierMsgLe = _messages.last.createdAt;
+      }
       if (_scrollCtrl.hasClients) {
         await Future.delayed(const Duration(milliseconds: 100));
         _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
