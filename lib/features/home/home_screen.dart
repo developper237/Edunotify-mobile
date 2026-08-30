@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
+import '../../core/sse_client.dart';
 import '../../core/widgets/ui_kit.dart';
 import '../auth/auth_provider.dart';
 import '../auth/auth_state.dart';
@@ -45,10 +46,22 @@ final nonLuesCountProvider =
 class NonLuesNotifier extends StateNotifier<int> {
   NonLuesNotifier() : super(0);
 
+  // Flux SSE : reçoit les nouvelles notifications en direct et recharge
+  // le compteur — le badge de la cloche se met à jour sans attendre le
+  // polling 20s. Une seule connexion par session utilisateur.
+  SseClient? _sse;
+  bool _sseDemarre = false;
+  String? _userId;
+
   Future<void> charger(String userId, String role,
       {String? etablissementId,
       String? departementId,
       String? classeId}) async {
+    _userId = userId;
+    _demarrerSse(userId, role,
+        etablissementId: etablissementId,
+        departementId: departementId,
+        classeId: classeId);
     try {
       final resp = await ApiClient.getNotif('/notifications/non-lues',
           userId: userId,
@@ -60,7 +73,45 @@ class NonLuesNotifier extends StateNotifier<int> {
     } catch (_) {}
   }
 
+  void _demarrerSse(String userId, String role,
+      {String? etablissementId,
+      String? departementId,
+      String? classeId}) {
+    if (_sseDemarre) return;
+    _sseDemarre = true;
+    _sse = SseClient(
+      url: '${ApiClient.notifBaseUrl}/notifications/stream',
+      canListen: () => _userId != null,
+      headers: () => buildAuthHeaders(
+        userId: userId,
+        role: role,
+        etablissementId: etablissementId,
+        departementId: departementId,
+        classeId: classeId,
+      ),
+      onEvent: (event, data) {
+        if (event == 'notification' || event == 'refresh') {
+          final uid = _userId;
+          if (uid != null) {
+            charger(uid, role,
+                etablissementId: etablissementId,
+                departementId: departementId,
+                classeId: classeId);
+          }
+        }
+      },
+    );
+    _sse!.start();
+  }
+
   void reset() => state = 0;
+
+  @override
+  void dispose() {
+    _sse?.stop();
+    _sse = null;
+    super.dispose();
+  }
 }
 
 final sessionActiveProvider =

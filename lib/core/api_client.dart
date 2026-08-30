@@ -27,9 +27,11 @@ class ApiClient {
   }
 
   // URLs de production — services déployés sur Render
+  // Getter public du notification-service (utilisé par le client SSE).
+  static String get notifBaseUrl     => 'https://notification-service-1o8a.onrender.com';
   static String get _baseUrl         => 'https://smartcampus-auth.onrender.com';
   static String get _presenceBaseUrl => 'https://presence-service-q9wq.onrender.com';
-  static String get _notifBaseUrl    => 'https://notification-service-1o8a.onrender.com';
+  static String get _notifBaseUrl    => notifBaseUrl;
   static String get _academicBaseUrl => 'https://academic-service-f5sm.onrender.com';
   static String get _chatbotBaseUrl  => 'https://chatbot-service-sh1b.onrender.com';
   static String get _billingBaseUrl  => 'https://billing-service-efm6.onrender.com';

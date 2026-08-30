@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../core/locale.dart';
 import '../../core/api_client.dart';
+import '../../core/sse_client.dart';
 import '../../core/widgets/ui_kit.dart';
 import '../auth/auth_provider.dart';
 import '../rapports/rapport_chef_screen.dart';
@@ -161,8 +162,15 @@ class NotifsNotifier extends StateNotifier<AsyncValue<List<EduNotification>>> {
   final Ref _ref;
   NotifsNotifier(this._ref) : super(const AsyncValue.loading());
 
-  Future<void> charger() async {
-    state = const AsyncValue.loading();
+  // Connexion SSE temps réel — une seule par notifier, relancée en cas de
+  // perte réseau par le client lui-même (backoff). Le polling 5s/20s reste le
+  // filet de sécurité si le flux SSE est indisponible.
+  SseClient? _sse;
+  bool _sseDemarre = false;
+
+  Future<void> charger({bool silencieux = false}) async {
+    _demarrerSse();
+    if (!silencieux) state = const AsyncValue.loading();
     try {
       final user = _ref.read(currentUserProvider)!;
       final resp = await ApiClient.getNotif(
@@ -182,8 +190,42 @@ class NotifsNotifier extends StateNotifier<AsyncValue<List<EduNotification>>> {
             .toList(),
       );
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (!silencieux) state = AsyncValue.error(e, st);
     }
+  }
+
+  void _demarrerSse() {
+    if (_sseDemarre) return;
+    final user = _ref.read(currentUserProvider);
+    if (user == null) return;
+    _sseDemarre = true;
+
+    _sse = SseClient(
+      url: '${ApiClient.notifBaseUrl}/notifications/stream',
+      canListen: () => _ref.read(currentUserProvider) != null,
+      headers: () async => buildAuthHeaders(
+        userId: user.id,
+        role: user.role,
+        etablissementId: user.etablissementId,
+        departementId: user.departementId,
+        classeId: user.classeId,
+      ),
+      onEvent: (event, data) {
+        // Nouvelle notification reçue en direct → rechargement silencieux
+        // pour mettre à jour la liste et le badge.
+        if (event == 'notification' || event == 'refresh') {
+          charger(silencieux: true);
+        }
+      },
+    );
+    _sse!.start();
+  }
+
+  @override
+  void dispose() {
+    _sse?.stop();
+    _sse = null;
+    super.dispose();
   }
 
   Future<void> markRead(String destId) async {
