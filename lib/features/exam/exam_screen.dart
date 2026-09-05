@@ -154,8 +154,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                     const SizedBox(height: 6),
                     Text(
                       "Demandez le code d'invitation à votre professeur",
-                      style:
-                          TextStyle(color: context.textMuted, fontSize: 12),
+                      style: TextStyle(color: context.textMuted, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
@@ -191,8 +190,8 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Text('Rejoindre'),
                       ),
@@ -233,8 +232,8 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                       const SizedBox(height: 8),
                       Text(
                         'Aucun examen passé',
-                        style: TextStyle(
-                            color: context.textMuted, fontSize: 13),
+                        style:
+                            TextStyle(color: context.textMuted, fontSize: 13),
                       ),
                     ],
                   ),
@@ -358,16 +357,15 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                   Flexible(
                     child: Text(
                       dateStr,
-                      style:
-                          TextStyle(color: context.textMuted, fontSize: 11),
+                      style: TextStyle(color: context.textMuted, fontSize: 11),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: borderColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -405,6 +403,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   }
 
   void _afficherDetailResultat(Map<String, dynamic> r) {
+    final sessionId = r['sessionId'] as String? ?? '';
     final titre = r['titre'] as String? ?? '';
     final matiere = r['matiere'] as String? ?? '';
     final rawNote2 = r['noteSur20'];
@@ -439,9 +438,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              estInvalide
-                  ? Icons.block_rounded
-                  : Icons.emoji_events_rounded,
+              estInvalide ? Icons.block_rounded : Icons.emoji_events_rounded,
               size: 48,
               color: estInvalide ? AppColors.red : AppColors.orange,
             ),
@@ -477,6 +474,18 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
         ),
         actions: [
           TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => _CorrectionScreen(sessionId: sessionId),
+                ),
+              );
+            },
+            child: const Text('Consulter la correction'),
+          ),
+          TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Fermer'),
           ),
@@ -491,8 +500,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style: TextStyle(color: context.textMuted, fontSize: 12)),
+          Text(label, style: TextStyle(color: context.textMuted, fontSize: 12)),
           Text(value,
               style: TextStyle(
                   color: context.textPrimary,
@@ -663,8 +671,7 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
             barrierDismissible: false,
             builder: (_) => AlertDialog(
               title: const Text('Session invalidée'),
-              content:
-                  Text(resp['message'] ?? 'Vous avez été déconnecté'),
+              content: Text(resp['message'] ?? 'Vous avez été déconnecté'),
               actions: [
                 ElevatedButton(
                   onPressed: () {
@@ -680,8 +687,7 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
         return;
       }
 
-      setState(() =>
-          _avertissements = resp['avertissements'] ?? 0);
+      setState(() => _avertissements = resp['avertissements'] ?? 0);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -740,17 +746,13 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
         final rawPts = sujet['points'];
         final points = rawPts is num ? rawPts.toInt() : 1;
         totalPoints += points;
-        final options =
-            (sujet['options'] as Map<String, dynamic>?) ?? {};
+        final options = (sujet['options'] as Map<String, dynamic>?) ?? {};
         final correctKey = options['correct'];
-        if (correctKey != null &&
-            _reponses[sujet['id']] == correctKey) {
+        if (correctKey != null && _reponses[sujet['id']] == correctKey) {
           pointsObtenus += points;
         }
       }
-      note20 = totalPoints > 0
-          ? (pointsObtenus / totalPoints * 20)
-          : 0.0;
+      note20 = totalPoints > 0 ? (pointsObtenus / totalPoints * 20) : 0.0;
     }
 
     if (mounted) {
@@ -776,21 +778,32 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
               const SizedBox(height: 8),
               Text(
                 '$pointsObtenus / $totalPoints points',
-                style: TextStyle(
-                    color: context.textMuted, fontSize: 13),
+                style: TextStyle(color: context.textMuted, fontSize: 13),
               ),
               const SizedBox(height: 8),
               Text(
                 backendOk
                     ? 'Vos réponses ont été corrigées par le serveur.'
                     : 'Réponses enregistrées (correction en attente).',
-                style: TextStyle(
-                    color: context.textMuted, fontSize: 12),
+                style: TextStyle(color: context.textMuted, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             ],
           ),
           actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        _CorrectionScreen(sessionId: widget.sessionId),
+                  ),
+                );
+              },
+              child: const Text('Consulter la correction'),
+            ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -857,13 +870,10 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.check_circle,
-                  color: AppColors.green, size: 64),
+              Icon(Icons.check_circle, color: AppColors.green, size: 64),
               const SizedBox(height: 16),
               Text(
-                _sujets.isEmpty
-                    ? 'Aucun sujet disponible'
-                    : 'Examen terminé !',
+                _sujets.isEmpty ? 'Aucun sujet disponible' : 'Examen terminé !',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -877,8 +887,7 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
     }
 
     final sujet = _sujets[_currentIndex];
-    final options =
-        (sujet['options'] as Map<String, dynamic>?) ?? {};
+    final options = (sujet['options'] as Map<String, dynamic>?) ?? {};
 
     return PopScope(
       canPop: false,
@@ -893,12 +902,10 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
           actions: [
             Container(
               margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: _secondesRestantes < 300
-                    ? AppColors.red
-                    : AppColors.cyan,
+                color:
+                    _secondesRestantes < 300 ? AppColors.red : AppColors.cyan,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -910,8 +917,7 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
                   Text(
                     _formatTemps(_secondesRestantes),
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700),
+                        color: Colors.white, fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
@@ -930,8 +936,8 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.cyan.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
@@ -957,10 +963,8 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                              Icons.warning_amber_rounded,
-                              color: AppColors.orange,
-                              size: 14),
+                          const Icon(Icons.warning_amber_rounded,
+                              color: AppColors.orange, size: 14),
                           const SizedBox(width: 4),
                           Text(
                             '$_avertissements avertissement(s)',
@@ -978,8 +982,7 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1003,45 +1006,31 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
                     const SizedBox(height: 24),
                     if (options.isNotEmpty)
                       ...options.entries.map((e) {
-                        final selected =
-                            _reponses[sujet['id']] == e.key;
+                        final selected = _reponses[sujet['id']] == e.key;
                         return Padding(
-                          padding:
-                              const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.only(bottom: 10),
                           child: Material(
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: () {
-                                setState(() =>
-                                    _reponses[sujet['id']] =
-                                        e.key);
-                                _soumettreReponse(
-                                    sujet['id'], e.key);
+                                setState(() => _reponses[sujet['id']] = e.key);
+                                _soumettreReponse(sujet['id'], e.key);
                               },
-                              borderRadius:
-                                  BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(12),
                               child: AnimatedContainer(
-                                duration: const Duration(
-                                    milliseconds: 200),
-                                padding:
-                                    const EdgeInsets.all(14),
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
                                   color: selected
-                                      ? AppColors.cyan
-                                          .withValues(
-                                              alpha: 0.1)
+                                      ? AppColors.cyan.withValues(alpha: 0.1)
                                       : isDark
                                           ? AppColors.darkCard
-                                          : AppColors
-                                              .lightCard,
-                                  borderRadius:
-                                      BorderRadius.circular(
-                                          12),
+                                          : AppColors.lightCard,
+                                  borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: selected
                                         ? AppColors.cyan
-                                        : context
-                                            .borderColor,
+                                        : context.borderColor,
                                     width: selected ? 2 : 1,
                                   ),
                                 ),
@@ -1050,38 +1039,29 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
                                     Container(
                                       width: 28,
                                       height: 28,
-                                      decoration:
-                                          BoxDecoration(
+                                      decoration: BoxDecoration(
                                         color: selected
                                             ? AppColors.cyan
-                                            : context
-                                                .borderColor,
-                                        shape:
-                                            BoxShape.circle,
+                                            : context.borderColor,
+                                        shape: BoxShape.circle,
                                       ),
                                       child: Center(
                                         child: Text(
                                           e.key,
-                                          style:
-                                              const TextStyle(
-                                            color: Colors
-                                                .white,
-                                            fontWeight:
-                                                FontWeight
-                                                    .w700,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
                                             fontSize: 13,
                                           ),
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(
-                                        width: 12),
+                                    const SizedBox(width: 12),
                                     Expanded(
                                       child: Text(
                                         e.value.toString(),
                                         style: TextStyle(
-                                          color: context
-                                              .textPrimary,
+                                          color: context.textPrimary,
                                           fontSize: 14,
                                         ),
                                       ),
@@ -1104,19 +1084,15 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
                   if (_currentIndex > 0)
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => setState(
-                            () => _currentIndex--),
+                        onPressed: () => setState(() => _currentIndex--),
                         child: const Text('Précédent'),
                       ),
                     ),
-                  if (_currentIndex > 0)
-                    const SizedBox(width: 12),
+                  if (_currentIndex > 0) const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _currentIndex <
-                              _sujets.length - 1
-                          ? () =>
-                              setState(() => _currentIndex++)
+                      onPressed: _currentIndex < _sujets.length - 1
+                          ? () => setState(() => _currentIndex++)
                           : _terminerExamen,
                       child: Text(
                         _currentIndex < _sujets.length - 1
@@ -1134,6 +1110,443 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
     );
   }
 
-  bool get isDark =>
-      Theme.of(context).brightness == Brightness.dark;
+  bool get isDark => Theme.of(context).brightness == Brightness.dark;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ÉCRAN CORRECTION — CONSULTATION DES RÉPONSES ET BONNES RÉPONSES
+// ══════════════════════════════════════════════════════════════════
+
+class _CorrectionScreen extends ConsumerStatefulWidget {
+  final String sessionId;
+  const _CorrectionScreen({required this.sessionId});
+
+  @override
+  ConsumerState<_CorrectionScreen> createState() => _CorrectionScreenState();
+}
+
+class _CorrectionScreenState extends ConsumerState<_CorrectionScreen> {
+  bool _isLoading = true;
+  String? _erreur;
+  Map<String, dynamic>? _sessionInfo;
+  List<Map<String, dynamic>> _correction = [];
+  double? _noteSur20;
+  int _score = 0;
+  int _totalPoints = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _chargerCorrection();
+  }
+
+  Future<void> _chargerCorrection() async {
+    try {
+      final user = ref.read(currentUserProvider);
+      final resp = await ApiClient.getExam(
+        '/exam/sessions/${widget.sessionId}/correction',
+        userId: user?.id ?? '',
+        role: user?.role ?? '',
+        etablissementId: user?.etablissementId ?? '',
+      );
+
+      final corr = (resp['correction'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+
+      setState(() {
+        _sessionInfo = resp['session'] as Map<String, dynamic>?;
+        _correction = corr;
+        _noteSur20 = resp['noteSur20'] is num
+            ? (resp['noteSur20'] as num).toDouble()
+            : null;
+        _score = resp['score'] is num ? (resp['score'] as num).toInt() : 0;
+        _totalPoints = resp['totalPoints'] is num
+            ? (resp['totalPoints'] as num).toInt()
+            : 0;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _erreur = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Correction'),
+        actions: [
+          if (_noteSur20 != null)
+            Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: (_noteSur20! >= 10 ? AppColors.green : AppColors.orange)
+                    .withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${_noteSur20!.toStringAsFixed(1)} / 20',
+                style: TextStyle(
+                  color: _noteSur20! >= 10 ? AppColors.green : AppColors.orange,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _erreur != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.error_outline_rounded,
+                          size: 48, color: AppColors.red),
+                      const SizedBox(height: 12),
+                      Text(_erreur!,
+                          style: TextStyle(
+                              color: context.textMuted, fontSize: 14)),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Retour'),
+                      ),
+                    ],
+                  ),
+                )
+              : _correction.isEmpty
+                  ? Center(
+                      child: Text('Aucune donnée de correction',
+                          style: TextStyle(color: context.textMuted)),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        // En-tête résumé
+                        if (_sessionInfo != null) ...[
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    _sessionInfo!['titre'] ?? '',
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w800,
+                                      color: context.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _sessionInfo!['matiere'] ?? '',
+                                    style: TextStyle(
+                                      color: AppColors.cyan,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  if ((_sessionInfo!['profNom'] as String? ??
+                                          '')
+                                      .isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Professeur : ${_sessionInfo!['profNom']}',
+                                      style: TextStyle(
+                                        color: context.textMuted,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Score : $_score / $_totalPoints points',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: context.textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        // Questions
+                        ...List.generate(_correction.length, (i) {
+                          final q = _correction[i];
+                          return _buildCorrectionCard(i, q);
+                        }),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+    );
+  }
+
+  Widget _buildCorrectionCard(int index, Map<String, dynamic> q) {
+    final intitule = q['intitule'] as String? ?? '';
+    final enonce = q['enonce'] as String? ?? '';
+    final options = (q['options'] as Map<String, dynamic>?) ?? {};
+    final correctKey = q['correctKey'] as String?;
+    final etudiantReponse = q['etudiantReponse'] as String?;
+    final estCorrecte = q['estCorrecte'] as bool?;
+    final points = q['points'] is num ? (q['points'] as num).toInt() : 1;
+    final pointsObtenus =
+        q['pointsObtenus'] is num ? (q['pointsObtenus'] as num).toInt() : null;
+
+    // Filtrer les options pour n'afficher que A, B, C, D
+    final displayOptions = Map.fromEntries(
+      options.entries
+          .where((e) => RegExp(r'^[A-Z]$').hasMatch(e.key.toString())),
+    );
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: estCorrecte == true
+              ? AppColors.green.withValues(alpha: 0.4)
+              : estCorrecte == false
+                  ? AppColors.red.withValues(alpha: 0.4)
+                  : context.borderColor,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Numéro + statut
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: estCorrecte == true
+                        ? AppColors.green.withValues(alpha: 0.12)
+                        : estCorrecte == false
+                            ? AppColors.red.withValues(alpha: 0.12)
+                            : context.textMuted.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Q${index + 1}',
+                    style: TextStyle(
+                      color: estCorrecte == true
+                          ? AppColors.green
+                          : estCorrecte == false
+                              ? AppColors.red
+                              : context.textMuted,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                if (pointsObtenus != null)
+                  Text(
+                    '$pointsObtenus / $points pts',
+                    style: TextStyle(
+                      color:
+                          pointsObtenus > 0 ? AppColors.green : AppColors.red,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                if (estCorrecte == true)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Icon(Icons.check_circle,
+                        color: AppColors.green, size: 18),
+                  ),
+                if (estCorrecte == false)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Icon(Icons.cancel, color: AppColors.red, size: 18),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            // Intitulé
+            Text(
+              intitule,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: context.textPrimary,
+              ),
+            ),
+            // Énoncé (si présent)
+            if (enonce.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                enonce,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: context.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            // Options avec mise en évidence
+            if (displayOptions.isNotEmpty)
+              ...displayOptions.entries.map((entry) {
+                final key = entry.key.toString();
+                final value = entry.value.toString();
+                final isCorrect = key == correctKey;
+                final isStudentAnswer = key == etudiantReponse;
+
+                Color bgColor;
+                Color borderColorOpt;
+                Widget? trailing;
+
+                if (isCorrect && isStudentAnswer) {
+                  // Bonne réponse du student
+                  bgColor = AppColors.green.withValues(alpha: 0.08);
+                  borderColorOpt = AppColors.green;
+                  trailing = const Icon(Icons.check_circle,
+                      color: AppColors.green, size: 18);
+                } else if (isCorrect) {
+                  // Bonne réponse (non choisie)
+                  bgColor = AppColors.green.withValues(alpha: 0.05);
+                  borderColorOpt = AppColors.green.withValues(alpha: 0.4);
+                  trailing = const Icon(Icons.check_circle_outline,
+                      color: AppColors.green, size: 18);
+                } else if (isStudentAnswer) {
+                  // mauvaise réponse
+                  bgColor = AppColors.red.withValues(alpha: 0.08);
+                  borderColorOpt = AppColors.red;
+                  trailing =
+                      const Icon(Icons.cancel, color: AppColors.red, size: 18);
+                } else {
+                  bgColor = isDark ? AppColors.darkCard : AppColors.lightCard;
+                  borderColorOpt = context.borderColor;
+                  trailing = null;
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: borderColorOpt, width: 1.2),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: isCorrect
+                                ? AppColors.green
+                                : isStudentAnswer
+                                    ? AppColors.red
+                                    : context.borderColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              key,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            value,
+                            style: TextStyle(
+                              color: context.textPrimary,
+                              fontSize: 13,
+                              fontWeight:
+                                  isCorrect ? FontWeight.w600 : FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                        if (trailing != null) trailing,
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            // Afficher la réponse de l'étudiant si pas QCM ou pas de réponse
+            if (displayOptions.isEmpty && etudiantReponse != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: estCorrecte == true
+                      ? AppColors.green.withValues(alpha: 0.08)
+                      : AppColors.red.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color:
+                        estCorrecte == true ? AppColors.green : AppColors.red,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      'Votre réponse : ',
+                      style: TextStyle(color: context.textMuted, fontSize: 12),
+                    ),
+                    Expanded(
+                      child: Text(
+                        etudiantReponse,
+                        style: TextStyle(
+                          color: estCorrecte == true
+                              ? AppColors.green
+                              : AppColors.red,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            // Pas de réponse
+            if (etudiantReponse == null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: context.textMuted.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Pas de réponse',
+                  style: TextStyle(
+                    color: context.textMuted,
+                    fontStyle: FontStyle.italic,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool get isDark => Theme.of(context).brightness == Brightness.dark;
 }
