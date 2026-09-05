@@ -25,6 +25,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   bool _isLoading = false;
   List<Map<String, dynamic>> _resultats = [];
   bool _loadingArchives = true;
+  String? _errorArchives;
 
   @override
   void initState() {
@@ -39,7 +40,10 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   }
 
   Future<void> _chargerResultats() async {
-    setState(() => _loadingArchives = true);
+    setState(() {
+      _loadingArchives = true;
+      _errorArchives = null;
+    });
     try {
       final user = ref.read(currentUserProvider);
       if (user == null) {
@@ -63,7 +67,10 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
       });
     } catch (e) {
       debugPrint('[ExamScreen] Erreur chargement resultats: $e');
-      setState(() => _loadingArchives = false);
+      setState(() {
+        _errorArchives = 'Erreur de chargement';
+        _loadingArchives = false;
+      });
     }
   }
 
@@ -227,6 +234,29 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                 child: Padding(
                   padding: EdgeInsets.all(32),
                   child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_errorArchives != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.error_outline_rounded,
+                          size: 40, color: AppColors.red),
+                      const SizedBox(height: 8),
+                      Text(
+                        _errorArchives!,
+                        style: TextStyle(color: AppColors.red, fontSize: 13),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: _chargerResultats,
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Réessayer'),
+                      ),
+                    ],
+                  ),
                 ),
               )
             else if (_resultats.isEmpty)
@@ -731,6 +761,7 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
     int pointsObtenus = 0;
     double note20 = 0.0;
     bool backendOk = false;
+    String? backendError;
 
     try {
       final user = ref.read(currentUserProvider);
@@ -748,19 +779,17 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
       pointsObtenus = rawScore is num ? rawScore.toInt() : 0;
       totalPoints = rawTotal is num ? rawTotal.toInt() : 0;
       note20 = rawNote is num ? rawNote.toDouble() : 0.0;
-    } catch (_) {
-      // Fallback : calcul local si le backend est injoignable
+    } catch (e) {
+      backendError = e.toString();
+      debugPrint('[ExamScreen] Erreur soumission: $backendError');
+      // Fallback : compter les points sans la réponse correcte (strippée côté serveur)
       for (final sujet in _sujets) {
         final rawPts = sujet['points'];
         final points = rawPts is num ? rawPts.toInt() : 1;
         totalPoints += points;
-        final options = (sujet['options'] as Map<String, dynamic>?) ?? {};
-        final correctKey = options['correct'];
-        if (correctKey != null && _reponses[sujet['id']] == correctKey) {
-          pointsObtenus += points;
-        }
       }
-      note20 = totalPoints > 0 ? (pointsObtenus / totalPoints * 20) : 0.0;
+      // On ne peut pas calculer le score sans la bonne réponse → indéterminé
+      note20 = 0.0;
     }
 
     if (mounted) {
@@ -792,8 +821,11 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
               Text(
                 backendOk
                     ? 'Vos réponses ont été corrigées par le serveur.'
-                    : 'Réponses enregistrées (correction en attente).',
-                style: TextStyle(color: context.textMuted, fontSize: 12),
+                    : 'La soumission a échoué. Réessayez depuis la liste des examens.',
+                style: TextStyle(
+                  color: backendOk ? context.textMuted : AppColors.red,
+                  fontSize: 12,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
