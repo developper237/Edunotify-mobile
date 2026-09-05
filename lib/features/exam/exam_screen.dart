@@ -42,11 +42,18 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
     setState(() => _loadingArchives = true);
     try {
       final user = ref.read(currentUserProvider);
+      if (user == null) {
+        setState(() {
+          _resultats = [];
+          _loadingArchives = false;
+        });
+        return;
+      }
       final resp = await ApiClient.getExam(
         '/exam/sessions/mes-resultats',
-        userId: user?.id ?? '',
-        role: user?.role ?? '',
-        etablissementId: user?.etablissementId ?? '',
+        userId: user.id,
+        role: user.role,
+        etablissementId: user.etablissementId ?? '',
       );
       setState(() {
         _resultats = (resp['resultats'] as List? ?? [])
@@ -54,7 +61,8 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
             .toList();
         _loadingArchives = false;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[ExamScreen] Erreur chargement resultats: $e');
       setState(() => _loadingArchives = false);
     }
   }
@@ -880,6 +888,27 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
                   color: context.textPrimary,
                 ),
               ),
+              if (_sujets.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            _CorrectionScreen(sessionId: widget.sessionId),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.rate_review_rounded, size: 18),
+                  label: const Text('Consulter la correction'),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Retour'),
+                ),
+              ],
             ],
           ),
         ),
@@ -1005,7 +1034,9 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
                     ),
                     const SizedBox(height: 24),
                     if (options.isNotEmpty)
-                      ...options.entries.map((e) {
+                      ...options.entries
+                          .where((e) => RegExp(r'^[A-Z]$').hasMatch(e.key))
+                          .map((e) {
                         final selected = _reponses[sujet['id']] == e.key;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 10),
