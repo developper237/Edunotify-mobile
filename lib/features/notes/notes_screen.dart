@@ -1047,9 +1047,10 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
   void dispose() { _motifCtrl.dispose(); super.dispose(); }
 
   Future<void> _pickerPieceJointe() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf'],
+      withData: true,
     );
     if (result != null && result.files.isNotEmpty) {
       final file = result.files.first;
@@ -1103,9 +1104,11 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
         ));
       }
     } on ApiException catch (e) {
-      setState(() { _loading = false; _erreur = e.message; });
-    } catch (_) {
-      setState(() { _loading = false; _erreur = 'Erreur de connexion'; });
+      final msg = e.message;
+      setState(() { _loading = false; _erreur = (msg.isEmpty || msg == 'Erreur réseau') ? 'Erreur serveur (${e.statusCode ?? '?'}) — réessayez' : msg; });
+    } catch (e, st) {
+      debugPrint('[Requete] Erreur: $e\n$st');
+      setState(() { _loading = false; _erreur = 'Erreur inattendue: ${e.runtimeType}'; });
     }
   }
 
@@ -1120,7 +1123,8 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
         left: 24, right: 24, top: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      child: Column(
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1246,8 +1250,8 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
                   : const Icon(Icons.send_rounded, size: 18),
               label: const Text('Envoyer la requête'),
             ),
-          ),
-        ],
+          ),          ],
+      ),
       ),
     );
   }

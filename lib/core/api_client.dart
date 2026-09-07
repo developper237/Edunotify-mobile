@@ -42,7 +42,7 @@ class ApiClient {
   static final _dio         = Dio(BaseOptions(baseUrl: _baseUrl, connectTimeout: const Duration(seconds: 10), receiveTimeout: const Duration(seconds: 60)))..interceptors.add(_AuthInterceptor());
   static final _dioPresence = Dio(BaseOptions(baseUrl: _presenceBaseUrl))..interceptors.add(_AuthInterceptor());
   static final _dioNotif    = Dio(BaseOptions(baseUrl: _notifBaseUrl))..interceptors.add(_AuthInterceptor());
-  static final _dioAcademic = Dio(BaseOptions(baseUrl: _academicBaseUrl))..interceptors.add(_AuthInterceptor());
+  static final _dioAcademic = Dio(BaseOptions(baseUrl: _academicBaseUrl, connectTimeout: const Duration(seconds: 15), receiveTimeout: const Duration(seconds: 60)))..interceptors.add(_AuthInterceptor());
   static final _dioChatbot  = Dio(BaseOptions(baseUrl: _chatbotBaseUrl))..interceptors.add(_AuthInterceptor());
   static final _dioBilling  = Dio(BaseOptions(baseUrl: _billingBaseUrl))..interceptors.add(_AuthInterceptor());
   static final _dioLibrary  = Dio(BaseOptions(baseUrl: _libraryBaseUrl))..interceptors.add(_AuthInterceptor());
