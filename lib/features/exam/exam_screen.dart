@@ -1,3 +1,4 @@
+import '../../core/locale.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,6 +22,7 @@ class ExamScreen extends ConsumerStatefulWidget {
 }
 
 class _ExamScreenState extends ConsumerState<ExamScreen> {
+  Strings get s => ref.watch(stringsProvider);
   final _codeController = TextEditingController();
   bool _isLoading = false;
   List<Map<String, dynamic>> _resultats = [];
@@ -564,6 +566,7 @@ class _ExamSessionScreen extends ConsumerStatefulWidget {
 
 class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
     with WidgetsBindingObserver {
+  Strings get s => ref.watch(stringsProvider);
   Map<String, dynamic>? _session;
   List<Map<String, dynamic>> _sujets = [];
   int _currentIndex = 0;

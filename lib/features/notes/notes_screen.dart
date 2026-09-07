@@ -9,6 +9,7 @@ import '../../core/theme.dart';
 import '../../core/api_client.dart';
 import '../../core/widgets/ui_kit.dart';
 import '../auth/auth_provider.dart';
+import '../../core/locale.dart';
 
 // ══════════════════════════════════════════════════════════════════
 // MODÈLES
@@ -453,9 +454,10 @@ class _NotesEtudiantState extends ConsumerState<_NotesEtudiant>
 
   @override
   Widget build(BuildContext context) {
+    final s = ref.watch(stringsProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes notes'),
+        title: Text(s.myGrades),
         actions: [
           IconButton(
               icon: const Icon(Icons.refresh_outlined), onPressed: _charger),
@@ -463,8 +465,8 @@ class _NotesEtudiantState extends ConsumerState<_NotesEtudiant>
         bottom: TabBar(
           controller: _tabs,
           tabs: const [
-            Tab(text: 'Mes résultats'),
-            Tab(text: 'Mes requêtes'),
+            Tab(text: s.myResults),
+            Tab(text: s.myRequests),
           ],
         ),
       ),
@@ -504,12 +506,12 @@ class _PublicationsEtudiantTab extends ConsumerWidget {
               children: [
                 Icon(Icons.assignment_outlined, size: 64, color: context.textMuted),
                 const SizedBox(height: 16),
-                Text('Aucun résultat publié',
+                Text(s.noResultsPublished,
                     style: TextStyle(color: context.textPrimary,
                         fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 Text(
-                  'Vos résultats apparaîtront ici\ndès que le chef de département les publiera.',
+                  s.resultsWillAppear,
                   style: TextStyle(color: context.textMuted, fontSize: 13),
                   textAlign: TextAlign.center,
                 ),
@@ -743,6 +745,7 @@ class _BulletinDetailScreenState
 
   @override
   Widget build(BuildContext context) {
+    final s = ref.watch(stringsProvider);
     final bulletin =
     ref.watch(bulletinPublicationProvider(widget.publication.id));
 
@@ -822,7 +825,7 @@ class _BulletinDetailScreenState
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Text('Notes par matière',
+                  Text(s.myGrades,
                       style: TextStyle(color: context.textPrimary,
                           fontSize: 16, fontWeight: FontWeight.w700)),
                   const Spacer(),
@@ -887,7 +890,7 @@ class _MoyenneCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Moyenne générale',
+              Text(s.generalAverage,
                   style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 12)),
@@ -1049,7 +1052,7 @@ class _NoteTile extends ConsumerWidget {
                 children: [
                   Icon(Icons.flag_rounded, color: AppColors.orange, size: 13),
                   SizedBox(width: 4),
-                  Text('Requête',
+                  Text(s.treat,
                       style: TextStyle(color: AppColors.orange,
                           fontSize: 11, fontWeight: FontWeight.w600)),
                 ],
@@ -1132,7 +1135,7 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content:         Text('Requête soumise avec succès'),
+          content:         Text(s.requestSubmitted),
           backgroundColor: AppColors.green,
         ));
       }
@@ -1170,7 +1173,7 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
             ),
           ),
           const SizedBox(height: 20),
-          Text('Soumettre une requête',
+          Text(s.submitRequest,
               style: TextStyle(color: context.textPrimary,
                   fontSize: 17, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
@@ -1200,7 +1203,7 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
             ),
           ),
           const SizedBox(height: 16),
-          Text('Décrivez le problème',
+          Text(s.describeProblem,
               style: TextStyle(color: context.textSecondary,
                   fontSize: 13, fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
@@ -1281,7 +1284,7 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.send_rounded, size: 18),
-              label: const Text('Envoyer la requête'),
+              label: Text(s.sendRequest),
             ),
           ),          ],
       ),
@@ -1314,7 +1317,7 @@ class _RequetesEtudiantTab extends ConsumerWidget {
               children: [
                 Icon(Icons.inbox_outlined, size: 56, color: context.textMuted),
                 const SizedBox(height: 16),
-                Text('Aucune requête soumise',
+                Text(s.noRequests,
                     style: TextStyle(color: context.textMuted, fontSize: 14)),
                 const SizedBox(height: 8),
                 Text(
@@ -1416,8 +1419,7 @@ class _RequeteTileEtudiant extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(Icons.picture_as_pdf_rounded, color: AppColors.cyan, size: 14),
-                  const SizedBox(width: 4),
-                  Text('Document joint (appuyez pour ouvrir)',
+                  const SizedBox(width: 4),                    Text('${s.documentAttached} (${s.openDocument})',
                       style: TextStyle(color: AppColors.cyan, fontSize: 11, fontWeight: FontWeight.w600)),
                 ],
               ),
@@ -1434,7 +1436,7 @@ class _RequeteTileEtudiant extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Réponse du chef',
+                  Text(s.response,
                       style: TextStyle(color: color,
                           fontSize: 11, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
@@ -1485,6 +1487,7 @@ class _NotesChefState extends ConsumerState<_NotesChef>
 
   @override
   Widget build(BuildContext context) {
+    final s = ref.watch(stringsProvider);
     final requetes    = ref.watch(requetesChefProvider);
     final nbEnAttente = requetes.valueOrNull
         ?.where((r) => r['statut'] == 'en_attente').length ??
@@ -1500,7 +1503,7 @@ class _NotesChefState extends ConsumerState<_NotesChef>
         bottom: TabBar(
           controller: _tabs,
           tabs: [
-            const Tab(text: 'Publier des notes'),
+            const            Tab(text: s.publishGrades),
             Tab(
               child: Row(
                 mainAxisSize: MainAxisSize.min,

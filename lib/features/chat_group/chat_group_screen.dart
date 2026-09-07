@@ -1,3 +1,4 @@
+import '../../core/locale.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -202,6 +203,7 @@ class ChatGroupScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
+  Strings get s => ref.watch(stringsProvider);
   List<GroupeChat> _groupes = [];
   bool _isLoading = true;
   VoidCallback? _onRefreshSignal;
@@ -257,7 +259,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
     final confirmed = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Créer un groupe'),
+        title: Text(s.createGroup),
         content: TextField(
           controller: nomController,
           decoration: const InputDecoration(hintText: 'Nom du groupe'),
@@ -266,7 +268,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuler')),
+              child: Text(s.cancel)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, nomController.text.trim()),
             child: const Text('Créer'),
@@ -361,7 +363,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Fermer'),
+            child: Text(s.close),
           ),
         ],
       ),
@@ -387,7 +389,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuler')),
+              child: Text(s.cancel)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, codeController.text.trim()),
             child: const Text('Rejoindre'),
@@ -445,11 +447,11 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Annuler')),
+              child: Text(s.cancel)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.red),
-            child: const Text('Supprimer'),
+            child: Text(s.delete),
           ),
         ],
       ),
@@ -633,7 +635,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat'),
+        title: Text(s.messages),
         actions: actions,
       ),
       body: body,
@@ -669,6 +671,7 @@ class ChatRoomScreen extends ConsumerStatefulWidget {
 }
 
 class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
+  Strings get s => ref.watch(stringsProvider);
   final _msgController = TextEditingController();
   final _scrollCtrl = ScrollController();
   List<MessageChat> _messages = [];
@@ -993,11 +996,11 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Annuler')),
+              child: Text(s.cancel)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.red),
-            child: const Text('Supprimer'),
+            child: Text(s.delete),
           ),
         ],
       ),
@@ -1034,11 +1037,11 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Annuler')),
+              child: Text(s.cancel)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.red),
-            child: const Text('Supprimer'),
+            child: Text(s.delete),
           ),
         ],
       ),

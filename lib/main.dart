@@ -117,9 +117,6 @@ class SmartCampusApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      // ── C'était ça qui manquait : sans themeMode, Flutter utilise
-      // ThemeMode.system par défaut et ignore complètement le toggle
-      // du profil (themeModeProvider). ──
       themeMode: ref.watch(themeModeProvider),
       routerConfig: router,
     );

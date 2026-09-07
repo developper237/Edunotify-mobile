@@ -1,3 +1,4 @@
+import '../../core/locale.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -93,6 +94,7 @@ class LibraryScreen extends ConsumerStatefulWidget {
 }
 
 class _LibraryScreenState extends ConsumerState<LibraryScreen> {
+  Strings get s => ref.watch(stringsProvider);
   String _searchQuery = '';
   String _categorieFiltre = 'tous';
   bool _isLoading = false;

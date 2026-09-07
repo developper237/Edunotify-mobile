@@ -202,7 +202,115 @@ class Strings {
   List<String> get sessionTypes => isFr
       ? ['Cours', 'TD', 'TP', 'Examen', 'Rattrapage']
       : ['Course', 'Tutorial', 'Lab', 'Exam', 'Resit'];
+
+  // ── Chat / Messages ──
+  String get messages         => isFr ? 'Messages'            : 'Messages';
+  String get newMessage       => isFr ? 'Nouveau message'     : 'New message';
+  String get typeMessage      => isFr ? 'Tapez un message...' : 'Type a message...';
+  String get send             => isFr ? 'Envoyer'             : 'Send';
+  String get noMessages       => isFr ? 'Aucun message'       : 'No messages';
+  String get groupChat        => isFr ? 'Chat de groupe'      : 'Group chat';
+  String get privateChat      => isFr ? 'Chat privé'          : 'Private chat';
+  String get joinGroup        => isFr ? 'Rejoindre un groupe' : 'Join a group';
+  String get createGroup      => isFr ? 'Créer un groupe'     : 'Create a group';
+  String get groupName        => isFr ? 'Nom du groupe'       : 'Group name';
+  String get invitationCode   => isFr ? 'Code d\'invitation'  : 'Invitation code';
+  String get copyCode         => isFr ? 'Copier le code'      : 'Copy code';
+  String get codeCopied       => isFr ? 'Code copié !'        : 'Code copied!';
+  String get members          => isFr ? 'Membres'             : 'Members';
+  String get member           => isFr ? 'Membre'              : 'Member';
+  String get online           => isFr ? 'En ligne'            : 'Online';
+  String get noConversations  => isFr ? 'Aucune conversation' : 'No conversations';
+  String get searchUsers      => isFr ? 'Rechercher un utilisateur' : 'Search for a user';
+  String get newConversation  => isFr ? 'Nouvelle conversation': 'New conversation';
+  String get deleteMessage    => isFr ? 'Supprimer le message': 'Delete message';
+  String get deleteConversation => isFr ? 'Supprimer la conversation' : 'Delete conversation';
+  String get attachment       => isFr ? 'Pièce jointe'        : 'Attachment';
+  String get audioMessage     => isFr ? 'Message vocal'       : 'Audio message';
+
+  // ── Notes / Requêtes ──
+  String get myResults        => isFr ? 'Mes résultats'       : 'My results';
+  String get myRequests       => isFr ? 'Mes requêtes'        : 'My requests';
+  String get publishGrades    => isFr ? 'Publier des notes'   : 'Publish grades';
+  String get noResultsPublished => isFr ? 'Aucun résultat publié' : 'No results published';
+  String get resultsWillAppear => isFr ? 'Vos résultats apparaîtront ici\ndès que le chef de département les publiera.' : 'Your results will appear here\nonce the department head publishes them.';
+  String get submitRequest    => isFr ? 'Soumettre une requête': 'Submit a request';
+  String get describeProblem  => isFr ? 'Décrivez le problème': 'Describe the problem';
+  String get attachDocument   => isFr ? 'Joindre un document (PDF)' : 'Attach a document (PDF)';
+  String get documentAttached => isFr ? 'Document joint'      : 'Document attached';
+  String get sendRequest      => isFr ? 'Envoyer la requête'  : 'Send request';
+  String get requestSubmitted => isFr ? 'Requête soumise avec succès' : 'Request submitted successfully';
+  String get requestPending   => isFr ? 'En attente'          : 'Pending';
+  String get requestProcessed => isFr ? 'Traitée'             : 'Processed';
+  String get requestRejected  => isFr ? 'Rejetée'             : 'Rejected';
+  String get noRequests       => isFr ? 'Aucune requête soumise' : 'No requests submitted';
+  String get average          => isFr ? 'Moyenne'             : 'Average';
+  String get passable         => isFr ? 'Passable'            : 'Passable';
+  String get good             => isFr ? 'Bien'                : 'Good';
+  String get toCatchUp        => isFr ? 'À rattraper'         : 'Needs makeup';
+  String get insufficient     => isFr ? 'Insuffisant'         : 'Insufficient';
+  String get admitted         => isFr ? 'Admis'               : 'Admitted';
+  String get notAdmitted      => isFr ? 'Non admis'           : 'Not admitted';
+  String get coefficient      => isFr ? 'Coeff.'              : 'Coeff.';
+  String get viewDetail       => isFr ? 'Voir le détail'      : 'View details';
+  String get publishedOn      => isFr ? 'Publié le'           : 'Published on';
+  String get submittedOn      => isFr ? 'Soumise le'          : 'Submitted on';
+  String get generalAverage   => isFr ? 'Moyenne générale'    : 'General average';
+  String get student          => isFr ? 'Étudiant'            : 'Student';
+  String get matricule        => isFr ? 'Matricule'           : 'Student ID';
+  String get response         => isFr ? 'Réponse'             : 'Response';
+  String get treatRequest     => isFr ? 'Traiter cette requête': 'Process this request';
+  String get documentJustificatif => isFr ? 'Document justificatif' : 'Supporting document';
+  String get openDocument     => isFr ? 'appuyez pour ouvrir' : 'tap to open';
+  String get allRequests      => isFr ? 'Toutes les requêtes' : 'All requests';
+  String get pendingRequests  => isFr ? 'En attente'          : 'Pending';
+  String get processedRequests => isFr ? 'Traitées'           : 'Processed';
+  String get noRequestsReceived => isFr ? 'Aucune requête reçue' : 'No requests received';
+  String get requestsCount    => isFr ? 'requête(s)'          : 'request(s)';
+  String get allTreated       => isFr ? 'Toutes traitées'     : 'All processed';
+  String get treat            => isFr ? 'Traiter'             : 'Process';
+  String get newGrade         => isFr ? 'Nouvelle note'       : 'New grade';
+  String get reject           => isFr ? 'Rejeter'             : 'Reject';
+  String get approve          => isFr ? 'Approuver'           : 'Approve';
+
+  // ── Examens ──
+  String get examRoom         => isFr ? 'Salle d\'examen'     : 'Exam room';
+  String get joinExam         => isFr ? 'Rejoindre un examen' : 'Join an exam';
+  String get examCode         => isFr ? 'Code de l\'examen'   : 'Exam code';
+  String get startExam        => isFr ? 'Commencer l\'examen' : 'Start exam';
+  String get submitExam       => isFr ? 'Soumettre l\'examen' : 'Submit exam';
+  String get examSubmitted    => isFr ? 'Examen soumis !'     : 'Exam submitted!';
+  String get yourScore        => isFr ? 'Votre note'          : 'Your score';
+  String get outOf            => isFr ? 'sur'                 : 'out of';
+  String get viewCorrection   => isFr ? 'Consulter la correction' : 'View correction';
+  String get examHistory      => isFr ? 'Historique des examens' : 'Exam history';
+  String get noExamsPassed    => isFr ? 'Aucun examen passé'  : 'No exams taken';
+  String get examCorrected    => isFr ? 'Corrigé'             : 'Corrected';
+  String get examInvalid      => isFr ? 'Invalide'            : 'Invalid';
+  String get correctAnswer    => isFr ? 'Bonne réponse'       : 'Correct answer';
+  String get wrongAnswer      => isFr ? 'Mauvaise réponse'    : 'Wrong answer';
+  String get yourAnswer       => isFr ? 'Votre réponse'       : 'Your answer';
+  String get noAnswer         => isFr ? 'Pas de réponse'      : 'No answer';
+  String get points           => isFr ? 'points'              : 'points';
+  String get question         => isFr ? 'Question'            : 'Question';
+  String get timer            => isFr ? 'Chrono'              : 'Timer';
+  String get remainingTime    => isFr ? 'restant'             : 'remaining';
+  String get previous         => isFr ? 'Précédent'           : 'Previous';
+  String get next             => isFr ? 'Suivant'             : 'Next';
+  String get createExam       => isFr ? 'Créer un examen'     : 'Create exam';
+  String get sessionCode      => isFr ? 'Code de la session'  : 'Session code';
+  String get copyInvitation   => isFr ? 'Copier le code d\'invitation' : 'Copy invitation code';
+  String get launchExam       => isFr ? 'Lancer l\'examen'    : 'Start exam';
+  String get endExam          => isFr ? 'Terminer l\'examen'  : 'End exam';
+  String get examLaunched     => isFr ? 'Examen lancé'        : 'Exam started';
+  String get examEnded        => isFr ? 'Examen terminé'      : 'Exam ended';
+  String get studentsComposed => isFr ? 'Étudiants ayant composé' : 'Students who took the exam';
+  String get noStudents       => isFr ? 'Aucun étudiant'      : 'No students';
+  String get questionOf       => isFr ? 'Question'            : 'Question';
+  String get ofTotal          => isFr ? 'sur'                 : 'of';
+  String get minRemaining     => isFr ? 'min restantes'       : 'min remaining';
 }
+
 
 // Provider global
 final stringsProvider = Provider<Strings>(

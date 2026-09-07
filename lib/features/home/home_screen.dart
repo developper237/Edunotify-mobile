@@ -1,3 +1,4 @@
+import '../../core/locale.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -149,6 +150,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  Strings get s => ref.watch(stringsProvider);
   Timer? _timer;
 
   @override

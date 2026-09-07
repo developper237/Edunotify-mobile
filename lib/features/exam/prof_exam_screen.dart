@@ -1,3 +1,4 @@
+import '../../core/locale.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +20,7 @@ class ProfExamScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
+  Strings get s => ref.watch(stringsProvider);
   List<Map<String, dynamic>> _sessions = [];
   bool _isLoading = true;
 

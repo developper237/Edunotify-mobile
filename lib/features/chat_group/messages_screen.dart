@@ -1,3 +1,4 @@
+import '../../core/locale.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -784,6 +785,7 @@ class _PrivateChatScreen extends ConsumerStatefulWidget {
 }
 
 class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
+  Strings get s => ref.watch(stringsProvider);
   final _msgController = TextEditingController();
   final _scrollCtrl = ScrollController();
   List<MessagePrive> _messages = [];
