@@ -74,9 +74,7 @@ class NonLuesNotifier extends StateNotifier<int> {
   }
 
   void _demarrerSse(String userId, String role,
-      {String? etablissementId,
-      String? departementId,
-      String? classeId}) {
+      {String? etablissementId, String? departementId, String? classeId}) {
     if (_sseDemarre) return;
     _sseDemarre = true;
     _sse = SseClient(
@@ -176,8 +174,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         departementId: user.departementId,
         classeId: user.classeId);
     // Badge des messages chat non lus
-    ref.read(chatNonLusProvider.notifier).charger(
-        user.id, user.role, user.etablissementId);
+    ref
+        .read(chatNonLusProvider.notifier)
+        .charger(user.id, user.role, user.etablissementId);
     if (user.role == 'etudiant' || user.role == 'delegue') {
       ref
           .read(sessionActiveProvider.notifier)
@@ -341,6 +340,135 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 // DASHBOARD TAB
 // ══════════════════════════════════════════════════════════════════
 
+class _HomeHeader extends StatelessWidget {
+  final User? user;
+  final int nonLues;
+  final VoidCallback onNotificationsTap;
+
+  const _HomeHeader({
+    required this.user,
+    required this.nonLues,
+    required this.onNotificationsTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto = user?.photoUrl?.isNotEmpty == true;
+    final initials = user?.initiales.isNotEmpty == true ? user!.initiales : '?';
+    final institution = user?.etablissementNom?.trim();
+    final institutionLabel = institution?.isNotEmpty == true
+        ? institution!
+        : 'Établissement non renseigné';
+
+    return Material(
+      color: context.cardColor,
+      elevation: 1,
+      child: Container(
+        height: 82,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          border: Border(
+            bottom: BorderSide(color: context.borderColor, width: 0.7),
+          ),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.cyan.withValues(alpha: 0.14),
+              backgroundImage: hasPhoto ? NetworkImage(user!.photoUrl!) : null,
+              child: hasPhoto
+                  ? null
+                  : Text(
+                      initials,
+                      style: const TextStyle(
+                        color: AppColors.cyan,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user?.fullName ?? 'Utilisateur',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: context.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    institutionLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: context.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (user?.etablissementLogo?.isNotEmpty == true) ...[
+              _EtablissementLogo(url: user!.etablissementLogo!, size: 42),
+              const SizedBox(width: 8),
+            ],
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  onPressed: onNotificationsTap,
+                  tooltip: 'Notifications',
+                  icon: Icon(
+                    Icons.notifications_none_rounded,
+                    color: context.textSecondary,
+                    size: 25,
+                  ),
+                ),
+                if (nonLues > 0)
+                  Positioned(
+                    right: 2,
+                    top: 3,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      constraints:
+                          const BoxConstraints(minWidth: 17, minHeight: 17),
+                      decoration: BoxDecoration(
+                        color: AppColors.red,
+                        shape: BoxShape.circle,
+                        border:
+                            Border.all(color: context.cardColor, width: 1.5),
+                      ),
+                      child: Text(
+                        nonLues > 99 ? '99+' : '$nonLues',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _DashboardTab extends ConsumerWidget {
   final String role;
   const _DashboardTab({required this.role});
@@ -357,83 +485,28 @@ class _DashboardTab extends ConsumerWidget {
     final accent = _roleAccent(role);
     final nonLues = ref.watch(nonLuesCountProvider);
 
-    // Hauteur réservée pour la barre de statut (heure, réseau, batterie)
-    final topSafe = MediaQuery.of(context).padding.top;
-
     return Scaffold(
-      // ── Le dégradé remonte derrière la barre de statut (plus de blanc) ──
-      extendBodyBehindAppBar: true,
-      // ── AppBar avec la cloche de notifications (top-right) ──
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness:
-              context.isDark ? Brightness.light : Brightness.dark,
-          statusBarBrightness:
-              context.isDark ? Brightness.dark : Brightness.light,
+      // Header fixe : il reste visible pendant tout le défilement du tableau.
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(
+          82 + MediaQuery.of(context).padding.top,
         ),
-        title: Text(
-          'SmartCampus',
-          style: TextStyle(
-            color: context.textPrimary,
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
+        child: SafeArea(
+          top: true,
+          bottom: false,
+          child: _HomeHeader(
+            user: user,
+            nonLues: nonLues,
+            onNotificationsTap: () {
+              ref.read(nonLuesCountProvider.notifier).reset();
+              ref.read(notifsProvider.notifier).charger();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              );
+            },
           ),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                IconButton(
-                  onPressed: () {
-                    ref.read(nonLuesCountProvider.notifier).reset();
-                    ref.read(notifsProvider.notifier).charger();
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const NotificationsScreen()),
-                    );
-                  },
-                  icon: Icon(
-                    Icons.notifications_none_rounded,
-                    color: context.textSecondary,
-                    size: 26,
-                  ),
-                  tooltip: 'Notifications',
-                ),
-                if (nonLues > 0)
-                  Positioned(
-                    right: 2,
-                    top: 4,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        color: AppColors.red,
-                        shape: BoxShape.circle,
-                        border:
-                            Border.all(color: context.cardColor, width: 1.5),
-                      ),
-                      constraints:
-                          const BoxConstraints(minWidth: 17, minHeight: 17),
-                      child: Text(
-                        nonLues > 99 ? '99+' : '$nonLues',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8.5,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(
@@ -478,16 +551,6 @@ class _DashboardTab extends ConsumerWidget {
                 child: CustomScrollView(
                   physics: const BouncingScrollPhysics(),
                   slivers: [
-                    // Marge de sécurité : barre de statut (heure, réseau) +
-                    // hauteur de l'AppBar transparente au-dessus
-                    SliverToBoxAdapter(
-                      child: SizedBox(height: topSafe + kToolbarHeight + 12),
-                    ),
-
-                    SliverToBoxAdapter(
-                      child: _WelcomeBanner(role: role, user: user),
-                    ),
-
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(
                           horizontalPad, 24, horizontalPad, 0),
@@ -495,7 +558,6 @@ class _DashboardTab extends ConsumerWidget {
                         child: _StatsStrip(role: role, accent: accent),
                       ),
                     ),
-
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(
                           horizontalPad, 28, horizontalPad, 0),
@@ -510,7 +572,6 @@ class _DashboardTab extends ConsumerWidget {
                         ),
                       ),
                     ),
-
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(
                           horizontalPad, 32, horizontalPad, 0),
@@ -518,7 +579,6 @@ class _DashboardTab extends ConsumerWidget {
                         child: _TipCard(role: role),
                       ),
                     ),
-
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(
                           horizontalPad, 32, horizontalPad, 0),
@@ -533,7 +593,6 @@ class _DashboardTab extends ConsumerWidget {
                         ),
                       ),
                     ),
-
                     if (role == 'delegue' ||
                         role == 'chef_departement' ||
                         role == 'admin' ||
@@ -545,7 +604,6 @@ class _DashboardTab extends ConsumerWidget {
                           child: _NotifyButton(),
                         ),
                       ),
-
                     const SliverToBoxAdapter(child: SizedBox(height: 100)),
                   ],
                 ),
@@ -978,13 +1036,11 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
                       children: [
                         CircleAvatar(
                           radius: 23,
-                          backgroundColor:
-                              _accentColor.withValues(alpha: 0.12),
-                          backgroundImage:
-                              (widget.user?.photoUrl != null &&
-                                      widget.user!.photoUrl!.isNotEmpty)
-                                  ? NetworkImage(widget.user!.photoUrl!)
-                                  : null,
+                          backgroundColor: _accentColor.withValues(alpha: 0.12),
+                          backgroundImage: (widget.user?.photoUrl != null &&
+                                  widget.user!.photoUrl!.isNotEmpty)
+                              ? NetworkImage(widget.user!.photoUrl!)
+                              : null,
                           child: (widget.user?.photoUrl == null ||
                                   widget.user!.photoUrl!.isEmpty)
                               ? Text(initiale,
@@ -1133,13 +1189,14 @@ class _CirclesPainter extends CustomPainter {
 // ── Logo de l'établissement, affiché en haut à droite du header ──
 class _EtablissementLogo extends StatelessWidget {
   final String url;
-  const _EtablissementLogo({required this.url});
+  final double size;
+  const _EtablissementLogo({required this.url, this.size = 70});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 70,
-      height: 70,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: context.cardColor,
         borderRadius: BorderRadius.circular(12),
