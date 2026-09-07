@@ -465,7 +465,7 @@ class _NotesEtudiantState extends ConsumerState<_NotesEtudiant>
         ],
         bottom: TabBar(
           controller: _tabs,
-          tabs: const [
+          tabs: [
             Tab(text: s.myResults),
             Tab(text: s.myRequests),
           ],
@@ -507,12 +507,12 @@ class _PublicationsEtudiantTab extends ConsumerWidget {
               children: [
                 Icon(Icons.assignment_outlined, size: 64, color: context.textMuted),
                 const SizedBox(height: 16),
-                Text(s.noResultsPublished,
+                Text('Aucun résultat publié',
                     style: TextStyle(color: context.textPrimary,
                         fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 Text(
-                  s.resultsWillAppear,
+                  'Vos résultats apparaîtront ici\ndès que le chef de département les publiera.',
                   style: TextStyle(color: context.textMuted, fontSize: 13),
                   textAlign: TextAlign.center,
                 ),
@@ -891,7 +891,7 @@ class _MoyenneCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(s.generalAverage,
+              Text('Moyenne générale',
                   style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 12)),
@@ -1048,12 +1048,12 @@ class _NoteTile extends ConsumerWidget {
                 border: Border.all(
                     color: AppColors.orange.withValues(alpha: 0.3)),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.flag_rounded, color: AppColors.orange, size: 13),
-                  SizedBox(width: 4),
-                  Text(s.treat,
+                  const Icon(Icons.flag_rounded, color: AppColors.orange, size: 13),
+                  const SizedBox(width: 4),
+                  Text('Requête',
                       style: TextStyle(color: AppColors.orange,
                           fontSize: 11, fontWeight: FontWeight.w600)),
                 ],
@@ -1136,8 +1136,8 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
       ));
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content:         Text(s.requestSubmitted),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:         Text('Requête soumise avec succès'),
           backgroundColor: AppColors.green,
         ));
       }
@@ -1319,7 +1319,7 @@ class _RequetesEtudiantTab extends ConsumerWidget {
               children: [
                 Icon(Icons.inbox_outlined, size: 56, color: context.textMuted),
                 const SizedBox(height: 16),
-                Text(s.noRequests,
+                Text('Aucune requête soumise',
                     style: TextStyle(color: context.textMuted, fontSize: 14)),
                 const SizedBox(height: 8),
                 Text(
@@ -1421,7 +1421,8 @@ class _RequeteTileEtudiant extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(Icons.picture_as_pdf_rounded, color: AppColors.cyan, size: 14),
-                  const SizedBox(width: 4),                    Text('${s.documentAttached} (${s.openDocument})',
+                  const SizedBox(width: 4),
+                  Text('Document joint (appuyez pour ouvrir)',
                       style: TextStyle(color: AppColors.cyan, fontSize: 11, fontWeight: FontWeight.w600)),
                 ],
               ),
@@ -1438,7 +1439,7 @@ class _RequeteTileEtudiant extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(s.response,
+                  Text('Réponse du chef',
                       style: TextStyle(color: color,
                           fontSize: 11, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
@@ -1505,7 +1506,7 @@ class _NotesChefState extends ConsumerState<_NotesChef>
         bottom: TabBar(
           controller: _tabs,
           tabs: [
-            const            Tab(text: s.publishGrades),
+            Tab(text: s.publishGrades),
             Tab(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
