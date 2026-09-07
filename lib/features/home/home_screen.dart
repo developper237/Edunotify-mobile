@@ -1251,68 +1251,48 @@ class _QuickActions extends StatelessWidget {
     switch (role) {
       case 'etudiant':
         return [
-          _QAction(Icons.how_to_reg_rounded, 'Présence', () => goTo(1)),
-          _QAction(Icons.grade_rounded, 'Notes', () => goTo(2)),
           _QAction(Icons.menu_book_rounded, 'Bibliothèque',
               () => ouvrir(const LibraryScreen())),
           _QAction(Icons.quiz_rounded, 'Salle d\'examen',
               () => ouvrir(const ExamScreen())),
-          _QAction(Icons.chat_bubble_rounded, 'Messages',
-              () => ouvrir(const ChatGroupScreen())),
           _QAction(Icons.notifications_rounded, 'Notifications',
               () => ouvrir(const NotificationsScreen())),
-          _QAction(Icons.person_rounded, 'Profil', () => goTo(3)),
         ];
       case 'delegue':
         return [
-          _QAction(Icons.play_circle_filled, 'Lancer appel', () => goTo(1)),
           _QAction(Icons.history_rounded, 'Historique',
               () => ouvrir(const HistoriqueScreen())),
           _QAction(Icons.people_rounded, 'Ma classe',
               () => ouvrir(const ClasseDelegueScreen())),
-          _QAction(Icons.grade_rounded, 'Notes', () => goTo(2)),
           _QAction(Icons.menu_book_rounded, 'Bibliothèque',
               () => ouvrir(const LibraryScreen())),
           _QAction(Icons.quiz_rounded, 'Salle d\'examen',
               () => ouvrir(const ExamScreen())),
-          _QAction(Icons.chat_bubble_rounded, 'Messages',
-              () => ouvrir(const ChatGroupScreen())),
         ];
       case 'chef_departement':
         return [
-          _QAction(Icons.description_rounded, 'Rapports', () => goTo(1)),
-          _QAction(Icons.grade_rounded, 'Notes', () => goTo(2)),
           _QAction(Icons.class_rounded, 'Classes',
               () => ouvrir(const ClassesChefScreen())),
           _QAction(Icons.menu_book_rounded, 'Bibliothèque',
               () => ouvrir(const LibraryScreen())),
-          _QAction(Icons.chat_bubble_rounded, 'Messages',
-              () => ouvrir(const ChatGroupScreen())),
           _QAction(Icons.notifications_rounded, 'Notifications',
               () => ouvrir(const NotificationsScreen())),
         ];
       case 'professeur':
         return [
-          _QAction(Icons.grade_rounded, 'Notes', () => goTo(1)),
           _QAction(Icons.quiz_rounded, 'Salle d\'examen',
               () => ouvrir(const ProfExamScreen())),
           _QAction(Icons.menu_book_rounded, 'Bibliothèque',
               () => ouvrir(const LibraryScreen())),
-          _QAction(Icons.chat_bubble_rounded, 'Messages',
-              () => ouvrir(const ChatGroupScreen())),
           _QAction(Icons.notifications_rounded, 'Notifications',
               () => ouvrir(const NotificationsScreen())),
         ];
       case 'admin':
         return [
-          _QAction(Icons.people_rounded, 'Utilisateurs', () => goTo(1)),
-          _QAction(Icons.bar_chart_rounded, 'Rapports', () => goTo(2)),
           _QAction(Icons.category_rounded, 'Départements',
               () => ouvrir(const DepartementsScreen())),
           _QAction(Icons.menu_book_rounded, 'Bibliothèque',
               () => ouvrir(const LibraryScreen())),
-          _QAction(Icons.chat_bubble_rounded, 'Messages',
-              () => ouvrir(const ChatGroupScreen())),
           _QAction(Icons.notifications_rounded, 'Notifications',
               () => ouvrir(const NotificationsScreen())),
           _QAction(Icons.workspace_premium_rounded, 'Abonnement',
@@ -1320,15 +1300,10 @@ class _QuickActions extends StatelessWidget {
         ];
       case 'super_admin':
         return [
-          _QAction(Icons.school_rounded, 'Établissements', () => goTo(1)),
-          _QAction(Icons.insights_rounded, 'Stats', () => goTo(2)),
           _QAction(Icons.mark_email_unread_rounded, 'Demandes',
               () => ouvrir(const LeadsAdminScreen())),
           _QAction(Icons.notifications_rounded, 'Notifications',
               () => ouvrir(const NotificationsScreen())),
-          _QAction(Icons.chat_bubble_rounded, 'Messages',
-              () => ouvrir(const ChatGroupScreen())),
-          _QAction(Icons.person_rounded, 'Profil', () => goTo(3)),
           _QAction(Icons.workspace_premium_rounded, 'Abonnement',
               () => ouvrir(const SubscriptionScreen())),
         ];
