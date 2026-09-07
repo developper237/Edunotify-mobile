@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -131,6 +132,7 @@ class RequeteNote {
   final String statut;
   final String motif;
   final String? reponse;
+  final String? pieceJointe;
   final String matiere;
   final double? noteActuelle;
   final DateTime createdAt;
@@ -141,6 +143,7 @@ class RequeteNote {
     required this.statut,
     required this.motif,
     this.reponse,
+    this.pieceJointe,
     required this.matiere,
     this.noteActuelle,
     required this.createdAt,
@@ -152,6 +155,7 @@ class RequeteNote {
     statut:       j['statut']  as String? ?? 'en_attente',
     motif:        j['motif']   as String? ?? '',
     reponse:      j['reponse'] as String?,
+    pieceJointe:  j['pieceJointe'] as String?,
     matiere:      j['matiere'] as String? ?? '',
     noteActuelle: (j['noteActuelle'] as num?)?.toDouble(),
     createdAt:    j['createdAt'] != null
@@ -1037,9 +1041,25 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
   final _motifCtrl = TextEditingController();
   bool    _loading = false;
   String? _erreur;
+  PlatformFile? _pieceJointe;
 
   @override
   void dispose() { _motifCtrl.dispose(); super.dispose(); }
+
+  Future<void> _pickerPieceJointe() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+    if (result != null && result.files.isNotEmpty) {
+      final file = result.files.first;
+      if (file.size > 5 * 1024 * 1024) {
+        setState(() => _erreur = 'Fichier trop volumineux (max 5 Mo)');
+        return;
+      }
+      setState(() { _pieceJointe = file; _erreur = null; });
+    }
+  }
 
   Future<void> _soumettre() async {
     if (_motifCtrl.text.trim().length < 10) {
@@ -1058,6 +1078,10 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
           'matiereId': widget.note.matiereId,
           'motif':     _motifCtrl.text.trim(),
           'type':      widget.note.manquante ? 'note_absente' : 'contestation',
+          if (_pieceJointe != null)
+            'pieceJointe': _pieceJointe!.bytes != null
+                ? 'data:application/pdf;base64,${base64Encode(_pieceJointe!.bytes!)}'
+                : null,
         },
         userId: user.id, role: user.role,
       );
@@ -1149,6 +1173,57 @@ class _RequeteModalState extends ConsumerState<_RequeteModal> {
             decoration: InputDecoration(
               hintText:  'Ex: Ma note de TP n\'a pas été prise en compte...',
               hintStyle: TextStyle(color: context.textMuted, fontSize: 12),
+            ),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: _pickerPieceJointe,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: context.isDark ? const Color(0xFF1A1D2E) : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _pieceJointe != null
+                      ? AppColors.green.withValues(alpha: 0.5)
+                      : context.borderColor,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _pieceJointe != null ? Icons.picture_as_pdf_rounded : Icons.attach_file_rounded,
+                    color: _pieceJointe != null ? AppColors.green : context.textMuted,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _pieceJointe != null ? _pieceJointe!.name : 'Joindre un document (PDF)',
+                          style: TextStyle(
+                            color: _pieceJointe != null ? context.textPrimary : context.textMuted,
+                            fontSize: 13,
+                            fontWeight: _pieceJointe != null ? FontWeight.w600 : FontWeight.w400,
+                          ),
+                        ),
+                        if (_pieceJointe != null)
+                          Text(
+                            '${(_pieceJointe!.size / 1024).toStringAsFixed(0)} Ko',
+                            style: TextStyle(color: context.textMuted, fontSize: 11),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (_pieceJointe != null)
+                    GestureDetector(
+                      onTap: () => setState(() => _pieceJointe = null),
+                      child: Icon(Icons.close_rounded, color: context.textMuted, size: 18),
+                    ),
+                ],
+              ),
             ),
           ),
           if (_erreur != null) ...[
@@ -1297,6 +1372,17 @@ class _RequeteTileEtudiant extends StatelessWidget {
           const SizedBox(height: 6),
           Text(r.motif, style: TextStyle(
               color: context.textSecondary, fontSize: 12, height: 1.4)),
+          if (r.pieceJointe != null && r.pieceJointe!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.picture_as_pdf_rounded, color: AppColors.cyan, size: 14),
+                const SizedBox(width: 4),
+                Text('Document joint',
+                    style: TextStyle(color: AppColors.cyan, fontSize: 11, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ],
           if (r.reponse != null) ...[
             const SizedBox(height: 10),
             Container(
@@ -2085,13 +2171,6 @@ class _RequetesChefTab extends ConsumerWidget {
         },
       ),
       data: (liste) {
-        final enAttente = liste
-            .where((r) => r['statut'] == 'en_attente')
-            .toList();
-        final traitees = liste
-            .where((r) => r['statut'] != 'en_attente')
-            .toList();
-
         if (liste.isEmpty) {
           return Center(
             child: Column(
@@ -2107,24 +2186,124 @@ class _RequetesChefTab extends ConsumerWidget {
           );
         }
 
+        // Grouper par étudiant
+        final Map<String, Map<String, dynamic>> groupes = {};
+        for (final r in liste) {
+          final etu = r['etudiant'] as Map<String, dynamic>? ?? {};
+          final eid = etu['id'] as String? ?? '';
+          if (eid.isEmpty) continue;
+          if (!groupes.containsKey(eid)) {
+            groupes[eid] = {
+              'etudiant': etu,
+              'nbTotal': 0,
+              'nbEnAttente': 0,
+              'nbTraitees': 0,
+              'nbRejetees': 0,
+              'requetes': <Map<String, dynamic>>[],
+            };
+          }
+          groupes[eid]!['nbTotal'] = (groupes[eid]!['nbTotal'] as int) + 1;
+          groupes[eid]!['requetes'].add(r);
+          final st = r['statut'] as String? ?? '';
+          if (st == 'en_attente') groupes[eid]!['nbEnAttente'] = (groupes[eid]!['nbEnAttente'] as int) + 1;
+          else if (st == 'traitee') groupes[eid]!['nbTraitees'] = (groupes[eid]!['nbTraitees'] as int) + 1;
+          else groupes[eid]!['nbRejetees'] = (groupes[eid]!['nbRejetees'] as int) + 1;
+        }
+
+        final sorted = groupes.values.toList()
+          ..sort((a, b) => (b['nbEnAttente'] as int).compareTo(a['nbEnAttente'] as int));
+
         return ListView(
           padding: const EdgeInsets.all(16),
-          children: [
-            if (enAttente.isNotEmpty) ...[
-              _SectionHeader(
-                  '⏳ En attente (${enAttente.length})',
-                  AppColors.orange),
-              const SizedBox(height: 10),
-              ...enAttente.map((r) => _RequeteTileChef(requete: r)),
-              const SizedBox(height: 16),
-            ],
-            if (traitees.isNotEmpty) ...[
-              _SectionHeader(
-                  '✅ Traitées (${traitees.length})', AppColors.green),
-              const SizedBox(height: 10),
-              ...traitees.map((r) => _RequeteTileChef(requete: r)),
-            ],
-          ],
+          children: sorted.map((g) {
+            final etu = g['etudiant'] as Map<String, dynamic>;
+            final prenom = etu['prenom'] as String? ?? '';
+            final nom = etu['nom'] as String? ?? '';
+            final matricule = etu['matricule'] as String? ?? '';
+            final initiales = '${prenom.isNotEmpty ? prenom[0] : ''}${nom.isNotEmpty ? nom[0] : ''}'.toUpperCase();
+            final nbAttente = g['nbEnAttente'] as int;
+            final nbTotal = g['nbTotal'] as int;
+            final filiere = etu['filiere'] as String? ?? '';
+
+            return GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => _RequetesEtudiantDetail(
+                    etudiantId: etu['id'] as String,
+                    etudiantNom: '$prenom $nom',
+                    matricule: matricule,
+                    filiere: filiere,
+                    requetes: g['requetes'] as List<Map<String, dynamic>>,
+                  ),
+                ),
+              ),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: context.cardColor,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: nbAttente > 0
+                        ? AppColors.orange.withValues(alpha: 0.3)
+                        : context.borderColor,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: AppColors.cyan.withValues(alpha: 0.15),
+                      child: Text(initiales,
+                          style: const TextStyle(
+                              color: AppColors.cyan,
+                              fontSize: 14, fontWeight: FontWeight.w700)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('$prenom $nom',
+                              style: TextStyle(color: context.textPrimary,
+                                  fontSize: 14, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text('$matricule${filiere.isNotEmpty ? ' · $filiere' : ''}',
+                              style: TextStyle(color: context.textMuted, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('$nbTotal requête${nbTotal > 1 ? 's' : ''}',
+                            style: TextStyle(color: context.textPrimary,
+                                fontSize: 13, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 2),
+                        if (nbAttente > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.orange.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text('$nbAttente en attente',
+                                style: const TextStyle(color: AppColors.orange,
+                                    fontSize: 10, fontWeight: FontWeight.w600)),
+                          )
+                        else
+                          Text('Toutes traitées',
+                              style: TextStyle(color: AppColors.green, fontSize: 10)),
+                      ],
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.chevron_right_rounded, color: context.textMuted, size: 20),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         );
       },
     );
@@ -2235,6 +2414,200 @@ class _RequeteTileChef extends ConsumerWidget {
           Text(requete['motif'] as String? ?? '',
               style: TextStyle(color: context.textSecondary,
                   fontSize: 12, height: 1.4)),
+        ],
+      ),
+    );
+  }
+}
+
+class _RequetesEtudiantDetail extends StatelessWidget {
+  final String etudiantId, etudiantNom, matricule, filiere;
+  final List<Map<String, dynamic>> requetes;
+
+  const _RequetesEtudiantDetail({
+    required this.etudiantId,
+    required this.etudiantNom,
+    required this.matricule,
+    required this.filiere,
+    required this.requetes,
+  });
+
+  Color _couleurStatut(String statut) {
+    if (statut == 'en_attente') return AppColors.orange;
+    if (statut == 'traitee') return AppColors.green;
+    return AppColors.red;
+  }
+
+  String _labelStatut(String statut) {
+    if (statut == 'en_attente') return 'En attente';
+    if (statut == 'traitee') return 'Traitée';
+    return 'Rejetée';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final initiales = etudiantNom.split(' ').map((w) => w.isNotEmpty ? w[0] : '').join().toUpperCase();
+
+    return Scaffold(
+      appBar: AppBar(title: Text(etudiantNom, maxLines: 1, overflow: TextOverflow.ellipsis)),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Carte étudiant
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: context.cardColor,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: AppColors.cyan.withValues(alpha: 0.15),
+                  child: Text(initiales, style: const TextStyle(color: AppColors.cyan, fontSize: 16, fontWeight: FontWeight.w700)),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(etudiantNom, style: TextStyle(color: context.textPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 2),
+                      Text('$matricule · $filiere', style: TextStyle(color: context.textMuted, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.cyan.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text('${requetes.length} requête${requetes.length > 1 ? 's' : ''}',
+                      style: const TextStyle(color: AppColors.cyan, fontSize: 12, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Liste des requêtes
+          ...requetes.map((r) {
+            final statut = r['statut'] as String? ?? 'en_attente';
+            final couleur = _couleurStatut(statut);
+            final date = r['createdAt'] != null ? DateTime.tryParse(r['createdAt'] as String) : null;
+            final dateStr = date != null ? '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}' : '';
+            final pieceJointe = r['pieceJointe'] as String?;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: context.cardColor,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: statut == 'en_attente' ? AppColors.orange.withValues(alpha: 0.3) : context.borderColor),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.grade_rounded, size: 14, color: context.textMuted),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text('${r['matiere'] ?? ''} — ${r['noteActuelle'] ?? 'N/A'}/20',
+                            style: TextStyle(color: context.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: couleur.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(_labelStatut(statut),
+                            style: TextStyle(color: couleur, fontSize: 11, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(r['motif'] as String? ?? '',
+                      style: TextStyle(color: context.textSecondary, fontSize: 12, height: 1.4)),
+                  if (dateStr.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text('Soumise le $dateStr',
+                        style: TextStyle(color: context.textMuted, fontSize: 11)),
+                  ],
+                  if (pieceJointe != null && pieceJointe.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.cyan.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.picture_as_pdf_rounded, color: AppColors.cyan, size: 14),
+                          const SizedBox(width: 6),
+                          Text('Document justificatif',
+                              style: TextStyle(color: AppColors.cyan, fontSize: 11, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (r['reponse'] != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: couleur.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Réponse', style: TextStyle(color: couleur, fontSize: 11, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          Text(r['reponse'] as String, style: TextStyle(color: context.textSecondary, fontSize: 12, height: 1.4)),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (statut == 'en_attente') ...[
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => _TraiterRequeteModal(
+                            requeteId: r['id'] as String? ?? '',
+                            etudiantNom: etudiantNom,
+                            matiere: r['matiere'] as String? ?? '',
+                            motif: r['motif'] as String? ?? '',
+                            note: (r['noteActuelle'] as num?)?.toDouble() ?? 0,
+                            onTraite: (_) {},
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.orange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('Traiter cette requête',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
