@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
 import '../../core/widgets/ui_kit.dart';
@@ -197,6 +200,36 @@ class ClasseInfo {
   );
 
   String get label => '$filiere · $niveau · $formation';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// HELPER — ouvrir une pièce jointe base64
+// ══════════════════════════════════════════════════════════════════
+
+Future<void> _ouvrirPieceJointe(String? dataUri, BuildContext context) async {
+  if (dataUri == null || dataUri.isEmpty) return;
+  try {
+    // Extraire le base64 du data URI
+    final base64Str = dataUri.contains(',') ? dataUri.split(',').last : dataUri;
+    final bytes = base64Decode(base64Str);
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/piece_jointe_${DateTime.now().millisecondsSinceEpoch}.pdf');
+    await file.writeAsBytes(bytes);
+    final result = await OpenFilex.open(file.path);
+    if (result.type != ResultType.done && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Impossible d\'ouvrir le fichier: ${result.message}'),
+        backgroundColor: Colors.red,
+      ));
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur lors de l\'ouverture: $e'),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1378,13 +1411,16 @@ class _RequeteTileEtudiant extends StatelessWidget {
               color: context.textSecondary, fontSize: 12, height: 1.4)),
           if (r.pieceJointe != null && r.pieceJointe!.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.picture_as_pdf_rounded, color: AppColors.cyan, size: 14),
-                const SizedBox(width: 4),
-                Text('Document joint',
-                    style: TextStyle(color: AppColors.cyan, fontSize: 11, fontWeight: FontWeight.w600)),
-              ],
+            GestureDetector(
+              onTap: () => _ouvrirPieceJointe(r.pieceJointe, context),
+              child: Row(
+                children: [
+                  Icon(Icons.picture_as_pdf_rounded, color: AppColors.cyan, size: 14),
+                  const SizedBox(width: 4),
+                  Text('Document joint (appuyez pour ouvrir)',
+                      style: TextStyle(color: AppColors.cyan, fontSize: 11, fontWeight: FontWeight.w600)),
+                ],
+              ),
             ),
           ],
           if (r.reponse != null) ...[
@@ -2544,20 +2580,23 @@ class _RequetesEtudiantDetail extends StatelessWidget {
                   ],
                   if (pieceJointe != null && pieceJointe.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.cyan.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.picture_as_pdf_rounded, color: AppColors.cyan, size: 14),
-                          const SizedBox(width: 6),
-                          Text('Document justificatif',
-                              style: TextStyle(color: AppColors.cyan, fontSize: 11, fontWeight: FontWeight.w600)),
-                        ],
+                    GestureDetector(
+                      onTap: () => _ouvrirPieceJointe(pieceJointe, context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.cyan.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.picture_as_pdf_rounded, color: AppColors.cyan, size: 14),
+                            const SizedBox(width: 6),
+                            Text('Document justificatif (appuyez pour ouvrir)',
+                                style: TextStyle(color: AppColors.cyan, fontSize: 11, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
                     ),
                   ],
