@@ -927,11 +927,10 @@ class _NoteTile extends ConsumerWidget {
       decoration: BoxDecoration(
         color: context.cardColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: note.manquante
+        border: Border.all(            color: (note.manquante || note.valeur == null)
               ? AppColors.orange.withValues(alpha: 0.4)
               : context.borderColor,
-          width: note.manquante ? 1.5 : 1,
+          width: (note.manquante || note.valeur == null) ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -950,7 +949,7 @@ class _NoteTile extends ConsumerWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Center(
-              child: note.manquante
+              child: (note.manquante || note.valeur == null)
                   ? Text('__',
                   style: TextStyle(color: AppColors.orange,
                       fontSize: 18, fontWeight: FontWeight.w800))
