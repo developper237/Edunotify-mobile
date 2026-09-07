@@ -1,3 +1,4 @@
+import '../../core/locale.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -1074,6 +1075,7 @@ class _RequeteModal extends ConsumerStatefulWidget {
 }
 
 class _RequeteModalState extends ConsumerState<_RequeteModal> {
+  Strings get s => ref.watch(stringsProvider);
   final _motifCtrl = TextEditingController();
   bool    _loading = false;
   String? _erreur;
@@ -1547,6 +1549,7 @@ class _ImportNotesTab extends ConsumerStatefulWidget {
 }
 
 class _ImportNotesTabState extends ConsumerState<_ImportNotesTab> {
+  Strings get s => ref.watch(stringsProvider);
   String?       _filiereSelectionnee;
   ClasseInfo?   _classeSelectionnee;
   PlatformFile? _fichier;

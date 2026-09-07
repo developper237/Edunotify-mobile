@@ -182,6 +182,9 @@ class Strings {
   String get logoutConfirm    => isFr ? 'Déconnexion'             : 'Sign out';
   String get logoutMessage    => isFr ? 'Tu vas être déconnecté de ton compte.' : 'You will be signed out of your account.';
   String get cancel           => isFr ? 'Annuler'                 : 'Cancel';
+  String get close            => isFr ? 'Fermer'                  : 'Close';
+  String get delete           => isFr ? 'Supprimer'               : 'Delete';
+  String get confirm          => isFr ? 'Confirmer'               : 'Confirm';
   String get disconnect       => isFr ? 'Déconnecter'             : 'Sign out';
   String get appearance       => isFr ? 'Apparence'               : 'Appearance';
   String get darkTheme        => isFr ? 'Thème sombre'            : 'Dark theme';
