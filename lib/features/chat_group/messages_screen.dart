@@ -980,13 +980,14 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
         }
         _isLoading = false;
       });
-      // Le curseur ne suit que les messages réellement persistés (pas les
-      // messages en attente aux ids locaux).
+      // Le curseur ne suit que les messages réellement persistés côté
+      // serveur (jamais les messages en attente aux ids locaux).
       if (nouveaux.isNotEmpty) {
         _dernierMsgLe = nouveaux.last.createdAt;
-      } else if (params['apres'] == null && _messages.isNotEmpty) {
-        _dernierMsgLe = _messages.last.createdAt;
       }
+      // NE PAS définir _dernierMsgLe depuis _messages (qui contient des
+      // messages locaux pending avec DateTime.now()) — sinon le filtre
+      // incrémental apres= exclut les copies serveur.
       if (_scrollCtrl.hasClients) {
         await Future.delayed(const Duration(milliseconds: 100));
         _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);

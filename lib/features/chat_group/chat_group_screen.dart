@@ -883,9 +883,10 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       // (jamais les messages en attente, aux ids locaux).
       if (nouveaux.isNotEmpty) {
         _dernierMsgLe = nouveaux.last.createdAt;
-      } else if (params['apres'] == null && _messages.isNotEmpty) {
-        _dernierMsgLe = _messages.last.createdAt;
       }
+      // NE PAS définir _dernierMsgLe depuis _messages (qui contient des
+      // messages locaux pending avec DateTime.now()) — sinon le filtre
+      // incrémental apres= exclut les copies serveur.
 
       // Auto-scroll en bas
       if (_scrollCtrl.hasClients) {
