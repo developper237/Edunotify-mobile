@@ -874,6 +874,7 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
     final restant = <MessagePrive>[];
+    final envoyes = <String>[]; // clientIds des messages envoyés
     for (final m in _pending) {
       try {
         await ApiClient.postChat(
@@ -887,12 +888,23 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
           role: user.role,
           etablissementId: user.etablissementId,
         );
+        if (m.clientId != null) envoyes.add(m.clientId!);
       } catch (_) {
         restant.add(m); // toujours hors-ligne, on réessaiera
       }
     }
     if (restant.length != _pending.length || restant.isEmpty) {
-      if (mounted) setState(() => _pending = restant);
+      // Retirer les placeholders locaux de _messages pour éviter les doublons
+      // quand _chargerMessages va récupérer la copie serveur.
+      if (envoyes.isNotEmpty && mounted) {
+        setState(() {
+          _pending = restant;
+          _messages.removeWhere(
+              (m) => m.clientId != null && envoyes.contains(m.clientId));
+        });
+      } else if (mounted) {
+        setState(() => _pending = restant);
+      }
       _sauverFileAttente();
       _chargerMessages(silent: true);
     }
@@ -925,34 +937,46 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
           // Mode incrémental : fusionner en reconciliant les pending avec
           // les réponses serveur (même clientId = même message).
           if (nouveaux.isNotEmpty) {
-            final pendingByCid = {
-              for (final p in _pending)
-                if (p.clientId != null) p.clientId!: p,
-            };
-            final ids = _messages.map((m) => m.id).toSet();
+            final serverCids = nouveaux
+                .where((n) => n.clientId != null)
+                .map((n) => n.clientId!)
+                .toSet();
+            final serverIds = nouveaux.map((n) => n.id).toSet();
             final merge = <MessagePrive>[];
             for (final n in nouveaux) {
-              if (n.clientId != null && pendingByCid.containsKey(n.clientId)) {
-                final ancien = pendingByCid[n.clientId]!;
-                merge.add(n.copyWith(statut: MessageStatut.envoye));
-                _pending.removeWhere((p) => p.clientId == n.clientId);
-                ids.remove(ancien.id);
-              } else if (!ids.contains(n.id)) {
-                merge.add(n);
-              }
+              merge.add(n.copyWith(statut: MessageStatut.envoye));
             }
-            _messages = [
-              ..._messages.where((m) => !pendingByCid.containsValue(m)),
-              ...merge,
-            ];
+            // Retirer les placeholders locaux (local-*) qui ont un clientId
+            // correspondant à un message serveur, puis ajouter les serveurs.
+            _messages.removeWhere((m) =>
+                m.id.startsWith('local-') &&
+                m.clientId != null &&
+                serverCids.contains(m.clientId));
+            // Aussi retirer les messages serveur déjà présents pour éviter
+            // les doublons lors du rechargement incrémental.
+            _messages.removeWhere((m) => serverIds.contains(m.id));
+            _messages = [..._messages, ...merge];
           }
         } else {
           // Chargement initial : messages en attente puis historique serveur
+          final serverCids = nouveaux
+              .where((n) => n.clientId != null)
+              .map((n) => n.clientId!)
+              .toSet();
           final serverIds = nouveaux.map((m) => m.id).toSet();
+          // Retirer les placeholders locaux qui ont un match serveur
+          final pendingRestants = _pending.where((p) {
+            if (p.clientId != null && serverCids.contains(p.clientId)) {
+              return false; // serveur a reçu ce message
+            }
+            if (serverIds.contains(p.id)) return false;
+            return true;
+          }).toList();
           _messages = [
             ...nouveaux,
-            ..._pending.where((p) => !serverIds.contains(p.id)),
+            ...pendingRestants,
           ];
+          _pending = pendingRestants;
         }
         _isLoading = false;
       });

@@ -107,7 +107,8 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: _statutColor(statut).withValues(alpha: 0.12),
+                              color:
+                                  _statutColor(statut).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
@@ -174,15 +175,19 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
                                     )
                                   : statut == 'termine'
                                       ? IconButton(
-                                          onPressed: () => _afficherResultats(s['id'], s['titre'] ?? ''),
-                                          icon: const Icon(Icons.bar_chart_rounded,
+                                          onPressed: () => _afficherResultats(
+                                              s['id'], s['titre'] ?? ''),
+                                          icon: const Icon(
+                                              Icons.bar_chart_rounded,
                                               color: AppColors.cyan),
                                           tooltip: 'Résultats',
                                         )
                                       : null,
                           onTap: statut == 'termine'
-                              ? () => _afficherResultats(s['id'], s['titre'] ?? '')
-                              : () => _afficherCode(s['codeInvitation'], s['titre']),
+                              ? () =>
+                                  _afficherResultats(s['id'], s['titre'] ?? '')
+                              : () => _afficherCode(
+                                  s['codeInvitation'], s['titre']),
                         ),
                       );
                     },
@@ -334,21 +339,28 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
                         itemBuilder: (c, i) {
                           final p = participants[i];
                           final user = p['user'] as Map<String, dynamic>? ?? {};
-                          final nom = '${user['prenom'] ?? ''} ${user['nom'] ?? ''}'.trim();
+                          final nom =
+                              '${user['prenom'] ?? ''} ${user['nom'] ?? ''}'
+                                  .trim();
                           final email = user['email'] as String? ?? '';
                           final rawScore = p['score'];
-                          final score = rawScore is num ? rawScore.toDouble() : null;
+                          final score =
+                              rawScore is num ? rawScore.toDouble() : null;
                           final pStatut = p['statut'] as String? ?? '';
                           final rawAvis = p['avertissements'];
-                          final avertissements = rawAvis is num ? rawAvis.toInt() : 0;
-                          final nbReponses = (p['reponses'] as List?)?.length ?? 0;
+                          final avertissements =
+                              rawAvis is num ? rawAvis.toInt() : 0;
+                          final nbReponses =
+                              (p['reponses'] as List?)?.length ?? 0;
 
                           // Calculer la note sur 20
                           final totalPoints = participants.isNotEmpty && i == 0
-                              ? (p['reponses'] as List?)?.fold<int>(0, (sum, r) {
-                                  final pts = (r as Map)['pointsObtenus'];
-                                  return sum + (pts is num ? pts.toInt() : 0);
-                                }) ?? 0
+                              ? (p['reponses'] as List?)?.fold<int>(0,
+                                      (sum, r) {
+                                    final pts = (r as Map)['pointsObtenus'];
+                                    return sum + (pts is num ? pts.toInt() : 0);
+                                  }) ??
+                                  0
                               : 0;
 
                           return ListTile(
@@ -359,14 +371,19 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
                               child: Text(
                                 nom.isNotEmpty ? nom[0].toUpperCase() : '?',
                                 style: TextStyle(
-                                  color: pStatut == 'invalide' ? AppColors.red : AppColors.cyan,
+                                  color: pStatut == 'invalide'
+                                      ? AppColors.red
+                                      : AppColors.cyan,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
-                            title: Text(nom, style: const TextStyle(fontWeight: FontWeight.w600)),
+                            title: Text(nom,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600)),
                             subtitle: Text(email,
-                                style: TextStyle(color: context.textMuted, fontSize: 11)),
+                                style: TextStyle(
+                                    color: context.textMuted, fontSize: 11)),
                             trailing: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.end,
@@ -377,15 +394,20 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
                                     style: TextStyle(
                                       fontWeight: FontWeight.w800,
                                       fontSize: 14,
-                                      color: pStatut == 'invalide' ? AppColors.red : AppColors.cyan,
+                                      color: pStatut == 'invalide'
+                                          ? AppColors.red
+                                          : AppColors.cyan,
                                     ),
                                   ),
                                 if (pStatut == 'invalide')
                                   Text('Invalide',
-                                      style: TextStyle(color: AppColors.red, fontSize: 10)),
+                                      style: TextStyle(
+                                          color: AppColors.red, fontSize: 10)),
                                 if (avertissements > 0)
                                   Text('$avertissements avt.',
-                                      style: TextStyle(color: AppColors.orange, fontSize: 10)),
+                                      style: TextStyle(
+                                          color: AppColors.orange,
+                                          fontSize: 10)),
                               ],
                             ),
                           );
@@ -458,28 +480,40 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
 
   Color _statutColor(String statut) {
     switch (statut) {
-      case 'en_preparation': return AppColors.orange;
-      case 'en_cours': return AppColors.green;
-      case 'termine': return AppColors.cyan;
-      default: return context.textMuted;
+      case 'en_preparation':
+        return AppColors.orange;
+      case 'en_cours':
+        return AppColors.green;
+      case 'termine':
+        return AppColors.cyan;
+      default:
+        return context.textMuted;
     }
   }
 
   IconData _statutIcon(String statut) {
     switch (statut) {
-      case 'en_preparation': return Icons.edit_note_rounded;
-      case 'en_cours': return Icons.timer_rounded;
-      case 'termine': return Icons.check_circle_rounded;
-      default: return Icons.help_outline;
+      case 'en_preparation':
+        return Icons.edit_note_rounded;
+      case 'en_cours':
+        return Icons.timer_rounded;
+      case 'termine':
+        return Icons.check_circle_rounded;
+      default:
+        return Icons.help_outline;
     }
   }
 
   String _statutLabel(String statut) {
     switch (statut) {
-      case 'en_preparation': return 'Préparation';
-      case 'en_cours': return 'En cours';
-      case 'termine': return 'Terminé';
-      default: return statut;
+      case 'en_preparation':
+        return 'Préparation';
+      case 'en_cours':
+        return 'En cours';
+      case 'termine':
+        return 'Terminé';
+      default:
+        return statut;
     }
   }
 }
@@ -496,6 +530,7 @@ class _CreerExamenScreen extends ConsumerStatefulWidget {
 }
 
 class _CreerExamenScreenState extends ConsumerState<_CreerExamenScreen> {
+  Strings get s => ref.watch(stringsProvider);
   final _titreController = TextEditingController();
   final _matiereController = TextEditingController();
   final _descController = TextEditingController();
@@ -545,7 +580,8 @@ class _CreerExamenScreenState extends ConsumerState<_CreerExamenScreen> {
           q.enonceController.text.trim().isEmpty ||
           q.correctAnswer == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Question ${i + 1} : remplissez tous les champs')),
+          SnackBar(
+              content: Text('Question ${i + 1} : remplissez tous les champs')),
         );
         return;
       }
@@ -804,15 +840,13 @@ class _CreerExamenScreenState extends ConsumerState<_CreerExamenScreen> {
                   children: [
                     // Radio pour bonne réponse
                     GestureDetector(
-                      onTap: () =>
-                          setState(() => q.correctAnswer = letter),
+                      onTap: () => setState(() => q.correctAnswer = letter),
                       child: Container(
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
-                          color: isCorrect
-                              ? AppColors.green
-                              : context.borderColor,
+                          color:
+                              isCorrect ? AppColors.green : context.borderColor,
                           shape: BoxShape.circle,
                         ),
                         child: Center(
