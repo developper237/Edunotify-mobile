@@ -32,7 +32,6 @@ import '../leads/leads_admin_screen.dart';
 import '../library/library_screen.dart';
 import '../exam/exam_screen.dart';
 import '../exam/prof_exam_screen.dart';
-import '../chat_group/chat_group_screen.dart';
 import '../chat_group/messages_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════
@@ -193,7 +192,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.read(navIndexProvider.notifier).state = i;
 
     // 1. Refresh de la Présence / Appel
-    if (label == 'Présence' || label == 'Appel') {
+    if (label == s.presence || label == s.attendance) {
       ref.invalidate(sessionActiveProvider);
       if (user != null) {
         ref
@@ -203,8 +202,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _chargerBadges();
     }
 
-    // 2. NOUVEAU : Refresh des Notes
-    if (label == 'Notes') {
+    // 2. Refresh des Notes
+    if (label == s.notes) {
       if (user != null) {
         // Recharge les publications (résultats)
         ref.read(mesPublicationsProvider.notifier).charger(user.id, user.role);
@@ -224,69 +223,69 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     switch (role) {
       case 'etudiant':
         return [
-          _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
-          _NavItem(Icons.how_to_reg_rounded, 'Présence', const PresenceScreen(),
+          _NavItem(Icons.home_rounded, s.home, _DashboardTab(role: role)),
+          _NavItem(Icons.how_to_reg_rounded, s.presence, const PresenceScreen(),
               badge: hasSession ? 1 : 0, badgeColor: const Color(0xFF22C55E)),
-          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+          _NavItem(Icons.chat_rounded, s.messages, const MessagesScreen(),
               badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
-          _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
-          _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
+          _NavItem(Icons.grade_rounded, s.notes, const NotesScreen()),
+          _NavItem(Icons.person_rounded, s.profile, const ProfileScreen()),
         ];
       case 'delegue':
         return [
-          _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
-          _NavItem(Icons.play_circle_filled, 'Appel', const PresenceScreen(),
+          _NavItem(Icons.home_rounded, s.home, _DashboardTab(role: role)),
+          _NavItem(Icons.play_circle_filled, s.attendance, const PresenceScreen(),
               badge: hasSession ? 1 : 0, badgeColor: const Color(0xFF22C55E)),
-          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+          _NavItem(Icons.chat_rounded, s.messages, const MessagesScreen(),
               badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
-          _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
-          _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
+          _NavItem(Icons.grade_rounded, s.notes, const NotesScreen()),
+          _NavItem(Icons.person_rounded, s.profile, const ProfileScreen()),
         ];
       case 'chef_departement':
         return [
-          _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
-          _NavItem(Icons.description_rounded, 'Rapports',
+          _NavItem(Icons.home_rounded, s.home, _DashboardTab(role: role)),
+          _NavItem(Icons.description_rounded, s.reports,
               const RapportsChefScreen()),
-          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+          _NavItem(Icons.chat_rounded, s.messages, const MessagesScreen(),
               badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
-          _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
-          _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
+          _NavItem(Icons.grade_rounded, s.notes, const NotesScreen()),
+          _NavItem(Icons.person_rounded, s.profile, const ProfileScreen()),
         ];
       case 'professeur':
         return [
-          _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
-          _NavItem(Icons.grade_rounded, 'Notes', const NotesScreen()),
-          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+          _NavItem(Icons.home_rounded, s.home, _DashboardTab(role: role)),
+          _NavItem(Icons.grade_rounded, s.notes, const NotesScreen()),
+          _NavItem(Icons.chat_rounded, s.messages, const MessagesScreen(),
               badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
-          _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
+          _NavItem(Icons.person_rounded, s.profile, const ProfileScreen()),
         ];
       case 'admin':
         return [
-          _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
+          _NavItem(Icons.home_rounded, s.home, _DashboardTab(role: role)),
           _NavItem(
-              Icons.people_rounded, 'Utilisateurs', const UtilisateursScreen()),
-          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+              Icons.people_rounded, s.users, const UtilisateursScreen()),
+          _NavItem(Icons.chat_rounded, s.messages, const MessagesScreen(),
               badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
           _NavItem(
-              Icons.bar_chart_rounded, 'Rapports', const RapportsAdminScreen()),
-          _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
+              Icons.bar_chart_rounded, s.reports, const RapportsAdminScreen()),
+          _NavItem(Icons.person_rounded, s.profile, const ProfileScreen()),
         ];
       case 'super_admin':
         return [
-          _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
-          _NavItem(Icons.school_rounded, 'Établissements',
+          _NavItem(Icons.home_rounded, s.home, _DashboardTab(role: role)),
+          _NavItem(Icons.school_rounded, s.schools,
               const EtablissementsScreen()),
-          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+          _NavItem(Icons.chat_rounded, s.messages, const MessagesScreen(),
               badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
-          _NavItem(Icons.insights_rounded, 'Stats', const StatistiquesScreen()),
-          _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
+          _NavItem(Icons.insights_rounded, s.stats, const StatistiquesScreen()),
+          _NavItem(Icons.person_rounded, s.profile, const ProfileScreen()),
         ];
       default:
         return [
-          _NavItem(Icons.home_rounded, 'Accueil', _DashboardTab(role: role)),
-          _NavItem(Icons.chat_rounded, 'Messages', const MessagesScreen(),
+          _NavItem(Icons.home_rounded, s.home, _DashboardTab(role: role)),
+          _NavItem(Icons.chat_rounded, s.messages, const MessagesScreen(),
               badge: chatBadge, badgeColor: const Color(0xFF4F46E5)),
-          _NavItem(Icons.person_rounded, 'Profil', const ProfileScreen()),
+          _NavItem(Icons.person_rounded, s.profile, const ProfileScreen()),
         ];
     }
   }

@@ -80,7 +80,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
     final code = _codeController.text.trim();
     if (code.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Entrez le code d'invitation")),
+        SnackBar(content: Text(s.examCode)),
       );
       return;
     }
@@ -104,7 +104,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
       if (statut == 'termine' || statut == 'annule') {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cette session est terminée')),
+            SnackBar(content: Text(s.examEnded)),
           );
         }
         setState(() => _isLoading = false);
@@ -116,7 +116,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
       if (participant != null && participant['statut'] == 'termine') {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Vous avez déjà passé cet examen')),
+            SnackBar(content: Text(s.examSubmitted)),
           );
         }
         setState(() => _isLoading = false);
@@ -134,7 +134,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     } finally {
@@ -145,7 +145,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Salle d'examen")),
+      appBar: AppBar(title: Text(s.examRoom)),
       body: RefreshIndicator(
         onRefresh: _chargerResultats,
         child: ListView(
@@ -210,7 +210,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                                 child:
                                     CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('Rejoindre'),
+                            : Text(s.join),
                       ),
                     ),
                   ],
@@ -255,7 +255,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                       TextButton.icon(
                         onPressed: _chargerResultats,
                         icon: const Icon(Icons.refresh, size: 16),
-                        label: const Text('Réessayer'),
+                        label: Text(s.retry),
                       ),
                     ],
                   ),
@@ -667,7 +667,7 @@ class _ExamSessionScreenState extends ConsumerState<_ExamSessionScreen>
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
         Navigator.pop(context);
       }

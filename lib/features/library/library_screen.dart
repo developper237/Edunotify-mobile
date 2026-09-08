@@ -156,7 +156,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }
@@ -185,7 +185,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     if (file.size > 20 * 1024 * 1024) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Le fichier dépasse 20 Mo')),
+          SnackBar(content: Text(s.fileTooLarge)),
         );
       }
       return;
@@ -196,7 +196,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final categorie = await showDialog<String>(
       context: context,
       builder: (ctx) => SimpleDialog(
-        title: const Text('Catégorie du document'),
+        title: Text(s.categoryDocument),
         children: _categories.entries
             .where((e) => e.key != 'tous')
             .map((e) => SimpleDialogOption(
@@ -227,7 +227,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Document uploadé avec succès')),
+          SnackBar(content: Text(s.documentUploaded)),
         );
       }
       await _chargerDocuments();
@@ -235,7 +235,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur upload: $e')),
+          SnackBar(content: Text('${s.uploadError}: $e')),
         );
       }
     }
@@ -244,7 +244,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   void _telecharger(DocumentItem doc) async {
     final messenger = ScaffoldMessenger.of(context);
     messenger.showSnackBar(
-      const SnackBar(content: Text('Téléchargement en cours...')),
+      SnackBar(content: Text(s.downloading)),
     );
     try {
       final user = ref.read(currentUserProvider);
@@ -261,14 +261,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       await OpenFilex.open(fichier.path);
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Fichier enregistré : ${doc.nom}')),
+          SnackBar(content: Text('${s.fileSaved}: ${doc.nom}')),
         );
       }
       _chargerDocuments();
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }
@@ -280,7 +280,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bibliothèque'),
+        title: Text(s.library),
         actions: [
           IconButton(
             onPressed: _uploaderDocument,

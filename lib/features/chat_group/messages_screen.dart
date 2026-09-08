@@ -292,7 +292,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
       if (convId == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Impossible de démarrer la conversation')),
+            SnackBar(content: Text(s.noConversationStarted)),
           );
         }
         return;
@@ -311,7 +311,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }
@@ -361,7 +361,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer la conversation'),
+        title: Text(s.confirmDeleteConversation),
         content: Text(
             'Voulez-vous supprimer la conversation avec ${c.displayNom} ? Les messages seront perdus pour vous et pour l\'autre personne.'),
         actions: [
@@ -393,7 +393,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }
@@ -541,13 +541,13 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
           Icon(Icons.forum_outlined,
               size: 64, color: context.textMuted.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
-          Text('Sélectionnez une conversation',
+          Text(s.selectConversation,
               style: TextStyle(
                   color: context.textMuted,
                   fontSize: 15,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
-          Text('Choisissez une discussion dans la liste',
+          Text(s.chooseDiscussion,
               style:
                   TextStyle(color: context.textMuted, fontSize: 12)),
         ],
@@ -602,7 +602,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
     return Scaffold(
       backgroundColor: context.bgColor,
       appBar: AppBar(
-        title: const Text('Messages'),
+        title: Text(s.messages),
         actions: [
           IconButton(
             onPressed: _nouvelleConversation,
@@ -989,7 +989,7 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
     if (file.size > 20 * 1024 * 1024) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Le fichier dépasse 20 Mo')),
+          SnackBar(content: Text(s.fileTooLarge)),
         );
       }
       return;
@@ -1029,7 +1029,7 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur upload: $e')),
+          SnackBar(content: Text('${s.uploadError}: $e')),
         );
       }
     }
@@ -1068,7 +1068,7 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur envoi vocal : $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }
@@ -1079,8 +1079,8 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer le message'),
-        content: const Text('Voulez-vous supprimer ce message ?'),
+        title: Text(s.deleteMessage),
+        content: Text(s.confirmDeleteConversation),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -1106,7 +1106,7 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }

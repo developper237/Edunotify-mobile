@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/app_theme.dart';
@@ -12,11 +13,11 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user      = ref.watch(currentUserProvider);
-    final s         = ref.watch(stringsProvider);
+    final user = ref.watch(currentUserProvider);
+    final s = ref.watch(stringsProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final locale    = ref.watch(localeProvider);
-    final isDark    = themeMode == ThemeMode.dark;
+    final locale = ref.watch(localeProvider);
+    final isDark = themeMode == ThemeMode.dark;
 
     if (user == null) return const SizedBox();
 
@@ -43,7 +44,8 @@ class ProfileScreen extends ConsumerWidget {
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
                   child: Column(
                     children: [
                       GestureDetector(
@@ -51,23 +53,28 @@ class ProfileScreen extends ConsumerWidget {
                         child: Stack(
                           children: [
                             Container(
-                              width: 90, height: 90,
+                              width: 90,
+                              height: 90,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.white.withValues(alpha: 0.2),
-                                border: Border.all(color: Colors.white, width: 3),
+                                border:
+                                    Border.all(color: Colors.white, width: 3),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 20, offset: const Offset(0, 10),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
                                   )
                                 ],
                               ),
                               child: ClipOval(
-                                child: user.photoUrl != null && user.photoUrl!.isNotEmpty
+                                child: user.photoUrl != null &&
+                                        user.photoUrl!.isNotEmpty
                                     ? Image.network(
                                         user.photoUrl!,
-                                        width: 90, height: 90,
+                                        width: 90,
+                                        height: 90,
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) => Center(
                                           child: Text(
@@ -94,13 +101,16 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                             // Badge caméra (petit cercle en bas à droite)
                             Positioned(
-                              right: 0, bottom: 0,
+                              right: 0,
+                              bottom: 0,
                               child: Container(
-                                width: 28, height: 28,
+                                width: 28,
+                                height: 28,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: AppColors.cyan,
-                                  border: Border.all(color: Colors.white, width: 2),
+                                  border:
+                                      Border.all(color: Colors.white, width: 2),
                                 ),
                                 child: const Icon(
                                   Icons.camera_alt_rounded,
@@ -123,7 +133,8 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
@@ -149,7 +160,8 @@ class ProfileScreen extends ConsumerWidget {
               transform: Matrix4.translationValues(0, -24, 0),
               decoration: BoxDecoration(
                 color: bgColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(30)),
               ),
               padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
               child: Column(
@@ -157,13 +169,21 @@ class ProfileScreen extends ConsumerWidget {
                   _Section(
                     titre: s.information,
                     enfants: [
-                      _InfoTile(icon: Icons.email_outlined, label: s.emailLabel, value: user.email),
-                      _InfoTile(icon: Icons.badge_outlined, label: s.idLabel, value: user.id),
+                      _InfoTile(
+                          icon: Icons.email_outlined,
+                          label: s.emailLabel,
+                          value: user.email),
+                      _InfoTile(
+                          icon: Icons.badge_outlined,
+                          label: s.idLabel,
+                          value: user.id),
                       _InfoTile(
                         icon: Icons.circle,
                         label: s.statusLabel,
                         value: user.statut == 'actif' ? s.active : s.inactive,
-                        valueColor: user.statut == 'actif' ? AppColors.green : AppColors.red,
+                        valueColor: user.statut == 'actif'
+                            ? AppColors.green
+                            : AppColors.red,
                         trailing: user.statut == 'actif'
                             ? const PulseDot(color: AppColors.green)
                             : const PulseDot(color: AppColors.red),
@@ -177,6 +197,25 @@ class ProfileScreen extends ConsumerWidget {
                     _Section(
                       titre: 'Établissement',
                       enfants: [
+                        if (user.etablissementId != null &&
+                            user.etablissementId!.isNotEmpty)
+                          _InfoTile(
+                            icon: Icons.location_city_outlined,
+                            label: s.schoolId,
+                            value: user.etablissementId!,
+                            trailing: IconButton(
+                              icon: const Icon(Icons.copy_rounded, size: 18),
+                              onPressed: () {
+                                Clipboard.setData(
+                                    ClipboardData(text: user.etablissementId!));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(s.copied),
+                                      backgroundColor: AppColors.green),
+                                );
+                              },
+                            ),
+                          ),
                         _ActionTile(
                           icon: Icons.image_outlined,
                           label: 'Charger le logo de l\'établissement',
@@ -210,8 +249,14 @@ class ProfileScreen extends ConsumerWidget {
                   _Section(
                     titre: s.settings,
                     enfants: [
-                      _ActionTile(icon: Icons.lock_outline, label: s.changePassword, onTap: () => _showChangePwd(context, ref, s)),
-                      _ActionTile(icon: Icons.notifications_outlined, label: s.notifPrefs, onTap: () {}),
+                      _ActionTile(
+                          icon: Icons.lock_outline,
+                          label: s.changePassword,
+                          onTap: () => _showChangePwd(context, ref, s)),
+                      _ActionTile(
+                          icon: Icons.notifications_outlined,
+                          label: s.notifPrefs,
+                          onTap: () {}),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -219,10 +264,14 @@ class ProfileScreen extends ConsumerWidget {
                     titre: s.appearance,
                     enfants: [
                       _ToggleTile(
-                        icon: isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                        icon: isDark
+                            ? Icons.dark_mode_outlined
+                            : Icons.light_mode_outlined,
                         label: isDark ? s.darkTheme : s.lightTheme,
                         value: isDark,
-                        onChanged: (v) => ref.read(themeModeProvider.notifier).state = v ? ThemeMode.dark : ThemeMode.light,
+                        onChanged: (v) => ref
+                            .read(themeModeProvider.notifier)
+                            .state = v ? ThemeMode.dark : ThemeMode.light,
                       ),
                       _ToggleTile(
                         icon: Icons.language_outlined,
@@ -230,7 +279,9 @@ class ProfileScreen extends ConsumerWidget {
                         value: locale == AppLocale.fr,
                         activeLabel: 'FR',
                         inactiveLabel: 'EN',
-                        onChanged: (v) => ref.read(localeProvider.notifier).state = v ? AppLocale.fr : AppLocale.en,
+                        onChanged: (v) => ref
+                            .read(localeProvider.notifier)
+                            .state = v ? AppLocale.fr : AppLocale.en,
                       ),
                     ],
                   ),
@@ -251,7 +302,10 @@ class ProfileScreen extends ConsumerWidget {
                   Text(
                     'SmartCampus v2.0',
                     style: TextStyle(
-                      color: (isDark ? AppColors.textMuted : AppColors.lightTextMuted).withValues(alpha: 0.5),
+                      color: (isDark
+                              ? AppColors.textMuted
+                              : AppColors.lightTextMuted)
+                          .withValues(alpha: 0.5),
                       fontSize: 11,
                     ),
                   ),
@@ -266,7 +320,8 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   // ── Sélection + upload de la photo de profil ────────────────────
-  Future<void> _choisirEtUploaderPhoto(BuildContext context, WidgetRef ref) async {
+  Future<void> _choisirEtUploaderPhoto(
+      BuildContext context, WidgetRef ref) async {
     final picker = ImagePicker();
     final XFile? fichier = await picker.pickImage(
       source: ImageSource.gallery,
@@ -286,9 +341,9 @@ class ProfileScreen extends ConsumerWidget {
 
     try {
       await ref.read(authProvider.notifier).uploaderPhotoProfil(
-        fileBytes: bytes,
-        filename:  fichier.name,
-      );
+            fileBytes: bytes,
+            filename: fichier.name,
+          );
       if (!context.mounted) return;
       Navigator.pop(context); // ferme le loader
       ScaffoldMessenger.of(context).showSnackBar(
@@ -304,7 +359,8 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   // ── Sélection + upload du logo établissement ────────────────────
-  Future<void> _choisirEtUploaderLogo(BuildContext context, WidgetRef ref) async {
+  Future<void> _choisirEtUploaderLogo(
+      BuildContext context, WidgetRef ref) async {
     final picker = ImagePicker();
     final XFile? fichier = await picker.pickImage(
       source: ImageSource.gallery,
@@ -324,9 +380,9 @@ class ProfileScreen extends ConsumerWidget {
 
     try {
       await ref.read(authProvider.notifier).uploaderLogoEtablissement(
-        fileBytes: bytes,
-        filename:  fichier.name,
-      );
+            fileBytes: bytes,
+            filename: fichier.name,
+          );
       if (!context.mounted) return;
       Navigator.pop(context); // ferme le loader
       ScaffoldMessenger.of(context).showSnackBar(
@@ -348,7 +404,11 @@ class ProfileScreen extends ConsumerWidget {
       builder: (_) => AlertDialog(
         backgroundColor: isDark ? AppColors.darkCard : AppColors.lightCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(s.logoutConfirm, style: TextStyle(color: isDark ? AppColors.textPrimary : AppColors.lightTextPrimary)),
+        title: Text(s.logoutConfirm,
+            style: TextStyle(
+                color: isDark
+                    ? AppColors.textPrimary
+                    : AppColors.lightTextPrimary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -367,10 +427,10 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   void _showChangePwd(BuildContext context, WidgetRef ref, Strings s) {
-    final ancien  = TextEditingController();
+    final ancien = TextEditingController();
     final nouveau = TextEditingController();
     final confirm = TextEditingController();
-    final isDark  = ref.read(themeModeProvider) == ThemeMode.dark;
+    final isDark = ref.read(themeModeProvider) == ThemeMode.dark;
 
     showDialog(
       context: context,
@@ -405,20 +465,23 @@ class ProfileScreen extends ConsumerWidget {
 
                     if (nouveau.text != confirm.text) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Les mots de passe ne correspondent pas")),
+                        const SnackBar(
+                            content:
+                                Text("Les mots de passe ne correspondent pas")),
                       );
                       return;
                     }
 
                     try {
                       await ref.read(authProvider.notifier).updatePassword(
-                        oldPassword: ancien.text,
-                        newPassword: nouveau.text,
-                      );
+                            oldPassword: ancien.text,
+                            newPassword: nouveau.text,
+                          );
                       if (!context.mounted) return;
                       Navigator.pop(context); // Fermer le popup
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Mot de passe mis à jour !")),
+                        const SnackBar(
+                            content: Text("Mot de passe mis à jour !")),
                       );
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -427,20 +490,27 @@ class ProfileScreen extends ConsumerWidget {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.forRole(ref.read(currentUserProvider)!.role),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    backgroundColor:
+                        AppColors.forRole(ref.read(currentUserProvider)!.role),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
                   ),
                   child: Text(
                     s.save,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text(s.cancel, style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.lightTextMuted)),
+                child: Text(s.cancel,
+                    style: TextStyle(
+                        color: isDark
+                            ? AppColors.textMuted
+                            : AppColors.lightTextMuted)),
               ),
             ],
           ),
@@ -463,13 +533,20 @@ class _Section extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(titre, style: TextStyle(color: isDark ? AppColors.textPrimary : AppColors.lightTextPrimary, fontSize: 15, fontWeight: FontWeight.w800)),
+          child: Text(titre,
+              style: TextStyle(
+                  color: isDark
+                      ? AppColors.textPrimary
+                      : AppColors.lightTextPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800)),
         ),
         Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.darkCard : AppColors.lightCard,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+            border: Border.all(
+                color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
           ),
           child: Column(children: enfants),
         ),
@@ -483,7 +560,12 @@ class _InfoTile extends StatelessWidget {
   final String label, value;
   final Color? valueColor;
   final Widget? trailing;
-  const _InfoTile({required this.icon, required this.label, required this.value, this.valueColor, this.trailing});
+  const _InfoTile(
+      {required this.icon,
+      required this.label,
+      required this.value,
+      this.valueColor,
+      this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -494,16 +576,33 @@ class _InfoTile extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: (isDark ? AppColors.textMuted : AppColors.lightTextMuted).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, color: isDark ? AppColors.textMuted : AppColors.lightTextMuted, size: 18),
+            decoration: BoxDecoration(
+                color: (isDark ? AppColors.textMuted : AppColors.lightTextMuted)
+                    .withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon,
+                color: isDark ? AppColors.textMuted : AppColors.lightTextMuted,
+                size: 18),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: TextStyle(color: isDark ? AppColors.textMuted : AppColors.lightTextMuted, fontSize: 11)),
-                Text(value, style: TextStyle(color: valueColor ?? (isDark ? AppColors.textPrimary : AppColors.lightTextPrimary), fontSize: 14, fontWeight: FontWeight.w600)),
+                Text(label,
+                    style: TextStyle(
+                        color: isDark
+                            ? AppColors.textMuted
+                            : AppColors.lightTextMuted,
+                        fontSize: 11)),
+                Text(value,
+                    style: TextStyle(
+                        color: valueColor ??
+                            (isDark
+                                ? AppColors.textPrimary
+                                : AppColors.lightTextPrimary),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -519,7 +618,12 @@ class _ActionTile extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final Color? labelColor, iconColor;
-  const _ActionTile({required this.icon, required this.label, required this.onTap, this.labelColor, this.iconColor});
+  const _ActionTile(
+      {required this.icon,
+      required this.label,
+      required this.onTap,
+      this.labelColor,
+      this.iconColor});
 
   @override
   Widget build(BuildContext context) {
@@ -531,10 +635,25 @@ class _ActionTile extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(icon, color: iconColor ?? (isDark ? AppColors.textPrimary : AppColors.lightTextPrimary), size: 20),
+            Icon(icon,
+                color: iconColor ??
+                    (isDark
+                        ? AppColors.textPrimary
+                        : AppColors.lightTextPrimary),
+                size: 20),
             const SizedBox(width: 16),
-            Expanded(child: Text(label, style: TextStyle(color: labelColor ?? (isDark ? AppColors.textPrimary : AppColors.lightTextPrimary), fontSize: 15, fontWeight: FontWeight.w500))),
-            Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.textMuted : AppColors.lightTextMuted, size: 20),
+            Expanded(
+                child: Text(label,
+                    style: TextStyle(
+                        color: labelColor ??
+                            (isDark
+                                ? AppColors.textPrimary
+                                : AppColors.lightTextPrimary),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500))),
+            Icon(Icons.chevron_right_rounded,
+                color: isDark ? AppColors.textMuted : AppColors.lightTextMuted,
+                size: 20),
           ],
         ),
       ),
@@ -548,7 +667,13 @@ class _ToggleTile extends StatelessWidget {
   final bool value;
   final String? activeLabel, inactiveLabel;
   final void Function(bool) onChanged;
-  const _ToggleTile({required this.icon, required this.label, required this.value, required this.onChanged, this.activeLabel, this.inactiveLabel});
+  const _ToggleTile(
+      {required this.icon,
+      required this.label,
+      required this.value,
+      required this.onChanged,
+      this.activeLabel,
+      this.inactiveLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -557,12 +682,27 @@ class _ToggleTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          Icon(icon, color: isDark ? AppColors.textPrimary : AppColors.lightTextPrimary, size: 20),
+          Icon(icon,
+              color:
+                  isDark ? AppColors.textPrimary : AppColors.lightTextPrimary,
+              size: 20),
           const SizedBox(width: 16),
-          Expanded(child: Text(label, style: TextStyle(color: isDark ? AppColors.textPrimary : AppColors.lightTextPrimary, fontSize: 15, fontWeight: FontWeight.w500))),
+          Expanded(
+              child: Text(label,
+                  style: TextStyle(
+                      color: isDark
+                          ? AppColors.textPrimary
+                          : AppColors.lightTextPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500))),
           if (activeLabel != null)
-            Text(value ? activeLabel! : inactiveLabel!, style: const TextStyle(color: AppColors.cyan, fontSize: 12, fontWeight: FontWeight.bold)),
-          Switch.adaptive(value: value, onChanged: onChanged, activeColor: AppColors.cyan),
+            Text(value ? activeLabel! : inactiveLabel!,
+                style: const TextStyle(
+                    color: AppColors.cyan,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
+          Switch.adaptive(
+              value: value, onChanged: onChanged, activeColor: AppColors.cyan),
         ],
       ),
     );
@@ -587,14 +727,20 @@ class _PwdFieldState extends State<_PwdField> {
     return TextField(
       controller: widget.controller,
       obscureText: !_show,
-      style: TextStyle(color: isDark ? AppColors.textPrimary : AppColors.lightTextPrimary),
+      style: TextStyle(
+          color: isDark ? AppColors.textPrimary : AppColors.lightTextPrimary),
       decoration: InputDecoration(
         hintText: widget.hint,
         filled: true,
         fillColor: fieldBg,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
         suffixIcon: IconButton(
-          icon: Icon(_show ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: AppColors.textMuted, size: 18),
+          icon: Icon(
+              _show ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              color: AppColors.textMuted,
+              size: 18),
           onPressed: () => setState(() => _show = !_show),
         ),
       ),

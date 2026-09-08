@@ -539,7 +539,7 @@ class _EtudiantSessionActiveState
         final expired = widget.session.isExpired;
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Confirmer ma présence')),
+          appBar: AppBar(title: Text(s.confirmAttendance)),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -764,7 +764,7 @@ class _EtudiantSessionActiveState
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
-                    label: const Text('Scanner le QR du délégué'),
+                    label: Text(s.scanQR),
                   ),
                 ),
 
@@ -790,7 +790,7 @@ class _EtudiantSessionActiveState
                         width: 20, height: 20,
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white))
-                        : const Text('Confirmer ma présence'),
+                        : Text(s.confirmAttendance),
                   ),
                 ),
 
@@ -919,7 +919,7 @@ class _BandeauScanOffline extends ConsumerWidget {
                 ),
                 onPressed: () => scannerQrOffline(context, ref),
                 icon: const Icon(Icons.qr_code_scanner, size: 17),
-                label: const Text('Scanner',
+                label: Text(s.scanQRShort,
                     style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
               ),
             ],
@@ -958,11 +958,11 @@ class _EtudiantHistoriqueState extends ConsumerState<_EtudiantHistorique> {
     final historique = ref.watch(historiqueEtudiantProvider);
     return historique.when(
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Présence')),
+        appBar: AppBar(title: Text(s.presence)),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => Scaffold(
-        appBar: AppBar(title: const Text('Présence')),
+        appBar: AppBar(title: Text(s.presence)),
         body: Column(
           children: [
             const _BandeauScanOffline(),
@@ -1285,7 +1285,7 @@ class _SuccessView extends StatelessWidget {
     final m   = now.minute.toString().padLeft(2, '0');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Présence')),
+      appBar: AppBar(title: Text(s.presence)),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),

@@ -1,4 +1,3 @@
-import '../../core/locale.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -473,9 +472,9 @@ class _NotesEtudiantState extends ConsumerState<_NotesEtudiant>
       ),
       body: TabBarView(
         controller: _tabs,
-        children: const [
-          _PublicationsEtudiantTab(),
-          _RequetesEtudiantTab(),
+        children: [
+          const _PublicationsEtudiantTab(),
+          const _RequetesEtudiantTab(),
         ],
       ),
     );

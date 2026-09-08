@@ -55,7 +55,7 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes Examens'),
+        title: Text(s.myExams),
         actions: [
           IconButton(
             onPressed: () => Navigator.push(
@@ -226,7 +226,7 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
             onPressed: () {
               Clipboard.setData(ClipboardData(text: code));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Code copié !')),
+                SnackBar(content: Text(s.codeCopied)),
               );
               Navigator.pop(ctx);
             },
@@ -400,7 +400,7 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
       if (mounted) {
         Navigator.pop(context); // dismiss loading
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }
@@ -419,13 +419,13 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
       _chargerSessions();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Examen lancé !')),
+          SnackBar(content: Text(s.examStarted)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }
@@ -450,7 +450,7 @@ class _ProfExamScreenState extends ConsumerState<ProfExamScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }
@@ -601,7 +601,7 @@ class _CreerExamenScreenState extends ConsumerState<_CreerExamenScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     } finally {

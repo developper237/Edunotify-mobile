@@ -297,7 +297,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }
@@ -309,7 +309,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Groupe créé ! 🎉'),
+        title: Text(s.groupCreated),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -343,7 +343,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: code));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Code copié !')),
+                        SnackBar(content: Text(s.codeCopied)),
                       );
                     },
                     icon: const Icon(Icons.copy_rounded, color: AppColors.cyan),
@@ -376,7 +376,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
     final code = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Rejoindre avec un code'),
+        title: Text(s.joinWithCode),
         content: TextField(
           controller: codeController,
           decoration: const InputDecoration(
@@ -411,7 +411,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vous avez rejoint le groupe !')),
+        SnackBar(content: Text(s.joinedGroup)),
       );
       _chargerGroupes();
     } on ApiException catch (e) {
@@ -423,7 +423,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }
@@ -441,7 +441,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer le groupe'),
+        title: Text(s.deleteGroup),
         content: Text(
             'Voulez-vous vraiment supprimer « ${g.nom} » ? Tous les messages seront perdus.'),
         actions: [
@@ -466,14 +466,14 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Groupe supprimé')),
+          SnackBar(content: Text(s.groupDeleted)),
         );
       }
       await _chargerGroupes();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }
@@ -980,7 +980,7 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }
@@ -1018,7 +1018,7 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }
@@ -1031,7 +1031,7 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer le groupe'),
+        title: Text(s.deleteGroup),
         content: Text(
             'Voulez-vous vraiment supprimer « ${widget.nom} » ? Tous les messages seront perdus.'),
         actions: [
@@ -1058,13 +1058,13 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       if (mounted && !widget.embarque) Navigator.pop(context);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Groupe supprimé')),
+          SnackBar(content: Text(s.groupDeleted)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
+          SnackBar(content: Text('${s.error}: $e')),
         );
       }
     }

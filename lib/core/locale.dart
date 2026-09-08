@@ -312,7 +312,119 @@ class Strings {
   String get questionOf       => isFr ? 'Question'            : 'Question';
   String get ofTotal          => isFr ? 'sur'                 : 'of';
   String get minRemaining     => isFr ? 'min restantes'       : 'min remaining';
+
+  // ── Chat / Groupes ──
+  String get groupCreated     => isFr ? 'Groupe créé ! 🎉'    : 'Group created! 🎉';
+  String get joinWithCode     => isFr ? 'Rejoindre avec un code' : 'Join with a code';
+  String get joinedGroup      => isFr ? 'Vous avez rejoint le groupe !' : 'You joined the group!';
+  String get deleteGroup      => isFr ? 'Supprimer le groupe' : 'Delete group';
+  String get groupDeleted     => isFr ? 'Groupe supprimé'     : 'Group deleted';
+  String get confirmDeleteGroup => isFr ? 'Voulez-vous vraiment supprimer ce groupe ?' : 'Do you really want to delete this group?';
+  String get descriptionHint  => isFr ? 'Décrivez le problème...' : 'Describe the problem...';
+  String get startConversation => isFr ? 'Démarrer une conversation' : 'Start a conversation';
+  String get selectConversation => isFr ? 'Sélectionnez une conversation' : 'Select a conversation';
+  String get chooseDiscussion => isFr ? 'Choisissez une discussion dans la liste' : 'Choose a discussion from the list';
+  String get fileTooLarge     => isFr ? 'Le fichier dépasse 20 Mo' : 'File exceeds 20 MB';
+  String get confirmDeleteConversation => isFr ? 'Supprimer cette conversation ?' : 'Delete this conversation?';
+  String get conversationDeleted => isFr ? 'Conversation supprimée' : 'Conversation deleted';
+  String get noConversationStarted => isFr ? 'Impossible de démarrer la conversation' : 'Unable to start conversation';
+  String get shareCode        => isFr ? 'Partagez ce code avec vos étudiants :' : 'Share this code with your students:';
+  String get participants     => isFr ? 'participant(s)'      : 'participant(s)';
+  String get noParticipants   => isFr ? 'Aucun participant'   : 'No participants';
+  String get groupInfo        => isFr ? 'Informations du groupe' : 'Group info';
+  String get leaveGroup       => isFr ? 'Quitter le groupe'   : 'Leave group';
+  String get groupPhoto       => isFr ? 'Photo du groupe'     : 'Group photo';
+
+  // ── Examens (prof) ──
+  String get myExams          => isFr ? 'Mes Examens'         : 'My Exams';
+  String get noExams          => isFr ? 'Aucun examen'        : 'No exams';
+  String get createFirstExam  => isFr ? 'Créez votre premier examen' : 'Create your first exam';
+  String get examStarted      => isFr ? 'Examen lancé !'      : 'Exam started!';
+  String get examStudents     => isFr ? 'Étudiants ayant composé' : 'Students who took the exam';
+  String get warnings         => isFr ? 'avt.'                : 'warn.';
+
+  // ── Bibliothèque ──
+  String get library          => isFr ? 'Bibliothèque'       : 'Library';
+  String get categoryDocument => isFr ? 'Catégorie du document' : 'Document category';
+  String get documentUploaded => isFr ? 'Document uploadé avec succès' : 'Document uploaded successfully';
+  String get uploadError      => isFr ? 'Erreur upload'       : 'Upload error';
+  String get downloading      => isFr ? 'Téléchargement en cours...' : 'Downloading...';
+  String get fileSaved        => isFr ? 'Fichier enregistré'  : 'File saved';
+  String get uploadDocument   => isFr ? 'Uploader un document': 'Upload a document';
+  String get documentCategory => isFr ? 'Catégorie'           : 'Category';
+
+  // ── Présence (compléments) ──
+  String get scanQR           => isFr ? 'Scanner le QR du délégué' : 'Scan the rep\'s QR code';
+  String get scanQRShort      => isFr ? 'Scanner'             : 'Scan';
+  String get youPresent       => isFr ? 'Vous êtes présent ?' : 'Are you present?';
+  String get noSessionActive  => isFr ? 'Aucune session en cours' : 'No active session';
+  String get presenceHistory  => isFr ? 'Historique'          : 'History';
+  String get sessionsCount    => isFr ? 'séances'             : 'sessions';
+  String get presenceSynced   => isFr ? 'synchronisée(s) ✅' : 'synced ✅';
+  String get loadError        => isFr ? 'Impossible de charger' : 'Failed to load';
+
+  // ── Admin / Super Admin ──
+  String get departments      => isFr ? 'Départements'        : 'Departments';
+  String get subscription     => isFr ? 'Abonnement'          : 'Subscription';
+  String get requests         => isFr ? 'Demandes'            : 'Requests';
+  String get demandes         => isFr ? 'Demandes'            : 'Requests';
+  String get superAdmin       => isFr ? 'Super Admin'         : 'Super Admin';
+
+  // ── Profil (compléments) ──
+  String get uploadPhoto      => isFr ? 'Mettre à jour la photo' : 'Update photo';
+  String get photoUpdated     => isFr ? 'Photo de profil mise à jour !' : 'Profile photo updated!';
+  String get logoUpdated      => isFr ? 'Logo de l\'établissement mis à jour !' : 'School logo updated!';
+  String get passwordsMismatch => isFr ? 'Les mots de passe ne correspondent pas' : 'Passwords do not match';
+  String get passwordUpdated  => isFr ? 'Mot de passe mis à jour !' : 'Password updated!';
+  String get french           => isFr ? 'Français'            : 'French';
+  String get english          => isFr ? 'Anglais'             : 'English';
+
+  // ── Général ──
+  String get retry            => isFr ? 'Réessayer'           : 'Retry';
+  String get error            => isFr ? 'Erreur'              : 'Error';
+  String get errorColon       => isFr ? 'Erreur: '            : 'Error: ';
+  String get loading          => isFr ? 'Chargement...'       : 'Loading...';
+  String get success          => isFr ? 'Succès'              : 'Success';
+  String get copied           => isFr ? 'Copié !'             : 'Copied!';
+  String get ok                => isFr ? 'OK'                  : 'OK';
+  String get yes              => isFr ? 'Oui'                 : 'Yes';
+  String get no               => isFr ? 'Non'                 : 'No';
+  String get share            => isFr ? 'Partager'            : 'Share';
+  String get copy             => isFr ? 'Copier'              : 'Copy';
+  String get open             => isFr ? 'Ouvrir'              : 'Open';
+  String get download         => isFr ? 'Télécharger'         : 'Download';
+  String get unknown          => isFr ? 'Inconnu'             : 'Unknown';
+  String get viewAll          => isFr ? 'Voir tout'           : 'View all';
+  String get schoolId         => isFr ? 'ID Établissement'    : 'School ID';
+  String get yourId           => isFr ? 'Ton identifiant'     : 'Your ID';
+  String get pending          => isFr ? 'En attente'          : 'Pending';
+  String get processed        => isFr ? 'Traitée'             : 'Processed';
+  String get rejected         => isFr ? 'Rejetée'             : 'Rejected';
+  String get publishedOnLabel => isFr ? 'Publié le'           : 'Published on';
+  String get materialsCount   => isFr ? 'matière(s)'          : 'subject(s)';
+  String get publicationsCount => isFr ? 'publication(s)'     : 'publication(s)';
+  String get myAverage        => isFr ? 'Votre moyenne'       : 'Your average';
+  String get generalAverageLabel => isFr ? 'Moyenne générale' : 'General average';
+  String get seeDetail        => isFr ? 'Voir le détail'      : 'View details';
+  String get coeff            => isFr ? 'Coeff.'              : 'Coeff.';
+  String get questionN        => isFr ? 'Question'            : 'Question';
+  String get join             => isFr ? 'Rejoindre'           : 'Join';
+  String get assistant        => isFr ? 'Assistant'           : 'Assistant';
+  String get channel          => isFr ? 'Canal'               : 'Channel';
+  String get learnMore        => isFr ? 'En savoir plus'      : 'Learn more';
+  String get inscription      => isFr ? 'Inscription'         : 'Registration';
+  String get tuition          => isFr ? 'Frais de scolarité'  : 'Tuition fees';
+  String get teacherLabel     => isFr ? 'Professeur'          : 'Teacher';
+  String get roomLabel        => isFr ? 'Salle'               : 'Room';
+  String get dateTimeLabel    => isFr ? 'Date & heure'        : 'Date & time';
+  String get infoLabel        => isFr ? 'Infos'               : 'Info';
+  String get correction       => isFr ? 'Correction'          : 'Correction';
+  String get choices          => isFr ? 'Choix'               : 'Choices';
+  String get correctLabel     => isFr ? '✓ Correct'           : '✓ Correct';
+  String get incorrectLabel   => isFr ? '✗ Incorrect'         : '✗ Incorrect';
+  String get notAnswered      => isFr ? 'Pas répondu'         : 'Not answered';
 }
+
 
 
 // Provider global
