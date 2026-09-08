@@ -118,6 +118,7 @@ class MessageChat {
   final DateTime createdAt;
   final bool estMien;
   final List<String> luPar;
+  final String? clientId;
   // Statut local (hors-ligne) — utilisé uniquement pour nos propres messages
   final MessageStatut statut;
 
@@ -131,6 +132,7 @@ class MessageChat {
     required this.createdAt,
     this.estMien = false,
     this.luPar = const [],
+    this.clientId,
     this.statut = MessageStatut.envoye,
   });
 
@@ -151,6 +153,7 @@ class MessageChat {
           : DateTime.now(),
       estMien: j['userId'] == currentUserId,
       luPar: (j['luPar'] as List? ?? []).map((e) => e.toString()).toList(),
+      clientId: j['clientId'] as String?,
     );
   }
 
@@ -172,6 +175,7 @@ class MessageChat {
         createdAt: createdAt,
         estMien: estMien,
         luPar: luPar ?? this.luPar,
+        clientId: clientId,
         statut: statut ?? this.statut,
       );
 
@@ -734,6 +738,7 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
               createdAt: DateTime.tryParse(m['createdAt'] ?? '') ??
                   DateTime.now(),
               estMien: true,
+              clientId: m['clientId'] as String?,
               statut: MessageStatut.enAttente,
             )).toList();
       });
@@ -751,6 +756,7 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
                     'texte': m.texte,
                     'pieceJointe': m.pieceJointe?.toJson(),
                     'createdAt': m.createdAt.toIso8601String(),
+                    'clientId': m.clientId,
                   })
               .toList()));
     } catch (_) {}
@@ -766,7 +772,11 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       try {
         await ApiClient.postChat(
           '/chat/groups/${widget.groupeId}/messages',
-          data: {'texte': m.texte, 'pieceJointe': m.pieceJointe?.toJson()},
+          data: {
+            'texte': m.texte,
+            'pieceJointe': m.pieceJointe?.toJson(),
+            if (m.clientId != null) 'clientId': m.clientId,
+          },
           userId: user.id,
           role: user.role,
           etablissementId: user.etablissementId,
@@ -810,18 +820,41 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
 
       setState(() {
         if (params['apres'] != null) {
-          // Mode incrémental : fusionner sans créer de doublon (par id)
+          // Mode incrémental : fusionner en reconciliant les pending avec
+          // les réponses serveur (même clientId = même message).
           if (nouveaux.isNotEmpty) {
+            // Index des pending par clientId pour retrouver le doublon
+            final pendingByCid = {
+              for (final p in _pending)
+                if (p.clientId != null) p.clientId!: p,
+            };
             final ids = _messages.map((m) => m.id).toSet();
+            final merge = <MessageChat>[];
+            for (final n in nouveaux) {
+              // Si un pending a le même clientId, le remplacer par la version serveur
+              if (n.clientId != null && pendingByCid.containsKey(n.clientId)) {
+                final ancien = pendingByCid[n.clientId]!;
+                merge.add(n.copyWith(statut: MessageStatut.envoye));
+                // Retirer l'ancien pending
+                _pending.removeWhere((p) => p.clientId == n.clientId);
+                ids.remove(ancien.id); // supprimer l'ancien id local
+              } else if (!ids.contains(n.id)) {
+                merge.add(n);
+              }
+            }
             _messages = [
-              ..._messages,
-              ...nouveaux.where((m) => !ids.contains(m.id)),
+              ..._messages.where((m) => !pendingByCid.containsValue(m)),
+              ...merge,
             ];
           }
         } else {
           // Chargement initial : les messages hors-ligne (en attente) restent
           // affichés en haut, puis l'historique serveur.
-          _messages = [...nouveaux, ..._pending];
+          final serverIds = nouveaux.map((m) => m.id).toSet();
+          _messages = [
+            ...nouveaux,
+            ..._pending.where((p) => !serverIds.contains(p.id)),
+          ];
         }
         _isLoading = false;
       });
@@ -851,8 +884,10 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
     if (pj == null) _msgController.clear();
 
     final user = ref.read(currentUserProvider);
+    // clientId stable pour l'idempotence : même message = même clientId
+    final cid = '${user?.id ?? ''}-${DateTime.now().microsecondsSinceEpoch}';
     final localMsg = MessageChat(
-      id: 'local-${DateTime.now().microsecondsSinceEpoch}',
+      id: 'local-$cid',
       texte: text,
       userId: user?.id ?? '',
       userNom: user?.nom,
@@ -860,6 +895,7 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
       pieceJointe: pj,
       createdAt: DateTime.now(),
       estMien: true,
+      clientId: cid,
       statut: MessageStatut.enAttente,
     );
 

@@ -23,7 +23,8 @@ final chatNonLusProvider =
 class ChatNonLusNotifier extends StateNotifier<int> {
   ChatNonLusNotifier() : super(0);
 
-  Future<void> charger(String userId, String role, String? etablissementId) async {
+  Future<void> charger(
+      String userId, String role, String? etablissementId) async {
     try {
       state = await ApiClient.getChatNonLus(
           userId: userId, role: role, etablissementId: etablissementId);
@@ -120,6 +121,7 @@ class MessagePrive {
   final DateTime createdAt;
   final bool estMien;
   final bool lu;
+  final String? clientId;
   // Statut local (hors-ligne) — utilisé uniquement pour nos propres messages
   final MessageStatut statut;
 
@@ -133,6 +135,7 @@ class MessagePrive {
     required this.createdAt,
     this.estMien = false,
     this.lu = false,
+    this.clientId,
     this.statut = MessageStatut.envoye,
   });
 
@@ -145,14 +148,13 @@ class MessagePrive {
       userId: j['userId'] ?? '',
       userNom: user?['nom'],
       userPrenom: user?['prenom'],
-      pieceJointe: pj is Map<String, dynamic>
-          ? PieceJointe.fromJson(pj)
-          : null,
+      pieceJointe: pj is Map<String, dynamic> ? PieceJointe.fromJson(pj) : null,
       createdAt: j['createdAt'] != null
           ? DateTime.tryParse(j['createdAt']) ?? DateTime.now()
           : DateTime.now(),
       estMien: j['userId'] == currentUserId,
       lu: j['lu'] == true,
+      clientId: j['clientId'] as String?,
     );
   }
 
@@ -170,6 +172,7 @@ class MessagePrive {
         createdAt: createdAt,
         estMien: estMien,
         lu: lu ?? this.lu,
+        clientId: clientId,
         statut: statut ?? this.statut,
       );
 
@@ -189,6 +192,7 @@ class MessagesScreen extends ConsumerStatefulWidget {
 
 class _MessagesScreenState extends ConsumerState<MessagesScreen>
     with SingleTickerProviderStateMixin {
+  Strings get s => ref.watch(stringsProvider);
   List<ConversationPrivee> _conversations = [];
   bool _isLoading = true;
   Timer? _pollTimer;
@@ -342,8 +346,9 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
     // Rafraîchir la liste + le badge après retour
     await _charger(silent: true);
     if (mounted && user.id.isNotEmpty) {
-      ref.read(chatNonLusProvider.notifier).charger(
-          user.id, user.role, user.etablissementId);
+      ref
+          .read(chatNonLusProvider.notifier)
+          .charger(user.id, user.role, user.etablissementId);
     }
   }
 
@@ -388,7 +393,8 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
         setState(() => _selPrivee = null);
       }
       await _charger(silent: true);
-      ref.read(chatNonLusProvider.notifier)
+      ref
+          .read(chatNonLusProvider.notifier)
           .charger(user.id, user.role, user.etablissementId);
     } catch (e) {
       if (mounted) {
@@ -412,13 +418,12 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
                         size: 56, color: context.textMuted),
                     const SizedBox(height: 12),
                     Text('Aucune conversation',
-                        style: TextStyle(
-                            color: context.textMuted, fontSize: 15)),
+                        style:
+                            TextStyle(color: context.textMuted, fontSize: 15)),
                     const SizedBox(height: 4),
                     Text(
                       'Touchez + pour discuter avec quelqu\'un',
-                      style:
-                          TextStyle(color: context.textMuted, fontSize: 12),
+                      style: TextStyle(color: context.textMuted, fontSize: 12),
                     ),
                   ],
                 ),
@@ -437,24 +442,21 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
                       selected: selected,
                       selectedTileColor: AppColors.cyan.withValues(alpha: 0.08),
                       leading: CircleAvatar(
-                        backgroundColor:
-                            AppColors.cyan.withValues(alpha: 0.15),
-                        backgroundImage:
-                            c.autrePhotoUrl != null &&
-                                    c.autrePhotoUrl!.isNotEmpty
-                                ? NetworkImage(c.autrePhotoUrl!)
-                                : null,
-                        child: c.autrePhotoUrl == null ||
-                                c.autrePhotoUrl!.isEmpty
-                            ? Text(c.initiales,
-                                style: const TextStyle(
-                                    color: AppColors.cyan,
-                                    fontWeight: FontWeight.w700))
+                        backgroundColor: AppColors.cyan.withValues(alpha: 0.15),
+                        backgroundImage: c.autrePhotoUrl != null &&
+                                c.autrePhotoUrl!.isNotEmpty
+                            ? NetworkImage(c.autrePhotoUrl!)
                             : null,
+                        child:
+                            c.autrePhotoUrl == null || c.autrePhotoUrl!.isEmpty
+                                ? Text(c.initiales,
+                                    style: const TextStyle(
+                                        color: AppColors.cyan,
+                                        fontWeight: FontWeight.w700))
+                                : null,
                       ),
                       title: Text(c.displayNom,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600)),
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
                         c.dernierMessage == null
                             ? 'Dites bonjour !'
@@ -479,7 +481,8 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
                               style: TextStyle(
                                   color: context.textMuted, fontSize: 11),
                             ),
-                          if (c.nonLus > 0) ...[const SizedBox(width: 8),
+                          if (c.nonLus > 0) ...[
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.all(5),
                               decoration: const BoxDecoration(
@@ -548,8 +551,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           Text(s.chooseDiscussion,
-              style:
-                  TextStyle(color: context.textMuted, fontSize: 12)),
+              style: TextStyle(color: context.textMuted, fontSize: 12)),
         ],
       ),
     );
@@ -565,8 +567,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
       indicatorWeight: 3,
       labelColor: AppColors.cyan,
       unselectedLabelColor: context.textMuted,
-      labelStyle:
-          const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+      labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
       tabs: const [
         Tab(text: 'Privés'),
         Tab(text: 'Groupes'),
@@ -732,9 +733,10 @@ class _RechercheUtilisateursSheetState
                   return ListTile(
                     leading: CircleAvatar(
                       backgroundColor: AppColors.cyan.withValues(alpha: 0.15),
-                      backgroundImage: u.photoUrl != null && u.photoUrl!.isNotEmpty
-                          ? NetworkImage(u.photoUrl!)
-                          : null,
+                      backgroundImage:
+                          u.photoUrl != null && u.photoUrl!.isNotEmpty
+                              ? NetworkImage(u.photoUrl!)
+                              : null,
                       child: u.photoUrl == null || u.photoUrl!.isEmpty
                           ? Text(u.initiales,
                               style: const TextStyle(
@@ -745,8 +747,8 @@ class _RechercheUtilisateursSheetState
                     title: Text(u.displayNom,
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(u.role,
-                        style: TextStyle(
-                            color: context.textMuted, fontSize: 11)),
+                        style:
+                            TextStyle(color: context.textMuted, fontSize: 11)),
                     trailing: widget.dejaEnConversation.contains(u.id)
                         ? Icon(Icons.check_circle_rounded,
                             color: Colors.green.shade400, size: 20)
@@ -790,7 +792,8 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
   final _scrollCtrl = ScrollController();
   List<MessagePrive> _messages = [];
   List<MessagePrive> _pending = []; // messages hors-ligne (en attente)
-  DateTime? _dernierMsgLe; // curseur incrémental (dernier message serveur chargé)
+  DateTime?
+      _dernierMsgLe; // curseur incrémental (dernier message serveur chargé)
   bool _isLoading = true;
   Timer? _pollTimer;
 
@@ -827,20 +830,23 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
           .toList();
       final user = ref.read(currentUserProvider);
       setState(() {
-        _pending = list.map((m) => MessagePrive(
-              id: m['id'] ?? '',
-              texte: m['texte'] ?? '',
-              userId: user?.id ?? '',
-              userNom: user?.nom,
-              userPrenom: user?.prenom,
-              pieceJointe: m['pieceJointe'] != null
-                  ? PieceJointe.fromJson(m['pieceJointe'])
-                  : null,
-              createdAt: DateTime.tryParse(m['createdAt'] ?? '') ??
-                  DateTime.now(),
-              estMien: true,
-              statut: MessageStatut.enAttente,
-            )).toList();
+        _pending = list
+            .map((m) => MessagePrive(
+                  id: m['id'] ?? '',
+                  texte: m['texte'] ?? '',
+                  userId: user?.id ?? '',
+                  userNom: user?.nom,
+                  userPrenom: user?.prenom,
+                  pieceJointe: m['pieceJointe'] != null
+                      ? PieceJointe.fromJson(m['pieceJointe'])
+                      : null,
+                  createdAt:
+                      DateTime.tryParse(m['createdAt'] ?? '') ?? DateTime.now(),
+                  estMien: true,
+                  clientId: m['clientId'] as String?,
+                  statut: MessageStatut.enAttente,
+                ))
+            .toList();
       });
     } catch (_) {}
   }
@@ -856,6 +862,7 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
                     'texte': m.texte,
                     'pieceJointe': m.pieceJointe?.toJson(),
                     'createdAt': m.createdAt.toIso8601String(),
+                    'clientId': m.clientId,
                   })
               .toList()));
     } catch (_) {}
@@ -871,7 +878,11 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
       try {
         await ApiClient.postChat(
           '/chat/privates/${widget.conversationId}/messages',
-          data: {'texte': m.texte, 'pieceJointe': m.pieceJointe?.toJson()},
+          data: {
+            'texte': m.texte,
+            'pieceJointe': m.pieceJointe?.toJson(),
+            if (m.clientId != null) 'clientId': m.clientId,
+          },
           userId: user.id,
           role: user.role,
           etablissementId: user.etablissementId,
@@ -911,17 +922,37 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
       if (!mounted) return;
       setState(() {
         if (params['apres'] != null) {
-          // Mode incrémental : fusionner sans créer de doublon (par id)
+          // Mode incrémental : fusionner en reconciliant les pending avec
+          // les réponses serveur (même clientId = même message).
           if (nouveaux.isNotEmpty) {
+            final pendingByCid = {
+              for (final p in _pending)
+                if (p.clientId != null) p.clientId!: p,
+            };
             final ids = _messages.map((m) => m.id).toSet();
+            final merge = <MessagePrive>[];
+            for (final n in nouveaux) {
+              if (n.clientId != null && pendingByCid.containsKey(n.clientId)) {
+                final ancien = pendingByCid[n.clientId]!;
+                merge.add(n.copyWith(statut: MessageStatut.envoye));
+                _pending.removeWhere((p) => p.clientId == n.clientId);
+                ids.remove(ancien.id);
+              } else if (!ids.contains(n.id)) {
+                merge.add(n);
+              }
+            }
             _messages = [
-              ..._messages,
-              ...nouveaux.where((m) => !ids.contains(m.id)),
+              ..._messages.where((m) => !pendingByCid.containsValue(m)),
+              ...merge,
             ];
           }
         } else {
           // Chargement initial : messages en attente puis historique serveur
-          _messages = [...nouveaux, ..._pending];
+          final serverIds = nouveaux.map((m) => m.id).toSet();
+          _messages = [
+            ...nouveaux,
+            ..._pending.where((p) => !serverIds.contains(p.id)),
+          ];
         }
         _isLoading = false;
       });
@@ -948,14 +979,17 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
     _msgController.clear();
 
     final user = ref.read(currentUserProvider);
+    // clientId stable pour l'idempotence
+    final cid = '${user?.id ?? ''}-${DateTime.now().microsecondsSinceEpoch}';
     final localMsg = MessagePrive(
-      id: 'local-${DateTime.now().microsecondsSinceEpoch}',
+      id: 'local-$cid',
       texte: text,
       userId: user?.id ?? '',
       userNom: user?.nom,
       userPrenom: user?.prenom,
       createdAt: DateTime.now(),
       estMien: true,
+      clientId: cid,
       statut: MessageStatut.enAttente,
     );
 
@@ -978,8 +1012,20 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: [
-        'pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip',
-        'jpg', 'jpeg', 'png', 'gif', 'webp', 'txt'
+        'pdf',
+        'doc',
+        'docx',
+        'ppt',
+        'pptx',
+        'xls',
+        'xlsx',
+        'zip',
+        'jpg',
+        'jpeg',
+        'png',
+        'gif',
+        'webp',
+        'txt'
       ],
       withData: false,
     );
@@ -1009,8 +1055,9 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
       );
       // Ajout local immédiat puis envoi (file d'attente hors-ligne)
       final pj = PieceJointe.fromJson(resp);
+      final cid = '${user?.id ?? ''}-${DateTime.now().microsecondsSinceEpoch}';
       final localMsg = MessagePrive(
-        id: 'local-${DateTime.now().microsecondsSinceEpoch}',
+        id: 'local-$cid',
         texte: '',
         userId: user?.id ?? '',
         userNom: user?.nom,
@@ -1018,6 +1065,7 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
         pieceJointe: pj,
         createdAt: DateTime.now(),
         estMien: true,
+        clientId: cid,
         statut: MessageStatut.enAttente,
       );
       setState(() {
@@ -1048,8 +1096,9 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
         etablissementId: user?.etablissementId ?? '',
       );
       final pj = PieceJointe.fromJson(resp);
+      final cid = '${user?.id ?? ''}-${DateTime.now().microsecondsSinceEpoch}';
       final localMsg = MessagePrive(
-        id: 'local-${DateTime.now().microsecondsSinceEpoch}',
+        id: 'local-$cid',
         texte: '',
         userId: user?.id ?? '',
         userNom: user?.nom,
@@ -1057,6 +1106,7 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
         pieceJointe: pj,
         createdAt: DateTime.now(),
         estMien: true,
+        clientId: cid,
         statut: MessageStatut.enAttente,
       );
       setState(() {
@@ -1118,145 +1168,143 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
 
     final corps = Column(
       children: [
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _messages.isEmpty
-                    ? Center(
-                        child: Text(
-                          'Aucun message. Dites bonjour !',
-                          style: TextStyle(color: context.textMuted),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollCtrl,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        itemCount: _messages.length,
-                        itemBuilder: (ctx, i) {
-                          final msg = _messages[i];
-                          final isMe = msg.estMien;
-                          return GestureDetector(
-                            onLongPress: msg.estMien
-                                ? () => _supprimerMessage(msg)
-                                : null,
-                            child: Align(
-                              alignment: isMe
-                                  ? Alignment.centerRight
-                                  : Alignment.centerLeft,
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                constraints: BoxConstraints(
-                                  maxWidth:
-                                      MediaQuery.of(context).size.width * 0.75,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: isMe
-                                      ? AppColors.cyan
-                                      : isDark
-                                          ? AppColors.darkCard
-                                          : AppColors.lightCard,
-                                  borderRadius:
-                                      BorderRadius.circular(16).copyWith(
-                                    bottomRight: isMe
-                                        ? const Radius.circular(4)
-                                        : null,
-                                    bottomLeft: !isMe
-                                        ? const Radius.circular(4)
-                                        : null,
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (msg.pieceJointe != null) ...[
-                                      FichierJoint(
-                                          pj: msg.pieceJointe!, dark: isMe),
-                                      const SizedBox(height: 6),
-                                    ],
-                                    if (msg.texte.isNotEmpty)
-                                      Text(
-                                        msg.texte,
-                                        style: TextStyle(
-                                          color: isMe
-                                              ? Colors.white
-                                              : context.textPrimary,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          DateFormat('HH:mm')
-                                              .format(msg.createdAt),
-                                          style: TextStyle(
-                                            color: isMe
-                                                ? Colors.white70
-                                                : context.textMuted,
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                        if (isMe) ...[const SizedBox(width: 4),
-                                          _StatutMessagePrive(
-                                            statut: msg.statut,
-                                            lu: msg.lu,
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ],
+        Expanded(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _messages.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Aucun message. Dites bonjour !',
+                        style: TextStyle(color: context.textMuted),
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: _scrollCtrl,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      itemCount: _messages.length,
+                      itemBuilder: (ctx, i) {
+                        final msg = _messages[i];
+                        final isMe = msg.estMien;
+                        return GestureDetector(
+                          onLongPress:
+                              msg.estMien ? () => _supprimerMessage(msg) : null,
+                          child: Align(
+                            alignment: isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              constraints: BoxConstraints(
+                                maxWidth:
+                                    MediaQuery.of(context).size.width * 0.75,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isMe
+                                    ? AppColors.cyan
+                                    : isDark
+                                        ? AppColors.darkCard
+                                        : AppColors.lightCard,
+                                borderRadius:
+                                    BorderRadius.circular(16).copyWith(
+                                  bottomRight:
+                                      isMe ? const Radius.circular(4) : null,
+                                  bottomLeft:
+                                      !isMe ? const Radius.circular(4) : null,
                                 ),
                               ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (msg.pieceJointe != null) ...[
+                                    FichierJoint(
+                                        pj: msg.pieceJointe!, dark: isMe),
+                                    const SizedBox(height: 6),
+                                  ],
+                                  if (msg.texte.isNotEmpty)
+                                    Text(
+                                      msg.texte,
+                                      style: TextStyle(
+                                        color: isMe
+                                            ? Colors.white
+                                            : context.textPrimary,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        DateFormat('HH:mm')
+                                            .format(msg.createdAt),
+                                        style: TextStyle(
+                                          color: isMe
+                                              ? Colors.white70
+                                              : context.textMuted,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                      if (isMe) ...[
+                                        const SizedBox(width: 4),
+                                        _StatutMessagePrive(
+                                          statut: msg.statut,
+                                          lu: msg.lu,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                          );
-                        },
-                      ),
-          ),
-          // Champ de saisie
-          Container(
-            padding: const EdgeInsets.only(
-              left: 12,
-              right: 8,
-              top: 8,
-              bottom: 8,
-            ),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCard : Colors.white,
-              border: Border(top: BorderSide(color: context.borderColor)),
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: _envoyerPieceJointe,
-                  icon: const Icon(Icons.attach_file_rounded),
-                  color: context.textMuted,
-                  tooltip: 'Pièce jointe',
-                ),
-                EnregistreurAudio(
-                    onEnvoye: _envoyerAudio, couleur: AppColors.cyan),
-                Expanded(
-                  child: TextField(
-                    controller: _msgController,
-                    decoration: const InputDecoration(
-                      hintText: 'Votre message...',
-                      border: InputBorder.none,
+                          ),
+                        );
+                      },
                     ),
-                    onSubmitted: (_) => _envoyer(),
-                  ),
-                ),
-                IconButton(
-                  onPressed: _envoyer,
-                  icon: const Icon(Icons.send_rounded),
-                  color: AppColors.cyan,
-                ),
-              ],
-            ),
+        ),
+        // Champ de saisie
+        Container(
+          padding: const EdgeInsets.only(
+            left: 12,
+            right: 8,
+            top: 8,
+            bottom: 8,
           ),
-        ],
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkCard : Colors.white,
+            border: Border(top: BorderSide(color: context.borderColor)),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: _envoyerPieceJointe,
+                icon: const Icon(Icons.attach_file_rounded),
+                color: context.textMuted,
+                tooltip: 'Pièce jointe',
+              ),
+              EnregistreurAudio(
+                  onEnvoye: _envoyerAudio, couleur: AppColors.cyan),
+              Expanded(
+                child: TextField(
+                  controller: _msgController,
+                  decoration: const InputDecoration(
+                    hintText: 'Votre message...',
+                    border: InputBorder.none,
+                  ),
+                  onSubmitted: (_) => _envoyer(),
+                ),
+              ),
+              IconButton(
+                onPressed: _envoyer,
+                icon: const Icon(Icons.send_rounded),
+                color: AppColors.cyan,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
 
     if (widget.embarque) {
