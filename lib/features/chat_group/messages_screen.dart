@@ -889,7 +889,9 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
           role: user.role,
           etablissementId: user.etablissementId,
         );
-      } catch (_) {
+        debugPrint('[Chat] ✅ Message envoyé: ${m.texte}');
+      } catch (e) {
+        debugPrint('[Chat] ❌ Échec envoi: $e');
         restant.add(m); // toujours hors-ligne, on réessaiera
       }
     }
