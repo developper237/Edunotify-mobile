@@ -763,12 +763,14 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
   }
 
   // Renvoie les messages en attente ; retire ceux qui partent enfin
+  // Renvoie les messages en attente vers le serveur.
+  // NE retire PAS de _messages — c'est _chargerMessages qui déduplique
+  // en reconciliant par clientId quand le serveur confirme la réception.
   Future<void> _flusherFileAttente() async {
     if (_pending.isEmpty) return;
     final user = ref.read(currentUserProvider);
     if (user == null) return;
     final restant = <MessageChat>[];
-    final envoyes = <String>[]; // clientIds envoyés avec succès
     for (final m in _pending) {
       try {
         await ApiClient.postChat(
@@ -782,23 +784,12 @@ class ChatRoomScreenState extends ConsumerState<ChatRoomScreen> {
           role: user.role,
           etablissementId: user.etablissementId,
         );
-        if (m.clientId != null) envoyes.add(m.clientId!);
       } catch (_) {
         restant.add(m); // toujours hors-ligne, on réessaiera
       }
     }
     if (restant.length != _pending.length || restant.isEmpty) {
-      // Retirer les placeholders locaux de _messages pour éviter les doublons
-      // quand _chargerMessages va récupérer la copie serveur.
-      if (envoyes.isNotEmpty && mounted) {
-        setState(() {
-          _pending = restant;
-          _messages.removeWhere(
-              (m) => m.clientId != null && envoyes.contains(m.clientId));
-        });
-      } else if (mounted) {
-        setState(() => _pending = restant);
-      }
+      if (mounted) setState(() => _pending = restant);
       _sauverFileAttente();
       _chargerMessages(silent: true);
     }
