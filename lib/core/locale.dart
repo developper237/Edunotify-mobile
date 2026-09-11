@@ -383,6 +383,7 @@ class Strings {
   String get retry            => isFr ? 'Réessayer'           : 'Retry';
   String get error            => isFr ? 'Erreur'              : 'Error';
   String get errorColon       => isFr ? 'Erreur: '            : 'Error: ';
+  String get messageNonEnvoye => isFr ? 'Message non envoyé'  : 'Message not sent';
   String get loading          => isFr ? 'Chargement...'       : 'Loading...';
   String get success          => isFr ? 'Succès'              : 'Success';
   String get copied           => isFr ? 'Copié !'             : 'Copied!';

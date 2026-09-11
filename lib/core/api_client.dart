@@ -573,6 +573,18 @@ class ApiClient {
 
 }
 
+/// Vrai si l'échec est définitif : le serveur a refusé la requête (400, 403,
+/// 404, 409, 422…), réessayer ne servira à rien. Les erreurs réseau, les
+/// timeouts, les 429 et les 5xx restent transitoires (nouvelle tentative utile).
+bool estErreurDefinitive(Object erreur) {
+  if (erreur is ApiException) {
+    final code = erreur.statusCode;
+    if (code == null) return false;
+    return code >= 400 && code < 500 && code != 408 && code != 429;
+  }
+  return false;
+}
+
 class _AuthInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {

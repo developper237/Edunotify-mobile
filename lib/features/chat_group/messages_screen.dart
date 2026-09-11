@@ -649,6 +649,10 @@ class _StatutMessagePrive extends StatelessWidget {
       return const Icon(Icons.schedule_rounded,
           size: 12, color: Colors.white70);
     }
+    if (statut == MessageStatut.echoue) {
+      return const Icon(Icons.error_outline_rounded,
+          size: 13, color: Color(0xFFFFCDD2));
+    }
     if (lu) {
       return const Icon(Icons.done_all_rounded,
           size: 13, color: Color(0xFF8AB4F8));
@@ -796,6 +800,7 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
       _dernierMsgLe; // curseur incrémental (dernier message serveur chargé)
   bool _isLoading = true;
   Timer? _pollTimer;
+  bool _flushEnCours = false;
 
   String get _cleFileAttente => 'chat_pending_prive_${widget.conversationId}';
 
@@ -872,33 +877,73 @@ class _PrivateChatScreenState extends ConsumerState<_PrivateChatScreen> {
   // NE retire PAS de _messages — c'est _chargerMessages qui déduplique
   // en reconciliant par clientId quand le serveur confirme la réception.
   Future<void> _flusherFileAttente() async {
-    if (_pending.isEmpty) return;
+    if (_flushEnCours || _pending.isEmpty) return;
     final user = ref.read(currentUserProvider);
     if (user == null) return;
-    final restant = <MessagePrive>[];
-    for (final m in _pending) {
-      try {
-        await ApiClient.postChat(
-          '/chat/privates/${widget.conversationId}/messages',
-          data: {
-            'texte': m.texte,
-            'pieceJointe': m.pieceJointe?.toJson(),
-            if (m.clientId != null) 'clientId': m.clientId,
-          },
-          userId: user.id,
-          role: user.role,
-          etablissementId: user.etablissementId,
-        );
-        debugPrint('[Chat] ✅ Message envoyé: ${m.texte}');
-      } catch (e) {
-        debugPrint('[Chat] ❌ Échec envoi: $e');
-        restant.add(m); // toujours hors-ligne, on réessaiera
+
+    _flushEnCours = true;
+    try {
+      // Le polling et l'envoi manuel peuvent se chevaucher. Un instantané
+      // évite de modifier la liste pendant son parcours.
+      final aEnvoyer = List<MessagePrive>.from(_pending);
+      final envoyes = <String>{};
+      // Messages refusés définitivement par le serveur (400/403/404…) :
+      // réessayer à chaque cycle de polling ne sert à rien, on les marque
+      // en échec et on prévient l'utilisateur.
+      final echoues = <String>{};
+      Object? derniereErreur;
+      for (final m in aEnvoyer) {
+        try {
+          await ApiClient.postChat(
+            '/chat/privates/${widget.conversationId}/messages',
+            data: {
+              'texte': m.texte,
+              'pieceJointe': m.pieceJointe?.toJson(),
+              if (m.clientId != null) 'clientId': m.clientId,
+            },
+            userId: user.id,
+            role: user.role,
+            etablissementId: user.etablissementId,
+          );
+          if (m.clientId != null) envoyes.add(m.clientId!);
+          debugPrint('[Chat] ✅ Message envoyé: ${m.texte}');
+        } catch (e) {
+          debugPrint('[Chat] ❌ Échec envoi: $e');
+          if (estErreurDefinitive(e)) {
+            echoues.add(m.clientId ?? m.id);
+            derniereErreur = e;
+          }
+          // Erreur transitoire (réseau, 5xx) : le message reste dans la file.
+        }
       }
-    }
-    if (restant.length != _pending.length || restant.isEmpty) {
-      if (mounted) setState(() => _pending = restant);
-      _sauverFileAttente();
-      _chargerMessages(silent: true);
+
+      if (envoyes.isNotEmpty || echoues.isNotEmpty) {
+        if (mounted) {
+          setState(() {
+            _pending.removeWhere((m) =>
+                envoyes.contains(m.clientId) ||
+                echoues.contains(m.clientId ?? m.id));
+            _messages.removeWhere((m) =>
+                m.id.startsWith('local-') && envoyes.contains(m.clientId));
+            if (echoues.isNotEmpty) {
+              _messages = _messages
+                  .map((m) => echoues.contains(m.clientId ?? m.id)
+                      ? m.copyWith(statut: MessageStatut.echoue)
+                      : m)
+                  .toList();
+            }
+          });
+          if (echoues.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('${s.messageNonEnvoye}: ${derniereErreur ?? ''}'),
+            ));
+          }
+        }
+        await _sauverFileAttente();
+        if (envoyes.isNotEmpty) await _chargerMessages(silent: true);
+      }
+    } finally {
+      _flushEnCours = false;
     }
   }
 
