@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/api_client.dart';
-import '../../../features/auth/auth_provider.dart';
+import '../../core/api_client.dart';
+import '../auth/auth_provider.dart';
 import 'models/chat_message.dart';
 
 // ══════════════════════════════════════════════════════════════════

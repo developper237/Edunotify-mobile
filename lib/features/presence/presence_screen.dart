@@ -526,6 +526,7 @@ class _EtudiantSessionActiveState
 
   @override
   Widget build(BuildContext context) {
+    final s      = ref.watch(stringsProvider);
     final status = ref.watch(presenceStatusProvider);
     final error  = ref.watch(presenceErrorProvider);
     final filled = code.length == 6;
@@ -823,6 +824,7 @@ class _BandeauScanOffline extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
     final pending = ref.watch(pendingOfflineProvider);
     return Column(
       children: [
@@ -955,6 +957,7 @@ class _EtudiantHistoriqueState extends ConsumerState<_EtudiantHistorique> {
 
   @override
   Widget build(BuildContext context) {
+    final s = ref.watch(stringsProvider);
     final historique = ref.watch(historiqueEtudiantProvider);
     return historique.when(
       loading: () => Scaffold(
@@ -1273,13 +1276,14 @@ class _HistoriqueTile extends StatelessWidget {
 
 // ── Vue succès ────────────────────────────────────────────────────
 
-class _SuccessView extends StatelessWidget {
+class _SuccessView extends ConsumerWidget {
   final SessionData? session;
   final VoidCallback onReset;
   const _SuccessView({required this.session, required this.onReset});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
     final now = DateTime.now();
     final h   = now.hour.toString().padLeft(2, '0');
     final m   = now.minute.toString().padLeft(2, '0');
