@@ -665,6 +665,8 @@ class _CreerSalleModalState extends ConsumerState<_CreerSalleModal> {
   bool _loading = false;
   bool _done = false;
   String? _error;
+  // Avertissement renvoyé par le serveur (ex : matricule du délégué déjà pris)
+  String? _avertissement;
   bool _filiereCustomMode = false;
   final _filiereCustomCtrl = TextEditingController();
 
@@ -688,6 +690,13 @@ class _CreerSalleModalState extends ConsumerState<_CreerSalleModal> {
     if (_nomSalle.text.trim().isEmpty) return '---';
     return genererCodeClasse(
         _nomSalle.text.trim(), _filiereEffective, _niveau, _formation);
+  }
+
+  // Message de succès + avertissement éventuel renvoyé par le serveur.
+  String get _messageSucces {
+    final base = 'La classe $_codePreview a ete creee.\n'
+        'Les identifiants ont ete envoyes a ${_emailDelegue.text.trim()}.';
+    return _avertissement == null ? base : '$base\n\n⚠️ $_avertissement';
   }
 
   void _selectionnerNiveau(String n) {
@@ -717,7 +726,7 @@ class _CreerSalleModalState extends ConsumerState<_CreerSalleModal> {
     });
 
     try {
-      await ApiClient.post('/auth/cascade/classe', data: {
+      final resp = await ApiClient.post('/auth/cascade/classe', data: {
         'nomSalle': nom,
         'filiere': _filiereEffective,
         'niveau': _niveau,
@@ -727,6 +736,9 @@ class _CreerSalleModalState extends ConsumerState<_CreerSalleModal> {
         'prenomDelegue': 'Delegue',
         'nomDelegue': nom,
       });
+      // Le serveur prévient si le matricule était déjà utilisé : sans cela le
+      // délégué ne recevrait jamais ses notes, mieux vaut le dire au chef.
+      _avertissement = resp['avertissement'] as String?;
 
       // On ne fabrique plus de ClasseSalle locale avec un id fictif
       // (ex: 'cls-1783789211215'). L'appelant (widget.onCreer) recharge
@@ -773,8 +785,7 @@ class _CreerSalleModalState extends ConsumerState<_CreerSalleModal> {
       child: _done
           ? _SuccessView(
               titre: 'Classe creee !',
-              message: 'La classe $_codePreview a ete creee.\n'
-                  'Les identifiants ont ete envoyes a ${_emailDelegue.text.trim()}.',
+              message: _messageSucces,
               color: AppColors.green,
               onClose: () => Navigator.pop(context),
             )
