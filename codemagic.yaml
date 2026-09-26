@@ -24,6 +24,14 @@
 # Les builds se lancent à la main (Applications → SmartCampus → Start new
 # build) ou par API : aucun trigger automatique n'est configuré.
 #
+# ⚠ À LA MAIN, CHOISIS BIEN LE WORKFLOW. Si tu laisses la sélection par défaut
+# (ou si tu utilises l'onglet Workflow Editor), Codemagic lance son propre
+# modèle Flutter qui compile en debug avec une version de Flutter récente :
+# depuis Flutter 3.44 Swift Package Manager y est activé par défaut et la
+# résolution des binaires Firebase échoue (« ... already exists in file
+# system »). Les workflows ci-dessous pinent Flutter 3.41.5 et forcent
+# CocoaPods (voir aussi `flutter: config:` dans pubspec.yaml).
+#
 # Variables d'environnement attendues dans le groupe « smartcampus »
 # (Applications → SmartCampus → Environment variables) :
 #   GOOGLE_SERVICE_INFO_PLIST_B64 = base64 du GoogleService-Info.plist (Firebase
@@ -80,10 +88,17 @@ workflows:
 
       - name: Compiler sans signature
         script: |
-          set -e
+          set -eo pipefail
           NUM="${BUILD_NUMBER:-$(date +%s)}"
           echo "Numéro de build iOS : $NUM"
-          flutter build ios --release --no-codesign --build-number="$NUM"
+          # Le journal complet est conservé dans ios-build.log (artefact) et ses
+          # 80 dernières lignes sont réimprimées en fin de log en cas d'échec,
+          # pour lire l'erreur sans fouiller la sortie de xcodebuild.
+          if ! flutter build ios --release --no-codesign --build-number="$NUM" 2>&1 | tee ios-build.log; then
+            echo "──────────── ÉCHEC : dernières lignes du journal ────────────"
+            tail -n 80 ios-build.log
+            exit 1
+          fi
 
       - name: Empaqueter l'IPA non signée
         script: |
@@ -96,6 +111,7 @@ workflows:
 
     artifacts:
       - build/ios/iphoneos/SmartCampus-unsigned.ipa
+      - ios-build.log
       - /tmp/xcodebuild_logs/*.log
 
   # ── 2) TestFlight : réservé aux comptes Apple Developer payants ────────────
@@ -171,17 +187,22 @@ workflows:
 
       - name: Compiler l'IPA
         script: |
-          set -e
+          set -eo pipefail
           # BUILD_NUMBER est le compteur de builds Codemagic : il doit augmenter
           # à chaque envoi pour qu'App Store Connect accepte l'upload.
           NUM="${BUILD_NUMBER:-$(date +%s)}"
           echo "Numéro de build iOS : $NUM"
-          flutter build ipa --release \
+          if ! flutter build ipa --release \
             --build-number="$NUM" \
-            --export-options-plist=/Users/builder/export_options.plist
+            --export-options-plist=/Users/builder/export_options.plist 2>&1 | tee ios-build.log; then
+            echo "──────────── ÉCHEC : dernières lignes du journal ────────────"
+            tail -n 80 ios-build.log
+            exit 1
+          fi
 
     artifacts:
       - build/ios/ipa/*.ipa
+      - ios-build.log
       - /tmp/xcodebuild_logs/*.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
 
@@ -259,5 +280,6 @@ workflows:
 
     artifacts:
       - build/ios/ipa/*.ipa
+      - ios-build.log
       - /tmp/xcodebuild_logs/*.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
