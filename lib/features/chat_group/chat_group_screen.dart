@@ -437,7 +437,7 @@ class _ChatGroupScreenState extends ConsumerState<ChatGroupScreen> {
   // Convertit une URL relative /uploads/... en URL complète
   static String _urlComplet(String url) {
     if (url.startsWith('http')) return url;
-    return 'https://billing-service-efm6.onrender.com$url';
+    return '${ApiClient.billingBaseUrl}$url';
   }
 
   Future<void> _supprimerGroupe(GroupeChat g) async {
@@ -1451,7 +1451,7 @@ class _StatutMessage extends StatelessWidget {
 
 String _urlPieceJointe(PieceJointe pj) => pj.url.startsWith('http')
     ? pj.url
-    : 'https://billing-service-efm6.onrender.com${pj.url}';
+    : '${ApiClient.billingBaseUrl}${pj.url}';
 
 class FichierJoint extends StatefulWidget {
   final PieceJointe pj;

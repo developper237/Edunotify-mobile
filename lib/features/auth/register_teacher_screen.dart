@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:ui';
 import '../../core/theme.dart';
 import '../../core/api_client.dart';
 import '../../core/widgets/ui_kit.dart';
@@ -114,6 +113,10 @@ class _RegisterTeacherScreenState
   final List<String> _matieres = [];
 
   Timer? _debounce;
+
+  /// Remplissage des champs (gris très clair, comme la maquette).
+  static const _fieldLight = Color(0xFFF4F6F9);
+  static const _fieldDark = Color(0xFF1A2033);
 
   @override
   void dispose() {
@@ -237,10 +240,6 @@ class _RegisterTeacherScreenState
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth >= 900;
-
     // ── Succès ──────────────────────────────────────────────────────
     if (_success != null) {
       return Scaffold(
@@ -325,208 +324,128 @@ class _RegisterTeacherScreenState
     }
 
     // ── Formulaire ──────────────────────────────────────────────────
+    final isDark = context.isDark;
+
     return Scaffold(
-      backgroundColor: context.bgColor,
-      body: Row(
-        children: [
-          // Partie décorative (Desktop)
-          if (isDesktop)
-            Expanded(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Image.asset(
-                      'lib/assets/logos/univ.jpg',
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.red.withValues(alpha: 0.85),
-                            AppColors.orange.withValues(alpha: 0.7),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+      body: Container(
+        // Fond : blanc en haut, bleu très clair en bas (comme la maquette)
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: const [0.28, 1.0],
+            colors: isDark
+                ? const [AppColors.dark, Color(0xFF14243E)]
+                : const [Colors.white, Color(0xFFD9E9FA)],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ── LOGO (sans cercle ni halo coloré) ──
+                    Image.asset(
+                      'lib/assets/logos/logosmart.png',
+                      width: 160,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.school_rounded,
+                        size: 64,
+                        color: AppColors.cyan,
                       ),
                     ),
-                  ),
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.school_rounded,
-                              size: 80, color: Colors.white),
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          "Inscription Professeur",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 36,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1,
-                          ),
-                        ),
-                        const Text(
-                          "SmartCampus",
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 18,
-                            letterSpacing: 2,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
 
-          // Formulaire
-          Container(
-            width: isDesktop ? 550 : screenWidth,
-            height: double.infinity,
-            color: isDesktop ? Colors.transparent : context.bgColor,
-            child: Center(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  40,
-                  MediaQuery.of(context).padding.top + 24,
-                  40,
-                  24,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 460),
-                      padding: const EdgeInsets.all(32),
+                    const SizedBox(height: 14),
+
+                    // ── TITRE / SOUS-TITRE ──
+                    Text(
+                      'Inscription Professeur',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: context.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Créez votre compte enseignant',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: context.textSecondary,
+                      ),
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // ── CARTE BLANCHE ──
+                    Container(
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.05)
-                            : Colors.white.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(24),
+                        color: context.cardColor,
+                        borderRadius: BorderRadius.circular(26),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          width: 1.5,
+                          color: isDark ? AppColors.darkBorder : Colors.white,
+                          width: 1,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 20,
-                            spreadRadius: 5,
-                          )
+                            color: Colors.black
+                                .withValues(alpha: isDark ? 0.35 : 0.06),
+                            blurRadius: 26,
+                            offset: const Offset(0, 12),
+                          ),
                         ],
                       ),
                       child: Form(
                         key: _formKey,
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Titre
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.orange.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(Icons.school_rounded,
-                                      size: 24, color: AppColors.orange),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Inscription Professeur',
-                                        style: TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w800,
-                                          color: context.textPrimary,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Créez votre compte enseignant',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: context.textMuted,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 28),
-
                             // Erreur
                             if (_error != null) ...[
                               _buildErrorBox(_error!),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 12),
                             ],
 
                             // Nom
-                            _buildLabel('Nom *'),
-                            const SizedBox(height: 8),
-                            TextFormField(
+                            _buildField(
                               controller: _nomController,
-                              decoration: const InputDecoration(
-                                hintText: 'Votre nom',
-                                prefixIcon: Icon(Icons.person_outline_rounded,
-                                    size: 20),
-                              ),
+                              hint: 'Nom',
+                              icon: Icons.person_outline_rounded,
                               validator: (v) => v == null || v.trim().isEmpty
                                   ? 'Champ requis'
                                   : null,
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
 
                             // Prénom
-                            _buildLabel('Prénom *'),
-                            const SizedBox(height: 8),
-                            TextFormField(
+                            _buildField(
                               controller: _prenomController,
-                              decoration: const InputDecoration(
-                                hintText: 'Votre prénom',
-                                prefixIcon: Icon(Icons.person_outline_rounded,
-                                    size: 20),
-                              ),
+                              hint: 'Prénom',
+                              icon: Icons.person_outline_rounded,
                               validator: (v) => v == null || v.trim().isEmpty
                                   ? 'Champ requis'
                                   : null,
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
 
                             // Email
-                            _buildLabel('Adresse e-mail *'),
-                            const SizedBox(height: 8),
-                            TextFormField(
+                            _buildField(
                               controller: _emailController,
+                              hint: 'Adresse e-mail',
+                              icon: Icons.email_outlined,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(
-                                hintText: 'professeur@email.com',
-                                prefixIcon: Icon(Icons.email_outlined,
-                                    size: 20),
-                              ),
                               validator: (v) {
                                 if (v == null || v.trim().isEmpty) {
                                   return 'Champ requis';
@@ -539,32 +458,27 @@ class _RegisterTeacherScreenState
                               },
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
 
                             // ID Établissement
-                            _buildLabel('ID Établissement *'),
-                            const SizedBox(height: 8),
-                            TextFormField(
+                            _buildField(
                               controller: _etabIdController,
-                              decoration: InputDecoration(
-                                hintText: 'Entrez l\'ID de votre établissement',
-                                prefixIcon: const Icon(Icons.school_outlined,
-                                    size: 20),
-                                suffixIcon: _isLookingUp
-                                    ? const Padding(
-                                        padding: EdgeInsets.all(12),
-                                        child: SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                        ),
-                                      )
-                                    : _etablissement != null
-                                        ? const Icon(Icons.check_circle,
-                                            color: AppColors.green, size: 20)
-                                        : null,
-                              ),
+                              hint: 'ID de l\'établissement',
+                              icon: Icons.school_outlined,
+                              suffix: _isLookingUp
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(12),
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
+                                      ),
+                                    )
+                                  : _etablissement != null
+                                      ? const Icon(Icons.check_circle,
+                                          color: AppColors.green, size: 20)
+                                      : null,
                               onChanged: (value) {
                                 _debounce?.cancel();
                                 _debounce = Timer(
@@ -579,15 +493,15 @@ class _RegisterTeacherScreenState
 
                             // Affichage de l'établissement trouvé
                             if (_etablissement != null) ...[
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 10),
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: AppColors.green.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                      color:
-                                          AppColors.green.withValues(alpha: 0.3)),
+                                      color: AppColors.green
+                                          .withValues(alpha: 0.3)),
                                 ),
                                 child: Row(
                                   children: [
@@ -622,13 +536,20 @@ class _RegisterTeacherScreenState
                               ),
                             ],
 
-                            const SizedBox(height: 16),
-
-                            // Filières enseignées
+                            // Filières enseignées (sélection : ce n'est pas un
+                            // champ de saisie, le titre reste nécessaire)
                             if (_etablissement != null &&
                                 _etablissement!.filieres.isNotEmpty) ...[
-                              _buildLabel('Filières enseignées *'),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Filières enseignées',
+                                style: TextStyle(
+                                  color: context.textSecondary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
@@ -654,35 +575,25 @@ class _RegisterTeacherScreenState
                                   );
                                 }).toList(),
                               ),
-                              const SizedBox(height: 16),
                             ],
 
-                            // Matières enseignées
-                            _buildLabel('Matières enseignées *'),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _matiereController,
-                                    decoration: const InputDecoration(
-                                      hintText: 'Ex: Algorithmique',
-                                      prefixIcon: Icon(Icons.book_outlined,
-                                          size: 20),
-                                    ),
-                                    onSubmitted: (_) => _addMatiere(),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  onPressed: _addMatiere,
-                                  icon: const Icon(Icons.add_circle_rounded),
-                                  color: AppColors.orange,
-                                ),
-                              ],
+                            const SizedBox(height: 12),
+
+                            // Matières enseignées (saisie + ajout)
+                            _buildField(
+                              controller: _matiereController,
+                              hint: 'Matière (ex: Algorithmique)',
+                              icon: Icons.book_outlined,
+                              onSubmitted: (_) => _addMatiere(),
+                              suffix: IconButton(
+                                onPressed: _addMatiere,
+                                icon: const Icon(Icons.add_circle_rounded),
+                                color: AppColors.orange,
+                              ),
                             ),
+
                             if (_matieres.isNotEmpty) ...[
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 10),
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
@@ -702,30 +613,32 @@ class _RegisterTeacherScreenState
                               ),
                             ],
 
-                            const SizedBox(height: 28),
+                            const SizedBox(height: 20),
 
                             // Bouton soumettre
                             GradientButton(
                               label: 'Créer mon compte',
                               icon: Icons.person_add_rounded,
                               loading: _isSubmitting,
-                              onPressed:
-                                  _isSubmitting ? null : _submit,
+                              onPressed: _isSubmitting ? null : _submit,
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 6),
 
                             // Retour à la connexion
-                            Center(
-                              child: TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: Text(
-                                  'Déjà un compte ? Se connecter',
-                                  style: TextStyle(
-                                    color: AppColors.cyan,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(0, 32),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(
+                                'Déjà un compte ? Se connecter',
+                                style: TextStyle(
+                                  color: AppColors.cyan,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
@@ -733,23 +646,80 @@ class _RegisterTeacherScreenState
                         ),
                       ),
                     ),
-                  ),
+
+                    const SizedBox(height: 22),
+
+                    Text(
+                      'SmartCampus',
+                      style: TextStyle(
+                        color: context.textMuted.withValues(alpha: 0.5),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildLabel(String text) {
-    return Text(
-      text,
-      style: TextStyle(
-        color: context.textSecondary,
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
+  /// Champ arrondi, fond gris clair, sans libellé : l'info est dans le
+  /// placeholder (comme la maquette).
+  Widget _buildField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    TextInputType? keyboardType,
+    bool obscure = false,
+    String? Function(String?)? validator,
+    ValueChanged<String>? onChanged,
+    ValueChanged<String>? onSubmitted,
+    Widget? suffix,
+  }) {
+    final isDark = context.isDark;
+
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscure,
+      validator: validator,
+      onChanged: onChanged,
+      onFieldSubmitted: onSubmitted,
+      style: TextStyle(fontSize: 15, color: context.textPrimary),
+      decoration: InputDecoration(
+        hintText: hint,
+        isDense: true,
+        filled: true,
+        fillColor: isDark ? _fieldDark : _fieldLight,
+        prefixIcon: Icon(icon, size: 20, color: context.textMuted),
+        prefixIconConstraints: const BoxConstraints(minWidth: 46, minHeight: 24),
+        suffixIcon: suffix,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: isDark ? AppColors.darkBorder : const Color(0xFFE8EDF3),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.cyan, width: 1.4),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.red, width: 1.2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.red, width: 1.4),
+        ),
       ),
     );
   }
@@ -759,7 +729,7 @@ class _RegisterTeacherScreenState
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.red.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [

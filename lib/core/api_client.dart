@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart' show MediaType;
+import 'env_config.dart';
 import 'storage.dart';
 import 'package:flutter/widgets.dart';
 
@@ -26,17 +27,24 @@ class ApiClient {
     });
   }
 
-  // URLs de production — services déployés sur Render
+  // URLs des services — définies en un seul endroit dans lib/core/env_config.dart
+  // et surchargeables au build via --dart-define (aucune URL codée en dur ici).
   // Getter public du notification-service (utilisé par le client SSE).
-  static String get notifBaseUrl     => 'https://notification-service-1o8a.onrender.com';
-  static String get _baseUrl         => 'https://smartcampus-auth.onrender.com';
-  static String get _presenceBaseUrl => 'https://presence-service-q9wq.onrender.com';
+  static String get notifBaseUrl     => EnvConfig.notif;
+  static String get _baseUrl         => EnvConfig.auth;
+  static String get _presenceBaseUrl => EnvConfig.presence;
   static String get _notifBaseUrl    => notifBaseUrl;
-  static String get _academicBaseUrl => 'https://academic-service-f5sm.onrender.com';
-  static String get _chatbotBaseUrl  => 'https://chatbot-service-sh1b.onrender.com';
-  static String get _billingBaseUrl  => 'https://billing-service-efm6.onrender.com';
-  static String get _libraryBaseUrl  => 'https://billing-service-efm6.onrender.com';
-  static String get _examBaseUrl     => 'https://billing-service-efm6.onrender.com';
+  static String get _academicBaseUrl => EnvConfig.academic;
+  static String get _chatbotBaseUrl  => EnvConfig.chatbot;
+  static String get _billingBaseUrl  => EnvConfig.billing;
+  // /library et /exam sont servis par billing-service (pas de service séparé
+  // déployé pour l'instant) : mêmes URLs.
+  static String get _libraryBaseUrl  => EnvConfig.billing;
+  static String get _examBaseUrl     => EnvConfig.billing;
+
+  /// Base publique de billing-service : aussi utilisée pour reconstruire les
+  /// URLs relatives des pièces jointes (`/uploads/...`).
+  static String get billingBaseUrl => EnvConfig.billing;
 
   // Initialisation des instances Dio basées sur les getters dynamiques
   static final _dio         = Dio(BaseOptions(baseUrl: _baseUrl, connectTimeout: const Duration(seconds: 10), receiveTimeout: const Duration(seconds: 60)))..interceptors.add(_AuthInterceptor());

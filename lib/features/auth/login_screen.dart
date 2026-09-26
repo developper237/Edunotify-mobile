@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:ui';
 import '../../core/theme.dart';
 import '../../core/locale.dart';
 import '../../core/widgets/ui_kit.dart';
@@ -8,6 +7,9 @@ import 'auth_provider.dart';
 import 'forgot_password_screen.dart';
 import 'register_teacher_screen.dart';
 
+/// Écran de connexion — mise en page « maquette » :
+/// fond clair dégradé, logo centré (sans cercle), sous-titre,
+/// puis carte blanche contenant les champs et le bouton.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -19,6 +21,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _showPass = false;
+
+  /// Remplissage des champs (gris très clair, comme la maquette).
+  static const _fieldLight = Color(0xFFF4F6F9);
+  static const _fieldDark = Color(0xFF1A2033);
 
   @override
   void dispose() {
@@ -38,313 +44,118 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(authProvider);
     final s = ref.watch(stringsProvider);
-
-    // Détection du mode Desktop
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final bool isDesktop = screenWidth >= 900;
+    final isDark = context.isDark;
 
     return Scaffold(
-      backgroundColor: context.bgColor,
-      body: Row(
-        children: [
-          // --- PARTIE DÉCORATIVE (DESKTOP UNIQUEMENT) ---
-          // --- PARTIE DÉCORATIVE (DESKTOP UNIQUEMENT) ---
-          if (isDesktop)
-            Expanded(
-              child: Stack(
-                children: [
-                  // 1. L'image de fond qui remplit tout l'espace
-                  Positioned.fill(
-                    child: Image.asset(
-                      'lib/assets/logos/univ.jpg',
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  // 2. Le calque de couleur bleu/cyan légèrement opaque
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.cyan.withValues(alpha: 0.85), // Plus opaque en haut
-                            AppColors.cyan.withValues(alpha: 0.7),  // Plus transparent en bas
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+      body: Container(
+        // Fond : blanc en haut, bleu très clair en bas (comme la maquette)
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: const [0.28, 1.0],
+            colors: isDark
+                ? const [AppColors.dark, Color(0xFF14243E)]
+                : const [Colors.white, Color(0xFFD9E9FA)],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(22, 28, 22, 28),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ── LOGO (sans cercle ni halo coloré) ──
+                    Image.asset(
+                      'lib/assets/logos/logosmart.png',
+                      width: 190,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.school_rounded,
+                        size: 72,
+                        color: AppColors.cyan,
                       ),
                     ),
-                  ),
-                  // 3. Le contenu (Texte et Icone) au-dessus
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.school_rounded, size: 80, color: Colors.white),
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          "Smart Campus",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 48,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1,
-                            shadows: [
-                              Shadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))
-                            ],
-                          ),
-                        ),
-                        const Text(
-                          "IUT de Douala",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            letterSpacing: 2,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                      ],
+
+                    const SizedBox(height: 16),
+
+                    // ── SOUS-TITRE ──
+                    Text(
+                      s.appTagline,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: context.textSecondary,
+                        letterSpacing: 0.1,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          // --- FORMULAIRE DE CONNEXION ---
-          // --- FORMULAIRE DE CONNEXION (ASPECT LIQUID GLASS) ---
-          Container(
-            width: isDesktop ? 500 : screenWidth,
-            height: double.infinity,
-            // Sur Desktop, on laisse transparaître l'image de gauche ou le fond
-            color: isDesktop ? Colors.transparent : context.bgColor,
-            child: Center(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                  40,
-                  MediaQuery.of(context).padding.top + 24,
-                  40,
-                  24,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: BackdropFilter(
-                    // L'effet de flou "Liquid Glass"
-                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 400),
-                      padding: const EdgeInsets.all(32),
+
+                    const SizedBox(height: 26),
+
+                    // ── CARTE BLANCHE ──
+                    Container(
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        // Couleur semi-transparente
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white.withValues(alpha: 0.05)
-                            : Colors.white.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(24),
-                        // Bordure fine pour l'effet brillant du verre
+                        color: context.cardColor,
+                        borderRadius: BorderRadius.circular(26),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          width: 1.5,
+                          color: isDark ? AppColors.darkBorder : Colors.white,
+                          width: 1,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 20,
-                            spreadRadius: 5,
-                          )
+                            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.06),
+                            blurRadius: 26,
+                            offset: const Offset(0, 12),
+                          ),
                         ],
                       ),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // LOGO CIRCULAIRE avec halo animé
-                          Center(
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                // Halo dégradé tournant
-                                SizedBox(
-                                  width: 210, height: 210,
-                                  child: SpinningGlow(
-                                    duration: const Duration(seconds: 14),
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        gradient: SweepGradient(
-                                          colors: [
-                                            AppColors.cyan.withValues(alpha: 0.0),
-                                            AppColors.cyan.withValues(alpha: 0.35),
-                                            AppColors.violet.withValues(alpha: 0.35),
-                                            AppColors.cyan.withValues(alpha: 0.0),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.cyan.withValues(alpha: 0.25),
-                                        blurRadius: 30,
-                                        spreadRadius: 2,
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipOval(
-                                    child: Image.asset(
-                                      'lib/assets/logos/logosmart.png',
-                                      width:  168,
-                                      height: 168,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => Container(
-                                        width: 100,
-                                        height: 100,
-                                        color: AppColors.cyan.withValues(alpha: 0.2),
-                                        child: const Icon(Icons.school, color: AppColors.cyan, size: 40),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          Text(
-                            s.login,
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: context.textPrimary,
-                            ),
-                          ),
-                          Text(
-                            s.appTagline,
-                            style: TextStyle(fontSize: 14, color: context.textMuted),
-                          ),
-
-                          const SizedBox(height: 32),
-
                           // AFFICHAGE DE L'ERREUR
                           if (state.error != null) ...[
                             _buildErrorBox(state.error!),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
                           ],
 
                           // CHAMP EMAIL
-                          _buildLabel(s.email),
-                          const SizedBox(height: 8),
-                          TextField(
+                          _buildField(
                             controller: _email,
+                            hint: 'ton@email.com',
+                            icon: Icons.email_outlined,
                             keyboardType: TextInputType.emailAddress,
-                            decoration: InputDecoration(
-                              hintText: 'ton@email.com',
-                              prefixIcon: Icon(Icons.email_outlined, size: 20, color: context.textMuted),
-                              // Fond légèrement plus sombre pour les champs sur le verre
-                              filled: true,
-                              fillColor: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.black12
-                                  : Colors.white54,
-                            ),
+                            isDark: isDark,
                           ),
 
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 12),
 
                           // CHAMP MOT DE PASSE
-                          _buildLabel(s.password),
-                          const SizedBox(height: 8),
-                          TextField(
+                          _buildField(
                             controller: _password,
-                            obscureText: !_showPass,
+                            hint: '••••••••',
+                            icon: Icons.lock_outline,
+                            isDark: isDark,
+                            obscure: !_showPass,
                             onSubmitted: (_) => _login(),
-                            decoration: InputDecoration(
-                              hintText: '••••••••',
-                              prefixIcon: Icon(Icons.lock_outline, size: 20, color: context.textMuted),
-                              filled: true,
-                              fillColor: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.black12
-                                  : Colors.white54,
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _showPass ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                  size: 20,
-                                  color: context.textMuted,
-                                ),
-                                onPressed: () => setState(() => _showPass = !_showPass),
+                            suffix: IconButton(
+                              icon: Icon(
+                                _showPass
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                size: 20,
+                                color: context.textMuted,
                               ),
+                              onPressed: () => setState(() => _showPass = !_showPass),
                             ),
                           ),
 
-                          const SizedBox(height: 8),
-
-                          // LIEN MOT DE PASSE OUBLIÉ
-                          Align(
-                            alignment: Alignment.center,
-                            child: TextButton(
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                minimumSize: const Size(0, 32),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const ForgotPasswordScreen(),
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                'Mot de passe oublié ?',
-                                style: TextStyle(
-                                  color: AppColors.cyan,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // LIEN INSCRIPTION PROFESSEUR
-                          Align(
-                            alignment: Alignment.center,
-                            child: TextButton(
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                minimumSize: const Size(0, 32),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const RegisterTeacherScreen(),
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                'Vous êtes professeur et n\'avez pas encore de compte ? Créez-en un',
-                                style: TextStyle(
-                                  color: AppColors.orange,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 18),
 
                           // BOUTON DE CONNEXION (dégradé)
                           GradientButton(
@@ -354,39 +165,121 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             onPressed: state.isLoading ? null : _login,
                           ),
 
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 6),
 
-
-                          const SizedBox(height: 32),
-                          Center(
+                          // LIEN MOT DE PASSE OUBLIÉ
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(0, 32),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordScreen(),
+                                ),
+                              );
+                            },
                             child: Text(
-                              'SmartCampus',
+                              'Mot de passe oublié ?',
                               style: TextStyle(
-                                color: context.textMuted.withValues(alpha: 0.5),
-                                fontSize: 11,
+                                color: AppColors.cyan,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+
+                          // LIEN INSCRIPTION PROFESSEUR
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(0, 32),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterTeacherScreen(),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              'Vous êtes professeur et n\'avez pas encore de compte ? Créez-en un',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppColors.orange,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
+
+                    const SizedBox(height: 22),
+
+                    Text(
+                      'SmartCampus',
+                      style: TextStyle(
+                        color: context.textMuted.withValues(alpha: 0.5),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildLabel(String text) {
-    return Text(
-      text,
-      style: TextStyle(
-        color: context.textSecondary,
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
+  /// Champ arrondi, fond gris clair, sans bordure visible (style maquette).
+  Widget _buildField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    required bool isDark,
+    TextInputType? keyboardType,
+    bool obscure = false,
+    ValueChanged<String>? onSubmitted,
+    Widget? suffix,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscure,
+      onSubmitted: onSubmitted,
+      style: TextStyle(fontSize: 15, color: context.textPrimary),
+      decoration: InputDecoration(
+        hintText: hint,
+        isDense: true,
+        filled: true,
+        fillColor: isDark ? _fieldDark : _fieldLight,
+        prefixIcon: Icon(icon, size: 20, color: context.textMuted),
+        prefixIconConstraints: const BoxConstraints(minWidth: 46, minHeight: 24),
+        suffixIcon: suffix,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: isDark ? AppColors.darkBorder : const Color(0xFFE8EDF3),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.cyan, width: 1.4),
+        ),
       ),
     );
   }
@@ -396,7 +289,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.red.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
