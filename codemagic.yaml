@@ -3,18 +3,26 @@
 #
 # Deux workflows au choix :
 #
-#   ios-testflight  → IPA signée App Store + envoi automatique vers TestFlight.
-#                     Installation ensuite depuis l'app TestFlight sur l'iPhone.
+#   ios-testflight  → IPA signée App Store + envoi automatique vers TestFlight
+#                     (en « internal testing only » : pas de revue Apple à
+#                     attendre, le build apparaît tout de suite dans TestFlight).
 #                     Prérequis : compte Apple Developer Program, app créée dans
-#                     App Store Connect (bundle id cm.smartcampus.app), une
-#                     intégration « App Store Connect » nommée smartcampus_appstore.
+#                     App Store Connect (bundle id cm.smartcampus.app), et une
+#                     clé API « Developer Portal » nommée smartcampus_appstore.
 #
 #   ios-adhoc       → IPA ad-hoc à installer directement (3uTools, iMazing,
 #                     Sideloadly…). Prérequis : l'UDID de chaque iPhone de test
-#                     doit être enregistré côté Codemagic/Apple Developer.
+#                     doit être enregistré côté Apple Developer (et le profil
+#                     ad-hoc correspondant disponible dans Codemagic).
 #
-# Les deux builds se lancent à la main (onglet Builds → Start new build),
-# aucun trigger automatique n'est configuré.
+# Les builds se lancent à la main (Applications → SmartCampus → Start new
+# build) : aucun trigger automatique n'est configuré.
+#
+# Variables d'environnement attendues dans le groupe « smartcampus »
+# (Applications → SmartCampus → Environment variables) :
+#   GOOGLE_SERVICE_INFO_PLIST_B64 = base64 du GoogleService-Info.plist (Firebase
+#                                   iOS). Facultatif : sans elle le build passe
+#                                   mais les notifications push restent muettes.
 # ─────────────────────────────────────────────────────────────────────────────
 
 workflows:
@@ -24,32 +32,29 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
 
+    # Nom de la clé API créée dans
+    # Team settings → Team integrations → Developer Portal → Manage keys.
+    # ⚠ ce nom doit être identique à celui saisi dans Codemagic.
+    integrations:
+      app_store_connect: smartcampus_appstore
+
     environment:
-      flutter: 3.41.5 # meme version que le poste de dev (sinon "stable")
+      flutter: 3.41.5 # meme version que le poste de dev (sinon mettre "stable")
       xcode: latest
       cocoapods: default
 
-      # Signature : Codemagic récupère seul le certificat de distribution
-      # et le profil de provisionnement associé au bundle id.
+      # Signature : Codemagic récupère le certificat de distribution et le
+      # profil de provisionnement correspondant au bundle id, parmi les fichiers
+      # présents dans Team settings → codemagic.yaml settings → Code signing.
       ios_signing:
         distribution_type: app_store
         bundle_identifier: cm.smartcampus.app
 
-      # Nom de l'intégration « App Store Connect » (Team settings → Integrations).
-      # Renomme-la ici si tu l'appelles autrement dans Codemagic.
-      integrations:
-        app_store_connect: smartcampus_appstore
-
-      # Groupe de variables créé dans l'interface Codemagic. Y placer :
-      #   GOOGLE_SERVICE_INFO_PLIST_B64  (base64 du GoogleService-Info.plist)
-      # Facultatif : sans cette variable, le build passe mais les
-      # notifications push resteront inactives sur iOS.
       groups:
         - smartcampus
 
       vars:
         BUNDLE_ID: cm.smartcampus.app
-        XCODE_PROJECT: ios/Runner.xcodeproj
 
     cache:
       cache_paths:
@@ -76,13 +81,16 @@ workflows:
 
       - name: Appliquer les profils de signature
         script: |
-          xcode-project use-profiles
+          # testFlightInternalTestingOnly : distribue uniquement aux testeurs
+          # internes, donc sans revue Apple préalable (build disponible tout de suite).
+          xcode-project use-profiles \
+            --custom-export-options='{"testFlightInternalTestingOnly": true}'
 
       - name: Compiler l'IPA
         script: |
           set -e
-          # BUILD_NUMBER est le compteur de builds Codemagic : il doit
-          # augmenter à chaque envoi pour qu'App Store Connect accepte l'upload.
+          # BUILD_NUMBER est le compteur de builds Codemagic : il doit augmenter
+          # à chaque envoi pour qu'App Store Connect accepte l'upload.
           NUM="${BUILD_NUMBER:-$(date +%s)}"
           echo "Numéro de build iOS : $NUM"
           flutter build ipa --release \
@@ -119,7 +127,6 @@ workflows:
 
       vars:
         BUNDLE_ID: cm.smartcampus.app
-        XCODE_PROJECT: ios/Runner.xcodeproj
 
     cache:
       cache_paths:
