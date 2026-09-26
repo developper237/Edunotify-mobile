@@ -1,7 +1,13 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Codemagic CI/CD — SmartCampus (Flutter / iOS)
 #
-# Deux workflows au choix :
+# Trois workflows au choix :
+#
+#   ios-unsigned    → IPA NON signée, à installer avec Sideloadly ou AltStore
+#                     sur Windows/iPhone, en utilisant un simple identifiant
+#                     Apple GRATUIT. Aucun compte Apple Developer payant n'est
+#                     nécessaire. Contrepartie : l'app expire au bout de 7 jours
+#                     et doit être réinstallée.
 #
 #   ios-testflight  → IPA signée App Store + envoi automatique vers TestFlight
 #                     (en « internal testing only » : pas de revue Apple à
@@ -16,7 +22,7 @@
 #                     ad-hoc correspondant disponible dans Codemagic).
 #
 # Les builds se lancent à la main (Applications → SmartCampus → Start new
-# build) : aucun trigger automatique n'est configuré.
+# build) ou par API : aucun trigger automatique n'est configuré.
 #
 # Variables d'environnement attendues dans le groupe « smartcampus »
 # (Applications → SmartCampus → Environment variables) :
@@ -26,7 +32,62 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 workflows:
-  # ── 1) TestFlight : le plus simple pour tester sur son iPhone ──────────────
+  # ── 1) IPA non signée : installation gratuite via Sideloadly / AltStore ────
+  # Aucune signature Apple, donc aucun compte Apple Developer payant requis :
+  # Sideloadly signe lui-même l'IPA avec ton identifiant Apple gratuit.
+  # ⚠ l'app installée expire au bout de 7 jours (il faut la réinstaller),
+  # 3 applications maximum et les notifications push ne sont pas disponibles.
+  ios-unsigned:
+    name: SmartCampus iOS — IPA non signée (Sideloadly / AltStore)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: 3.41.5
+      xcode: latest
+      cocoapods: default
+
+      groups:
+        - smartcampus
+
+      vars:
+        BUNDLE_ID: cm.smartcampus.app
+
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $HOME/Library/Caches/CocoaPods
+
+    scripts:
+      - name: Dépendances Dart
+        script: flutter pub get
+
+      - name: Dépendances CocoaPods
+        script: |
+          cd ios
+          pod install --repo-update
+
+      - name: Compiler sans signature
+        script: |
+          set -e
+          NUM="${BUILD_NUMBER:-$(date +%s)}"
+          echo "Numéro de build iOS : $NUM"
+          flutter build ios --release --no-codesign --build-number="$NUM"
+
+      - name: Empaqueter l'IPA non signée
+        script: |
+          set -e
+          cd build/ios/iphoneos
+          rm -rf Payload && mkdir Payload
+          cp -R Runner.app Payload/
+          zip -qry SmartCampus-unsigned.ipa Payload
+          echo "IPA prête : $(du -h SmartCampus-unsigned.ipa | cut -f1)"
+
+    artifacts:
+      - build/ios/iphoneos/SmartCampus-unsigned.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+  # ── 2) TestFlight : réservé aux comptes Apple Developer payants ────────────
   ios-testflight:
     name: SmartCampus iOS — TestFlight
     max_build_duration: 60
@@ -82,7 +143,7 @@ workflows:
       - name: Appliquer les profils de signature
         script: |
           # testFlightInternalTestingOnly : distribue uniquement aux testeurs
-          # internes, donc sans revue Apple préalable (build disponible tout de suite).
+          # internes, donc sans revue Apple préalable (disponible tout de suite).
           xcode-project use-profiles \
             --custom-export-options='{"testFlightInternalTestingOnly": true}'
 
@@ -107,7 +168,7 @@ workflows:
         auth: integration
         submit_to_testflight: true
 
-  # ── 2) Ad-hoc : IPA à installer soi-même sur les iPhone enregistrés ────────
+  # ── 3) Ad-hoc : IPA à installer soi-même sur les iPhone enregistrés ────────
   ios-adhoc:
     name: SmartCampus iOS — iPhone (ad-hoc)
     max_build_duration: 60
