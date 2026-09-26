@@ -59,6 +59,17 @@ workflows:
         - $HOME/Library/Caches/CocoaPods
 
     scripts:
+      - name: Forcer CocoaPods (Swift Package Manager désactivé)
+        script: |
+          # Flutter 3.44+ active Swift Package Manager par défaut, et les
+          # binaires Firebase tirés par SPM échouent régulièrement à se
+          # télécharger (« ... already exists in file system »). Le projet est
+          # configuré pour CocoaPods (ios/Podfile) : on force ce mode, y compris
+          # si une version plus récente de Flutter est utilisée.
+          flutter --version
+          flutter config --no-enable-swift-package-manager || true
+          rm -rf "$HOME/Library/Caches/org.swift.swiftpm" build/ios/SourcePackages || true
+
       - name: Dépendances Dart
         script: flutter pub get
 
@@ -132,6 +143,17 @@ workflows:
             echo "Aucun GoogleService-Info.plist fourni : build sans notifications push iOS."
           fi
 
+      - name: Forcer CocoaPods (Swift Package Manager désactivé)
+        script: |
+          # Flutter 3.44+ active Swift Package Manager par défaut, et les
+          # binaires Firebase tirés par SPM échouent régulièrement à se
+          # télécharger (« ... already exists in file system »). Le projet est
+          # configuré pour CocoaPods (ios/Podfile) : on force ce mode, y compris
+          # si une version plus récente de Flutter est utilisée.
+          flutter --version
+          flutter config --no-enable-swift-package-manager || true
+          rm -rf "$HOME/Library/Caches/org.swift.swiftpm" build/ios/SourcePackages || true
+
       - name: Dépendances Dart
         script: flutter pub get
 
@@ -202,6 +224,17 @@ workflows:
           else
             echo "Aucun GoogleService-Info.plist fourni : build sans notifications push iOS."
           fi
+
+      - name: Forcer CocoaPods (Swift Package Manager désactivé)
+        script: |
+          # Flutter 3.44+ active Swift Package Manager par défaut, et les
+          # binaires Firebase tirés par SPM échouent régulièrement à se
+          # télécharger (« ... already exists in file system »). Le projet est
+          # configuré pour CocoaPods (ios/Podfile) : on force ce mode, y compris
+          # si une version plus récente de Flutter est utilisée.
+          flutter --version
+          flutter config --no-enable-swift-package-manager || true
+          rm -rf "$HOME/Library/Caches/org.swift.swiftpm" build/ios/SourcePackages || true
 
       - name: Dépendances Dart
         script: flutter pub get

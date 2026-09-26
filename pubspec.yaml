@@ -62,6 +62,16 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Verrouille l'outillage Darwin sur CocoaPods (voir ios/Podfile).
+  # Flutter 3.44+ active Swift Package Manager par défaut : les binaires
+  # Firebase alors téléchargés par SPM échouent régulièrement sur les machines
+  # de CI (« ... already exists in file system » → échec de résolution).
+  # Ce réglage, prioritaire sur la config globale de l'outil, garantit que le
+  # build passe même si la version de Flutter du CI change.
+  config:
+    enable-swift-package-manager: false
+
   assets:
     - lib/assets/logos/logo_dark.png
     - lib/assets/logos/logo_light.png
