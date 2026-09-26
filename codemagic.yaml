@@ -1,0 +1,162 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Codemagic CI/CD — SmartCampus (Flutter / iOS)
+#
+# Deux workflows au choix :
+#
+#   ios-testflight  → IPA signée App Store + envoi automatique vers TestFlight.
+#                     Installation ensuite depuis l'app TestFlight sur l'iPhone.
+#                     Prérequis : compte Apple Developer Program, app créée dans
+#                     App Store Connect (bundle id cm.smartcampus.app), une
+#                     intégration « App Store Connect » nommée smartcampus_appstore.
+#
+#   ios-adhoc       → IPA ad-hoc à installer directement (3uTools, iMazing,
+#                     Sideloadly…). Prérequis : l'UDID de chaque iPhone de test
+#                     doit être enregistré côté Codemagic/Apple Developer.
+#
+# Les deux builds se lancent à la main (onglet Builds → Start new build),
+# aucun trigger automatique n'est configuré.
+# ─────────────────────────────────────────────────────────────────────────────
+
+workflows:
+  # ── 1) TestFlight : le plus simple pour tester sur son iPhone ──────────────
+  ios-testflight:
+    name: SmartCampus iOS — TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: 3.41.5 # meme version que le poste de dev (sinon "stable")
+      xcode: latest
+      cocoapods: default
+
+      # Signature : Codemagic récupère seul le certificat de distribution
+      # et le profil de provisionnement associé au bundle id.
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: cm.smartcampus.app
+
+      # Nom de l'intégration « App Store Connect » (Team settings → Integrations).
+      # Renomme-la ici si tu l'appelles autrement dans Codemagic.
+      integrations:
+        app_store_connect: smartcampus_appstore
+
+      # Groupe de variables créé dans l'interface Codemagic. Y placer :
+      #   GOOGLE_SERVICE_INFO_PLIST_B64  (base64 du GoogleService-Info.plist)
+      # Facultatif : sans cette variable, le build passe mais les
+      # notifications push resteront inactives sur iOS.
+      groups:
+        - smartcampus
+
+      vars:
+        BUNDLE_ID: cm.smartcampus.app
+        XCODE_PROJECT: ios/Runner.xcodeproj
+
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $HOME/Library/Caches/CocoaPods
+
+    scripts:
+      - name: Configurer Firebase pour iOS (facultatif)
+        script: |
+          if [ -n "${GOOGLE_SERVICE_INFO_PLIST_B64:-}" ]; then
+            echo "$GOOGLE_SERVICE_INFO_PLIST_B64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+            echo "GoogleService-Info.plist écrit dans ios/Runner/"
+          else
+            echo "Aucun GoogleService-Info.plist fourni : build sans notifications push iOS."
+          fi
+
+      - name: Dépendances Dart
+        script: flutter pub get
+
+      - name: Dépendances CocoaPods
+        script: |
+          cd ios
+          pod install --repo-update
+
+      - name: Appliquer les profils de signature
+        script: |
+          xcode-project use-profiles
+
+      - name: Compiler l'IPA
+        script: |
+          set -e
+          # BUILD_NUMBER est le compteur de builds Codemagic : il doit
+          # augmenter à chaque envoi pour qu'App Store Connect accepte l'upload.
+          NUM="${BUILD_NUMBER:-$(date +%s)}"
+          echo "Numéro de build iOS : $NUM"
+          flutter build ipa --release \
+            --build-number="$NUM" \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+
+  # ── 2) Ad-hoc : IPA à installer soi-même sur les iPhone enregistrés ────────
+  ios-adhoc:
+    name: SmartCampus iOS — iPhone (ad-hoc)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: 3.41.5
+      xcode: latest
+      cocoapods: default
+
+      ios_signing:
+        distribution_type: ad_hoc
+        bundle_identifier: cm.smartcampus.app
+
+      groups:
+        - smartcampus
+
+      vars:
+        BUNDLE_ID: cm.smartcampus.app
+        XCODE_PROJECT: ios/Runner.xcodeproj
+
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $HOME/Library/Caches/CocoaPods
+
+    scripts:
+      - name: Configurer Firebase pour iOS (facultatif)
+        script: |
+          if [ -n "${GOOGLE_SERVICE_INFO_PLIST_B64:-}" ]; then
+            echo "$GOOGLE_SERVICE_INFO_PLIST_B64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          else
+            echo "Aucun GoogleService-Info.plist fourni : build sans notifications push iOS."
+          fi
+
+      - name: Dépendances Dart
+        script: flutter pub get
+
+      - name: Dépendances CocoaPods
+        script: |
+          cd ios
+          pod install --repo-update
+
+      - name: Appliquer les profils de signature
+        script: |
+          xcode-project use-profiles
+
+      - name: Compiler l'IPA
+        script: |
+          set -e
+          NUM="${BUILD_NUMBER:-$(date +%s)}"
+          echo "Numéro de build iOS : $NUM"
+          flutter build ipa --release \
+            --build-number="$NUM" \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM

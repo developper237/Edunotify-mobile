@@ -74,9 +74,13 @@ flutter:
 
 flutter_launcher_icons:
   android: true
-  ios: false
+  ios: true
   image_path: "lib/assets/logos/splash.png" # Chemin vers mon logo
+  image_path_ios: "lib/assets/logos/splash.png" # 1254x1254 sans alpha
+  remove_alpha_ios: true # iOS refuse les icones avec canal alpha
 flutter_native_splash:
+  android: true
+  ios: true
   color: "#ffffff" # Couleur de fond (blanc EduNotify)
   image: lib/assets/logos/logosmart.png
   android_12:
